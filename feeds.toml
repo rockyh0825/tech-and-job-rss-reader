@@ -1,0 +1,50 @@
+# 収集するフィードの設定
+# category は "tech"(技術記事)か "jobs"(求人)のどちらか。
+# 行を追加するだけでフィードを増やせます。
+
+[[feeds]]
+name = "はてなブックマーク テクノロジー"
+url = "https://b.hatena.ne.jp/hotentry/it.rss"
+category = "tech"
+
+[[feeds]]
+name = "Zenn"
+url = "https://zenn.dev/feed"
+category = "tech"
+
+[[feeds]]
+name = "Qiita 人気記事"
+url = "https://qiita.com/popular-items/feed"
+category = "tech"
+
+[[feeds]]
+name = "Publickey"
+url = "https://www.publickey1.jp/atom.xml"
+category = "tech"
+
+[[feeds]]
+name = "Hacker News"
+url = "https://hnrss.org/frontpage"
+category = "tech"
+
+# ---- 求人系 ----
+
+[[feeds]]
+name = "Hacker News Jobs"
+url = "https://hnrss.org/jobs"
+category = "jobs"
+
+[[feeds]]
+name = "HN Who is hiring"
+url = "https://hnrss.org/whoishiring/jobs"
+category = "jobs"
+
+[[feeds]]
+name = "We Work Remotely (Programming)"
+url = "https://weworkremotely.com/categories/remote-programming-jobs.rss"
+category = "jobs"
+
+[[feeds]]
+name = "Remote OK"
+url = "https://remoteok.com/remote-dev-jobs.rss"
+category = "jobs"

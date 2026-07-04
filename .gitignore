@@ -1,0 +1,17 @@
+# IDE
+.idea/
+*.iml
+
+# Gradle / build
+.gradle/
+build/
+
+# ランタイム生成物
+*.db
+*.db-journal
+
+# OS
+.DS_Store
+
+# Claude Code ローカル設定
+.claude/settings.local.json
