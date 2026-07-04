@@ -11,6 +11,11 @@ import org.junit.jupiter.api.Test
  *   Port → capabilities、PortImpl → application
  * - domain は純 Kotlin(Spring・Kafka・Rome・SQLite に非依存)
  * - feature 間の直接 import は禁止(capabilities の Port 経由のみ)
+ * - feature 内のレイヤー依存は外側から内側への一方向のみ:
+ *   - domain はプロジェクト内では同 feature の domain と shared.contract のみ import 可
+ *   - presentation は同 feature の infrastructure を import しない
+ *   - application は同 feature の presentation を import しない
+ *   - infrastructure は同 feature の presentation・application を import しない
  */
 class ArchitectureTest {
 
@@ -18,6 +23,8 @@ class ArchitectureTest {
         private const val BASE_PACKAGE = "dev.rockyh.rsswatch"
 
         private val featurePackages = setOf("fetch", "keywords", "archive", "live", "report")
+
+        private val layerPackages = setOf("presentation", "application", "domain", "infrastructure")
 
         private val springStereotypeAnnotations =
             setOf(
@@ -151,9 +158,79 @@ class ArchitectureTest {
             }
     }
 
+    @Test
+    fun `domain files import project code only from same feature domain or shared contract`() {
+        productionScope
+            .files
+            .forEach { file ->
+                val (feature, layer) =
+                    featureLayerOf(file.packagee?.name.orEmpty()) ?: return@forEach
+                if (layer != "domain") return@forEach
+                val violations =
+                    file.imports.filter { import ->
+                        import.name.startsWith("$BASE_PACKAGE.") &&
+                            !import.name.startsWith("$BASE_PACKAGE.shared.contract.") &&
+                            featureLayerOf(import.name) != (feature to "domain")
+                    }
+                assertTrue(violations.isEmpty()) {
+                    "${file.name} (feature: $feature, layer: domain) may only import " +
+                        "same-feature domain or shared.contract within the project, " +
+                        "but imports: ${violations.map { it.name }}"
+                }
+            }
+    }
+
+    @Test
+    fun `presentation files do not import same feature infrastructure`() {
+        assertLayerDoesNotImport(sourceLayer = "presentation", forbiddenLayers = setOf("infrastructure"))
+    }
+
+    @Test
+    fun `application files do not import same feature presentation`() {
+        assertLayerDoesNotImport(sourceLayer = "application", forbiddenLayers = setOf("presentation"))
+    }
+
+    @Test
+    fun `infrastructure files do not import same feature presentation or application`() {
+        assertLayerDoesNotImport(
+            sourceLayer = "infrastructure",
+            forbiddenLayers = setOf("presentation", "application"),
+        )
+    }
+
+    private fun assertLayerDoesNotImport(sourceLayer: String, forbiddenLayers: Set<String>) {
+        productionScope
+            .files
+            .forEach { file ->
+                val (feature, layer) =
+                    featureLayerOf(file.packagee?.name.orEmpty()) ?: return@forEach
+                if (layer != sourceLayer) return@forEach
+                val violations =
+                    file.imports.filter { import ->
+                        val imported = featureLayerOf(import.name) ?: return@filter false
+                        imported.first == feature && imported.second in forbiddenLayers
+                    }
+                assertTrue(violations.isEmpty()) {
+                    "${file.name} (feature: $feature, layer: $sourceLayer) must not import " +
+                        "$forbiddenLayers of the same feature (dependencies point inward only), " +
+                        "but imports: ${violations.map { it.name }}"
+                }
+            }
+    }
+
     private fun featureOf(fullyQualifiedName: String): String? {
         if (!fullyQualifiedName.startsWith("$BASE_PACKAGE.")) return null
         val firstSegment = fullyQualifiedName.removePrefix("$BASE_PACKAGE.").substringBefore(".")
         return firstSegment.takeIf { it in featurePackages }
+    }
+
+    /** `dev.rockyh.rsswatch.<feature>.<layer>` 形式の FQN から (feature, layer) を返す。 */
+    private fun featureLayerOf(fullyQualifiedName: String): Pair<String, String>? {
+        if (!fullyQualifiedName.startsWith("$BASE_PACKAGE.")) return null
+        val segments = fullyQualifiedName.removePrefix("$BASE_PACKAGE.").split(".")
+        if (segments.size < 2) return null
+        val feature = segments[0].takeIf { it in featurePackages } ?: return null
+        val layer = segments[1].takeIf { it in layerPackages } ?: return null
+        return feature to layer
     }
 }
