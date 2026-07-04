@@ -10,7 +10,7 @@
   - Purpose: ビルド・起動できる土台を作る
   - _Requirements: 全要件の前提_
 
-- [ ] 2. Kafka + kafka-ui の Docker Compose を作成
+- [x] 2. Kafka + kafka-ui の Docker Compose を作成
   - File: docker/docker-compose.yml
   - KRaft モードのシングルブローカー + kafka-ui。topic `rss.items` の自動作成設定
   - Purpose: ローカル・自宅サーバー共通の Kafka 実行環境
