@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
  * - feature 内のレイヤー依存は外側から内側への一方向のみ:
  *   - domain はプロジェクト内では同 feature の domain と shared.contract のみ import 可
  *   - presentation は同 feature の infrastructure を import しない
- *   - application は同 feature の presentation を import しない
+ *   - application は同 feature の presentation・infrastructure を import しない
  *   - infrastructure は同 feature の presentation・application を import しない
  */
 class ArchitectureTest {
@@ -186,8 +186,11 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `application files do not import same feature presentation`() {
-        assertLayerDoesNotImport(sourceLayer = "application", forbiddenLayers = setOf("presentation"))
+    fun `application files do not import same feature presentation or infrastructure`() {
+        assertLayerDoesNotImport(
+            sourceLayer = "application",
+            forbiddenLayers = setOf("presentation", "infrastructure"),
+        )
     }
 
     @Test
