@@ -27,6 +27,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.50.3.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
