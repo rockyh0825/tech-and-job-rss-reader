@@ -71,9 +71,9 @@ object Keywords {
             entry("FastAPI"),
             entry("Ruby on Rails", "Rails", "RoR"),
             entry("Laravel"),
-            entry("Node.js", "NodeJS", "Node"),
+            entry("Node.js", "NodeJS"),
             entry("NestJS", "Nest.js"),
-            entry(".NET", "dotnet", "ASP.NET"),
+            entry(".NET", "dotnet", "ASP.NET", "VB.NET"),
             entry("GraphQL"),
             entry("gRPC"),
             // モバイル

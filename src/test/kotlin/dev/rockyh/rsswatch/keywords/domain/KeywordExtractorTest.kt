@@ -50,6 +50,17 @@ class KeywordExtractorTest {
         assertTrue(notExpected !in keywords, "$notExpected should not be in $keywords")
     }
 
+    @ParameterizedTest(name = "一般語の「{0}」から {1} を誤検出しない")
+    @CsvSource(
+        "every node in the cluster, Node.js",
+        "add a node to the graph, Node.js",
+    )
+    fun does_not_match_generic_english_words(text: String, notExpected: String) {
+        val keywords = extractor.extract(text)
+
+        assertTrue(notExpected !in keywords, "$notExpected should not be in $keywords")
+    }
+
     // --- 要件 2.1: エイリアスの正規化(表記ゆれを正規化名に寄せる) ---
 
     @ParameterizedTest(name = "「{0}」を {1} に正規化する")
@@ -114,6 +125,7 @@ class KeywordExtractorTest {
         "C#とUnityでゲーム開発, C#",
         "Next.jsのApp Router, Next.js",
         ".NETエンジニア募集, .NET",
+        "VB.NETの案件, .NET",
     )
     fun detects_keywords_containing_symbols(text: String, expected: String) {
         val keywords = extractor.extract(text)
