@@ -18,6 +18,8 @@
 - **Apache Kafka**: メッセージング(KRaft モード、シングルブローカー)
 - **kafka-ui**: ブラウザで topic の中身を確認する運用ツール
 - **SQLite**(JDBC): 蓄積・集計。将来 PostgreSQL に差し替え可能な構造にする
+- **kuery-client**(`dev.hsbrysk:kuery-client-spring-data-jdbc` + Gradle プラグイン `dev.hsbrysk.kuery-client`): SQL を Kotlin の文字列補間で書く DB クライアント。補間はコンパイラプラグインによりバインドパラメータに変換されるため injection 安全。spring-data-jdbc ベースで `@Transactional` と互換
+- **Flyway**(flyway-core): スキーマ管理。`db/migration/` の `V{番号}__{説明}.sql` を起動時に自動適用(Spring Boot 統合)
 
 ### Application Architecture
 
@@ -58,6 +60,8 @@ flowchart LR
 ### Data Storage
 
 - **Primary storage**: SQLite(`guid UNIQUE` + `INSERT OR IGNORE` 相当の冪等書き込み)。リポジトリ層を分離し、将来 PostgreSQL へ差し替え可能にする
+- **Schema management**: Flyway。スキーマ変更は必ずマイグレーションファイルで行い、コードからの DDL 発行はしない
+- **Data access**: kuery-client で生 SQL を書く(ORM は使わない)
 - **Data formats**: Kafka メッセージは JSON(キーワード抽出済みのエントリ)
 
 ### External Integrations
@@ -97,9 +101,13 @@ flowchart LR
 5. **キーワード抽出は辞書ベース**: 透明性と保守の容易さを優先。日本語文中では `\b` が機能しないため、独自境界 `(?<![A-Za-z0-9])...(?![A-Za-z0-9+#])` を使う。`Go` は大文字小文字を区別する別枠で扱う
 6. **蓄積は DB、Kafka はパイプ**: 集計は DB(SQLite)、Kafka は輸送路に徹する。ブラウザへの配信は SSE で中継(単方向で十分なので WebSocket は使わない)
 7. **定期実行は @Scheduled**: 外部スケジューラに依存せず、デプロイ物を 1 つにまとめる
+8. **DB アクセスは kuery-client(vs ORM / JdbcTemplate)**: 集計・クロスリンクは SQL が主役なので「SQL をそのまま書く」方針。文字列補間がコンパイラプラグインでバインドパラメータ化されるため、生 SQL の読みやすさと安全性を両立。spring-data-jdbc ベースなので万一 SQLite で問題が出ても JdbcTemplate へ退避可能(SQL 資産はそのまま流用できる)
+9. **スキーマ管理は Flyway**: 使い慣れているため採用。起動時自動適用で運用手順が増えない。kuery-client とは役割が重ならず(Flyway = スキーマ、kuery-client = クエリ)、Spring Boot が同一 DataSource で両者を自動構成する
 
 ## Known Limitations
 
 - キーワード辞書は手動メンテが必要(辞書にない新技術は拾えない)
+- kuery-client はコンパイラプラグインが Kotlin バージョンと結合するため、Kotlin 更新時は kuery-client の対応バージョン(compatibility 表)を確認する必要がある
+- SQLite は Flyway ではコミュニティサポート。PostgreSQL 移行時にはどちらも公式サポート範囲になる
 - enricher を分離しないため「topic → 変換 → 別 topic」(Kafka Streams の典型)は最初のスコープ外。学習が進んだら切り出す拡張余地を残す
 - 日本語の求人 RSS がほぼ存在せず、求人データは英語圏中心
