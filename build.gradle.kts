@@ -22,6 +22,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.kafka:spring-kafka")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-toml")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.rometools:rome:2.1.0")
     implementation("org.xerial:sqlite-jdbc:3.50.3.0")
