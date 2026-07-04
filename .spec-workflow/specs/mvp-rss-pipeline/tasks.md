@@ -32,7 +32,7 @@
   - _Leverage: feeds.toml(Python 試作から引き継ぎ)_
   - _Requirements: 1.4, 1.5_
 
-- [ ] 5. keywords feature を実装(テスト込み)
+- [x] 5. keywords feature を実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/capabilities/KeywordExtractionPort.kt, keywords/domain/Keywords.kt, keywords/domain/KeywordExtractor.kt, keywords/application/KeywordExtractionPortImpl.kt
   - Test: src/test/kotlin/dev/rockyh/rsswatch/keywords/domain/KeywordExtractorTest.kt
   - 日本語文中の検出(`Pythonで`)・`Go`/`golang` の大文字小文字区別・エイリアス正規化の表駆動テストを先に書き、正規化名 + エイリアス辞書(約 60 分類)と独自境界の正規表現を純 Kotlin の domain として実装する
