@@ -24,7 +24,7 @@
   - _Leverage: cleaning-app の ArchitectureTest.kt_
   - _Requirements: 全要件の横断的制約_
 
-- [ ] 4. 共有契約と feeds.toml 読み込みを実装(テスト込み)
+- [x] 4. 共有契約と feeds.toml 読み込みを実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/shared/contract/RssItem.kt, fetch/domain/FeedDefinition.kt, fetch/infrastructure/FeedConfigLoader.kt
   - Test: src/test/kotlin/dev/rockyh/rsswatch/shared/contract/RssItemTest.kt, fetch/infrastructure/FeedConfigLoaderTest.kt
   - RssItem の JSON シリアライズ往復、feeds.toml のパース(正常・必須項目欠落・不正 category)をテストしてから実装する
