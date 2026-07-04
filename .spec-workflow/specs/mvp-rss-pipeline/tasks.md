@@ -16,7 +16,7 @@
   - Purpose: ローカル・自宅サーバー共通の Kafka 実行環境
   - _Requirements: 1, 3, 4_
 
-- [ ] 3. ArchitectureTest(Konsist)を導入
+- [x] 3. ArchitectureTest(Konsist)を導入
   - File: build.gradle.kts(konsist 依存追加)
   - Test: src/test/kotlin/dev/rockyh/rsswatch/architecture/ArchitectureTest.kt
   - UseCase は application、Controller/Consumer は presentation、Port は capabilities に置かれること、domain が Spring アノテーション・Kafka・SQLite に依存しないこと、feature 間の直接 import がないことを検証する
