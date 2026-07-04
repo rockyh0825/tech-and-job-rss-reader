@@ -6,3 +6,10 @@ spring:
 
 server:
   port: 8080
+
+rss-watch:
+  topic: rss.items
+  feeds-path: feeds.toml
+  fetch:
+    initial-delay-ms: 10000
+    interval-ms: 900000
