@@ -29,6 +29,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("com.lemonappdev:konsist:0.17.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
