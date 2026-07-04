@@ -1,11 +1,19 @@
 package dev.rockyh.rsswatch.fetch.infrastructure
 
+import com.sun.net.httpserver.HttpServer
 import dev.rockyh.rsswatch.fetch.domain.FeedCategory
 import dev.rockyh.rsswatch.fetch.domain.FeedDefinition
+import java.net.InetSocketAddress
 import java.nio.file.Path
+import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -147,5 +155,80 @@ class RomeFeedParserTest {
         val feed = feedFor("これはXMLではない")
 
         assertThrows<Exception> { parser.parse(feed) }
+    }
+
+    @Test
+    fun throws_within_bounded_time_when_server_never_responds() {
+        val releaseHandler = CountDownLatch(1)
+        val server = HttpServer.create(InetSocketAddress("localhost", 0), 0)
+        server.createContext("/feed") { exchange ->
+            // 応答を返さずにブロックし続ける(read timeout を発生させる)
+            releaseHandler.await(10, TimeUnit.SECONDS)
+            exchange.close()
+        }
+        server.executor = Executors.newSingleThreadExecutor()
+        server.start()
+        try {
+            val shortTimeoutParser = RomeFeedParser(connectTimeoutMs = 200, readTimeoutMs = 200)
+            val feed =
+                FeedDefinition(
+                    "ハングするフィード",
+                    "http://localhost:${server.address.port}/feed",
+                    FeedCategory.TECH,
+                )
+
+            assertTimeoutPreemptively(Duration.ofSeconds(5)) {
+                assertThrows<Exception> { shortTimeoutParser.parse(feed) }
+            }
+        } finally {
+            releaseHandler.countDown()
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun sends_rss_watch_user_agent_header_on_http_requests() {
+        val receivedUserAgent = AtomicReference<String>()
+        val server = HttpServer.create(InetSocketAddress("localhost", 0), 0)
+        server.createContext("/feed") { exchange ->
+            receivedUserAgent.set(exchange.requestHeaders.getFirst("User-Agent"))
+            val body =
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0">
+                  <channel>
+                    <title>Example Feed</title>
+                    <link>https://example.com</link>
+                    <description>example</description>
+                    <item>
+                      <title>UA検証記事</title>
+                      <link>https://example.com/articles/ua</link>
+                    </item>
+                  </channel>
+                </rss>
+                """.trimIndent().toByteArray(Charsets.UTF_8)
+            exchange.responseHeaders.add("Content-Type", "application/rss+xml; charset=UTF-8")
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.executor = Executors.newSingleThreadExecutor()
+        server.start()
+        try {
+            val feed =
+                FeedDefinition(
+                    "UA検証フィード",
+                    "http://localhost:${server.address.port}/feed",
+                    FeedCategory.TECH,
+                )
+
+            parser.parse(feed)
+
+            assertEquals(
+                "rss-watch/0.1 (+https://github.com/rockyh0825/tech-and-job-rss-reader)",
+                receivedUserAgent.get(),
+            )
+        } finally {
+            server.stop(0)
+        }
     }
 }
