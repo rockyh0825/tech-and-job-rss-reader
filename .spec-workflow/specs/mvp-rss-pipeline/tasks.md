@@ -47,7 +47,7 @@
   - _Leverage: KeywordExtractionPort, FeedConfigLoader_
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 7. RssItemRepository(archive/infrastructure)を実装(テスト込み)
+- [x] 7. RssItemRepository(archive/infrastructure)を実装(テスト込み)
   - File: build.gradle.kts(kuery-client プラグイン + flyway-core 追加), src/main/kotlin/dev/rockyh/rsswatch/archive/infrastructure/RssItemRepository.kt, src/main/resources/db/migration/V1__archive_initial.sql
   - Test: src/test/kotlin/dev/rockyh/rsswatch/archive/infrastructure/RssItemRepositoryTest.kt
   - 一時ファイル SQLite に Flyway を適用した上で、guid UNIQUE + INSERT OR IGNORE の冪等性(同 guid 再挿入で行数不変)、技術ランキング・記事/求人一覧・キーワード別記事の集計クエリをテストしてから、kuery-client の生 SQL で実装する

@@ -3,6 +3,11 @@ spring:
     name: tech-and-job-rss-reader
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  datasource:
+    url: jdbc:sqlite:${RSS_WATCH_DB_PATH:rss-watch.db}
+    hikari:
+      # SQLite は同時書き込みに弱いため、単一コネクションで直列化する
+      maximum-pool-size: 1
 
 server:
   port: 8080
