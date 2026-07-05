@@ -12,7 +12,7 @@ data class TechRankingEntry(
 /** 蓄積済み item の集計・検索の抽象(実装は infrastructure の RssItemRepository)。 */
 interface ItemQueries {
 
-    /** 直近 [days] 日の求人(category = "jobs")で言及された技術キーワードを言及求人数の降順で返す。 */
+    /** 直近 [days] 日の求人([ItemCategory.JOBS])で言及された技術キーワードを言及求人数の降順で返す。 */
     fun techRanking(days: Int): List<TechRankingEntry>
 
     /** 直近 [days] 日の指定カテゴリの item を新しい順で返す。 */

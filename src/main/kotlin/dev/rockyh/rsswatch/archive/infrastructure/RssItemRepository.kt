@@ -60,7 +60,7 @@ class RssItemRepository(
         return inserted
     }
 
-    /** 直近 [days] 日の求人(category = "jobs")で言及された技術キーワードを言及求人数の降順で返す。 */
+    /** 直近 [days] 日の求人([ItemCategory.JOBS])で言及された技術キーワードを言及求人数の降順で返す。 */
     override fun techRanking(days: Int): List<TechRankingEntry> {
         val cutoff = cutoff(days)
         val jobsCategory = ItemCategory.JOBS.value
