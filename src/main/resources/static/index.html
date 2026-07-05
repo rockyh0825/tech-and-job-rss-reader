@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSS Watch — 求人技術 × 記事クロスリンク</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1f2328;
+    --muted: #6a737d;
+    --accent: #0969da;
+    --border: #d8dee4;
+    --badge: #ddf4ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 24px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  header .days { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 14px; }
+  header .days button {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  header .days button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    padding: 20px 24px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section h2 { font-size: 15px; margin: 0 0 10px; color: var(--muted); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .cross-section .keyword {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .cross-section .count {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--accent);
+    background: var(--badge);
+    border-radius: 10px;
+    padding: 1px 8px;
+  }
+  ul.items { list-style: none; margin: 8px 0 0; padding: 0; }
+  ul.items li { padding: 3px 0; font-size: 14px; }
+  ul.items li a { color: var(--accent); text-decoration: none; }
+  ul.items li a:hover { text-decoration: underline; }
+  ul.items li .meta { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .empty { color: var(--muted); font-size: 13px; }
+  #live-status { font-size: 12px; color: var(--muted); }
+  #live-status.connected { color: #1a7f37; }
+  #live-list li { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: var(--badge); } to { background: transparent; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>RSS Watch</h1>
+  <div class="days">
+    <span>直近</span>
+    <button data-days="7">7日</button>
+    <button data-days="14">14日</button>
+    <button data-days="30">30日</button>
+  </div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>求人で言及されている技術 × 関連記事(言及求人数順)</h2>
+      <div id="cross-sections"><p class="empty">読み込み中…</p></div>
+    </section>
+  </div>
+  <div>
+    <section>
+      <h2>新着 <span id="live-status">接続中…</span></h2>
+      <div class="card"><ul class="items" id="live-list"><li class="empty">新着はまだありません</li></ul></div>
+    </section>
+    <section>
+      <h2>技術記事</h2>
+      <div class="card"><ul class="items" id="tech-articles"></ul></div>
+    </section>
+    <section>
+      <h2>求人</h2>
+      <div class="card"><ul class="items" id="job-postings"></ul></div>
+    </section>
+  </div>
+</main>
+
+<script>
+  const state = { days: 7 };
+
+  function itemLi(item) {
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = item.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = item.title;
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    const date = (item.publishedAt || item.fetchedAt || "").slice(0, 10);
+    meta.textContent = `${item.feedName}${date ? " · " + date : ""}`;
+    li.append(a, meta);
+    return li;
+  }
+
+  function renderList(elementId, items, emptyText) {
+    const ul = document.getElementById(elementId);
+    ul.replaceChildren();
+    if (items.length === 0) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = emptyText;
+      ul.append(li);
+      return;
+    }
+    items.forEach((item) => ul.append(itemLi(item)));
+  }
+
+  function renderCrossSections(sections) {
+    const container = document.getElementById("cross-sections");
+    container.replaceChildren();
+    if (sections.length === 0) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "直近の求人に技術キーワードが見つかりませんでした";
+      container.append(p);
+      return;
+    }
+    sections.forEach((section) => {
+      const card = document.createElement("div");
+      card.className = "card cross-section";
+      const heading = document.createElement("div");
+      heading.className = "keyword";
+      const name = document.createElement("span");
+      name.textContent = section.keyword;
+      const count = document.createElement("span");
+      count.className = "count";
+      count.textContent = `求人 ${section.mentionCount} 件で言及`;
+      heading.append(name, count);
+      const ul = document.createElement("ul");
+      ul.className = "items";
+      if (section.articles.length === 0) {
+        const li = document.createElement("li");
+        li.className = "empty";
+        li.textContent = "この技術の記事は直近にありません";
+        ul.append(li);
+      } else {
+        section.articles.forEach((item) => ul.append(itemLi(item)));
+      }
+      card.append(heading, ul);
+      container.append(card);
+    });
+  }
+
+  async function loadReport() {
+    document.querySelectorAll(".days button").forEach((button) => {
+      button.classList.toggle("active", Number(button.dataset.days) === state.days);
+    });
+    const response = await fetch(`/api/report?days=${state.days}`);
+    if (!response.ok) {
+      document.getElementById("cross-sections").textContent = `レポート取得に失敗しました (${response.status})`;
+      return;
+    }
+    const report = await response.json();
+    renderCrossSections(report.crossSections);
+    renderList("tech-articles", report.techArticles, "直近の技術記事はありません");
+    renderList("job-postings", report.jobPostings, "直近の求人はありません");
+  }
+
+  function connectLive() {
+    const status = document.getElementById("live-status");
+    const source = new EventSource("/api/stream");
+    source.addEventListener("open", () => {
+      status.textContent = "● live";
+      status.classList.add("connected");
+    });
+    source.addEventListener("error", () => {
+      // EventSource は自動再接続する
+      status.textContent = "再接続中…";
+      status.classList.remove("connected");
+    });
+    source.addEventListener("item", (event) => {
+      let item;
+      try {
+        item = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      const list = document.getElementById("live-list");
+      const placeholder = list.querySelector(".empty");
+      if (placeholder) placeholder.remove();
+      list.prepend(itemLi(item));
+      while (list.children.length > 20) list.lastChild.remove();
+    });
+  }
+
+  document.querySelectorAll(".days button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.days = Number(button.dataset.days);
+      loadReport();
+    });
+  });
+
+  loadReport();
+  connectLive();
+</script>
+</body>
+</html>

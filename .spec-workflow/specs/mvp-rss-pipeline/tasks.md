@@ -77,7 +77,7 @@
   - _Leverage: RssItemRepository(ArchiveQueryPortImpl 経由)_
   - _Requirements: 5.1_
 
-- [ ] 11. ブラウザ UI を実装
+- [x] 11. ブラウザ UI を実装
   - File: src/main/resources/static/index.html(+ 必要なら js/css)
   - クロスリンク表示(求人言及数順)+ SSE 新着欄。素の HTML/JS で作る(静的 UI のため自動テスト対象外。ブラウザで手動確認する)
   - _Requirements: 5.2, 5.3_
