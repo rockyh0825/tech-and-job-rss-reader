@@ -80,8 +80,9 @@ class RssItemRepository(
     }
 
     /** 直近 [days] 日の指定カテゴリの item を新しい順で返す。 */
-    override fun itemsByCategory(category: String, days: Int): List<RssItem> {
+    override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
         val cutoff = cutoff(days)
+        val categoryValue = category.value
         val rows =
             kueryClient
                 .sql {
@@ -90,7 +91,7 @@ class RssItemRepository(
                            i.title AS title, i.url AS url, i.summary AS summary,
                            i.published_at AS publishedAt, i.fetched_at AS fetchedAt
                     FROM items i
-                    WHERE i.category = $category
+                    WHERE i.category = $categoryValue
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
                     ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
                     """
@@ -99,8 +100,9 @@ class RssItemRepository(
     }
 
     /** 直近 [days] 日の、指定キーワードが付いた指定カテゴリの item を新しい順で返す。 */
-    override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> {
+    override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> {
         val cutoff = cutoff(days)
+        val categoryValue = category.value
         val rows =
             kueryClient
                 .sql {
@@ -111,7 +113,7 @@ class RssItemRepository(
                     FROM items i
                     JOIN item_keywords k ON k.guid = i.guid
                     WHERE k.keyword = $keyword
-                      AND i.category = $category
+                      AND i.category = $categoryValue
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
                     ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
                     """

@@ -3,6 +3,7 @@ package dev.rockyh.rsswatch.archive.application
 import dev.rockyh.rsswatch.archive.domain.ItemQueries
 import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
 import dev.rockyh.rsswatch.capabilities.TechMention
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -26,9 +27,9 @@ class ArchiveQueryPortImplTest {
     private class FakeItemQueries : ItemQueries {
         override fun techRanking(days: Int): List<TechRankingEntry> = listOf(TechRankingEntry("Kotlin", 3))
 
-        override fun itemsByCategory(category: String, days: Int): List<RssItem> = emptyList()
+        override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> = emptyList()
 
-        override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> = emptyList()
+        override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> = emptyList()
     }
 
     @Test

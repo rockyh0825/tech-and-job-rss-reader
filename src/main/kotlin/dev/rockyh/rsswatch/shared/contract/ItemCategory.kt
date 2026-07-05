@@ -1,8 +1,8 @@
 package dev.rockyh.rsswatch.shared.contract
 
 /**
- * item のカテゴリ。[RssItem.category] と feeds.toml の category が取り得る値の語彙で、
- * ワイヤ上(JSON・DB)では小文字の [value]("tech" | "jobs")で表記する。
+ * item のカテゴリ。[RssItem.category] が取り得る値の語彙で、
+ * ワイヤ上(JSON・DB・設定ファイル)では小文字の [value]("tech" | "jobs")で表記する。
  * カテゴリを追加するときはここに 1 箇所追加する(各 feature に文字列を散らさない)。
  */
 enum class ItemCategory(val value: String) {

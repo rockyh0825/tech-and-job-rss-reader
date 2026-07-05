@@ -1,11 +1,15 @@
 package dev.rockyh.rsswatch.archive.infrastructure
 
+import dev.hsbrysk.kuery.core.KueryBlockingClient
 import dev.hsbrysk.kuery.spring.jdbc.SpringJdbcKueryClient
 import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.nio.file.Path
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.flywaydb.core.Flyway
@@ -19,6 +23,7 @@ class RssItemRepositoryTest {
     @TempDir
     lateinit var tempDir: Path
 
+    private lateinit var kueryClient: KueryBlockingClient
     private lateinit var repository: RssItemRepository
 
     @BeforeEach
@@ -32,7 +37,8 @@ class RssItemRepositoryTest {
             .dataSource(dataSource)
             .load()
             .migrate()
-        repository = RssItemRepository(SpringJdbcKueryClient.builder().dataSource(dataSource).build())
+        kueryClient = SpringJdbcKueryClient.builder().dataSource(dataSource).build()
+        repository = RssItemRepository(kueryClient)
     }
 
     private fun rssItem(
@@ -74,7 +80,7 @@ class RssItemRepositoryTest {
         val insertedAgain = repository.insertIgnore(listOf(item))
 
         assertEquals(0, insertedAgain)
-        assertEquals(1, repository.itemsByCategory("tech", days = 7).size)
+        assertEquals(1, repository.itemsByCategory(ItemCategory.TECH, days = 7).size)
     }
 
     @Test
@@ -91,7 +97,7 @@ class RssItemRepositoryTest {
 
         repository.insertIgnore(listOf(item))
 
-        val stored = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
+        val stored = repository.itemsByKeyword("Kotlin", category = ItemCategory.TECH, days = 7)
         assertEquals(1, stored.size)
         assertEquals(listOf("Kafka", "Kotlin"), stored.single().keywords)
     }
@@ -114,7 +120,7 @@ class RssItemRepositoryTest {
             )
         repository.insertIgnore(listOf(item))
 
-        val stored = repository.itemsByCategory("tech", days = 7).single()
+        val stored = repository.itemsByCategory(ItemCategory.TECH, days = 7).single()
 
         assertEquals(item.copy(keywords = listOf("Kafka", "Kotlin")), stored)
     }
@@ -123,7 +129,7 @@ class RssItemRepositoryTest {
     fun round_trip_preserves_null_published_at() {
         repository.insertIgnore(listOf(rssItem("a", publishedAt = null)))
 
-        val stored = repository.itemsByCategory("tech", days = 7).single()
+        val stored = repository.itemsByCategory(ItemCategory.TECH, days = 7).single()
 
         assertNull(stored.publishedAt)
     }
@@ -206,7 +212,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByCategory("tech", days = 7)
+        val items = repository.itemsByCategory(ItemCategory.TECH, days = 7)
 
         assertEquals(listOf("newer", "older"), items.map { it.guid })
     }
@@ -221,7 +227,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByCategory("tech", days = 7)
+        val items = repository.itemsByCategory(ItemCategory.TECH, days = 7)
 
         assertEquals(listOf("no-published", "published-old"), items.map { it.guid })
     }
@@ -235,14 +241,31 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByCategory("tech", days = 7)
+        val items = repository.itemsByCategory(ItemCategory.TECH, days = 7)
 
         assertEquals(listOf("recent"), items.map { it.guid })
     }
 
     @Test
+    fun items_by_category_includes_item_published_exactly_at_cutoff_but_excludes_one_nanosecond_older() {
+        val fixedNow = Instant.parse("2026-07-05T00:00:00Z")
+        val fixedClockRepository = RssItemRepository(kueryClient, Clock.fixed(fixedNow, ZoneOffset.UTC))
+        val cutoff = fixedNow.minus(Duration.ofDays(7))
+        fixedClockRepository.insertIgnore(
+            listOf(
+                rssItem("at-cutoff", publishedAt = cutoff),
+                rssItem("just-before-cutoff", publishedAt = cutoff.minusNanos(1)),
+            ),
+        )
+
+        val items = fixedClockRepository.itemsByCategory(ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf("at-cutoff"), items.map { it.guid })
+    }
+
+    @Test
     fun items_by_category_returns_empty_list_when_no_items_exist() {
-        val items = repository.itemsByCategory("tech", days = 7)
+        val items = repository.itemsByCategory(ItemCategory.TECH, days = 7)
 
         assertEquals(emptyList(), items)
     }
@@ -258,7 +281,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = ItemCategory.TECH, days = 7)
 
         assertEquals(listOf("article"), items.map { it.guid })
     }
@@ -273,7 +296,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = ItemCategory.TECH, days = 7)
 
         assertEquals(setOf("kotlin-article", "both"), items.map { it.guid }.toSet())
     }
@@ -291,7 +314,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = ItemCategory.TECH, days = 7)
 
         assertEquals(listOf("recent"), items.map { it.guid })
     }
@@ -306,7 +329,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = ItemCategory.TECH, days = 7)
 
         assertEquals(listOf("newer", "older"), items.map { it.guid })
     }

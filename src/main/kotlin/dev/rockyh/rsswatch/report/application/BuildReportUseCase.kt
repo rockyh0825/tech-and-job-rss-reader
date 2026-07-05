@@ -33,13 +33,13 @@ class BuildReportUseCase(private val archiveQueryPort: ArchiveQueryPort) {
                     keyword = mention.keyword,
                     mentionCount = mention.mentionCount,
                     articles =
-                        archiveQueryPort.itemsByKeyword(mention.keyword, ItemCategory.TECH.value, days),
+                        archiveQueryPort.itemsByKeyword(mention.keyword, ItemCategory.TECH, days),
                 )
             }
         return Report(
             crossSections = crossSections,
-            techArticles = archiveQueryPort.itemsByCategory(ItemCategory.TECH.value, days),
-            jobPostings = archiveQueryPort.itemsByCategory(ItemCategory.JOBS.value, days),
+            techArticles = archiveQueryPort.itemsByCategory(ItemCategory.TECH, days),
+            jobPostings = archiveQueryPort.itemsByCategory(ItemCategory.JOBS, days),
         )
     }
 }

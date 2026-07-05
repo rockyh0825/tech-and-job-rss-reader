@@ -1,6 +1,7 @@
 package dev.rockyh.rsswatch.archive
 
 import dev.rockyh.rsswatch.archive.infrastructure.RssItemRepository
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.nio.file.Path
 import java.time.Instant
@@ -63,7 +64,7 @@ class SinkConsumerIntegrationTest {
         kafkaTemplate.send("rss.items", item.feedName, item.toJson()).get()
     }
 
-    private fun storedGuids(category: String = "tech"): List<String> =
+    private fun storedGuids(category: ItemCategory = ItemCategory.TECH): List<String> =
         repository.itemsByCategory(category, days = 7).map { it.guid }
 
     /** [condition] が true になるまで最大 [timeoutMs] ポーリングする。 */
@@ -83,7 +84,7 @@ class SinkConsumerIntegrationTest {
         publish(item)
 
         await { storedGuids().contains("persist-1") }
-        val stored = repository.itemsByCategory("tech", days = 7).single { it.guid == "persist-1" }
+        val stored = repository.itemsByCategory(ItemCategory.TECH, days = 7).single { it.guid == "persist-1" }
         assertEquals(item, stored)
     }
 

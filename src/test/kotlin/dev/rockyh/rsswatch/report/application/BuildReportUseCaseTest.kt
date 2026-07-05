@@ -2,6 +2,7 @@ package dev.rockyh.rsswatch.report.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -28,22 +29,20 @@ class BuildReportUseCaseTest {
         private val itemsByCategory: Map<String, List<RssItem>> = emptyMap(),
     ) : ArchiveQueryPort {
         val receivedDays = mutableListOf<Int>()
-        val receivedKeywordCategories = mutableListOf<String>()
 
         override fun techRanking(days: Int): List<TechMention> {
             receivedDays += days
             return ranking
         }
 
-        override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> {
+        override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> {
             receivedDays += days
-            receivedKeywordCategories += category
-            return itemsByKeyword.getOrDefault(keyword, emptyList())
+            return itemsByKeyword.getOrDefault(keyword, emptyList()).filter { it.category == category.value }
         }
 
-        override fun itemsByCategory(category: String, days: Int): List<RssItem> {
+        override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
             receivedDays += days
-            return itemsByCategory.getOrDefault(category, emptyList())
+            return itemsByCategory.getOrDefault(category.value, emptyList())
         }
     }
 
@@ -69,18 +68,25 @@ class BuildReportUseCaseTest {
     }
 
     @Test
-    fun requests_only_tech_category_articles_for_cross_sections() {
-        val archive =
-            FakeArchive(
-                ranking = listOf(TechMention("Kotlin", 2), TechMention("Go", 1)),
-                itemsByKeyword = mapOf("Kotlin" to listOf(rssItem("article", category = "tech"))),
+    fun cross_section_articles_contain_only_tech_articles() {
+        val useCase =
+            BuildReportUseCase(
+                FakeArchive(
+                    ranking = listOf(TechMention("Kotlin", 2)),
+                    itemsByKeyword =
+                        mapOf(
+                            "Kotlin" to
+                                listOf(
+                                    rssItem("article", category = "tech"),
+                                    rssItem("job-posting", category = "jobs"),
+                                ),
+                        ),
+                ),
             )
-        val useCase = BuildReportUseCase(archive)
 
         val report = useCase.build(days = 7)
 
-        assertEquals(listOf("tech", "tech"), archive.receivedKeywordCategories)
-        assertEquals(listOf("article"), report.crossSections.first().articles.map { it.guid })
+        assertEquals(listOf("article"), report.crossSections.single().articles.map { it.guid })
     }
 
     @Test
