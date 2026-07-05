@@ -3,6 +3,7 @@ package dev.rockyh.rsswatch.archive.application
 import dev.rockyh.rsswatch.archive.domain.ItemQueries
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import org.springframework.stereotype.Component
 
@@ -13,9 +14,9 @@ class ArchiveQueryPortImpl(private val itemQueries: ItemQueries) : ArchiveQueryP
     override fun techRanking(days: Int): List<TechMention> =
         itemQueries.techRanking(days).map { TechMention(it.keyword, it.mentionCount) }
 
-    override fun itemsByCategory(category: String, days: Int): List<RssItem> =
+    override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> =
         itemQueries.itemsByCategory(category, days)
 
-    override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> =
-        itemQueries.itemsByKeyword(keyword, days)
+    override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
+        itemQueries.itemsByKeyword(keyword, category, days)
 }

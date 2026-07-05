@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.report.application.BuildReportUseCase
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -27,12 +28,13 @@ class ReportControllerTest {
             return listOf(TechMention("Kotlin", 2))
         }
 
-        override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> = listOf(rssItem("article-1"))
+        override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
+            listOf(rssItem("article-1"))
 
-        override fun itemsByCategory(category: String, days: Int): List<RssItem> =
+        override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> =
             when (category) {
-                "tech" -> listOf(rssItem("article-1"))
-                else -> listOf(rssItem("job-1", category = "jobs"))
+                ItemCategory.TECH -> listOf(rssItem("article-1"))
+                ItemCategory.JOBS -> listOf(rssItem("job-1", category = "jobs"))
             }
     }
 

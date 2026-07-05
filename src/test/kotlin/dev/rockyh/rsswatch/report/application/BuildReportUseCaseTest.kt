@@ -2,6 +2,7 @@ package dev.rockyh.rsswatch.report.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -34,14 +35,14 @@ class BuildReportUseCaseTest {
             return ranking
         }
 
-        override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> {
+        override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> {
             receivedDays += days
-            return itemsByKeyword.getOrDefault(keyword, emptyList())
+            return itemsByKeyword.getOrDefault(keyword, emptyList()).filter { it.category == category.value }
         }
 
-        override fun itemsByCategory(category: String, days: Int): List<RssItem> {
+        override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
             receivedDays += days
-            return itemsByCategory.getOrDefault(category, emptyList())
+            return itemsByCategory.getOrDefault(category.value, emptyList())
         }
     }
 

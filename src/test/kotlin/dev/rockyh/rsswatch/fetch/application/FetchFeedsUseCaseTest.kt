@@ -1,12 +1,12 @@
 package dev.rockyh.rsswatch.fetch.application
 
 import dev.rockyh.rsswatch.capabilities.KeywordExtractionPort
-import dev.rockyh.rsswatch.fetch.domain.FeedCategory
 import dev.rockyh.rsswatch.fetch.domain.FeedConfigSource
 import dev.rockyh.rsswatch.fetch.domain.FeedDefinition
 import dev.rockyh.rsswatch.fetch.domain.FeedParser
 import dev.rockyh.rsswatch.fetch.domain.ItemPublisher
 import dev.rockyh.rsswatch.fetch.domain.ParsedEntry
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Clock
 import java.time.Instant
@@ -20,8 +20,8 @@ class FetchFeedsUseCaseTest {
     private val fixedNow = Instant.parse("2026-07-05T12:00:00Z")
     private val clock = Clock.fixed(fixedNow, ZoneOffset.UTC)
 
-    private val techFeed = FeedDefinition("Zenn", "https://zenn.dev/feed", FeedCategory.TECH)
-    private val jobsFeed = FeedDefinition("HN Jobs", "https://hnrss.org/jobs", FeedCategory.JOBS)
+    private val techFeed = FeedDefinition("Zenn", "https://zenn.dev/feed", ItemCategory.TECH)
+    private val jobsFeed = FeedDefinition("HN Jobs", "https://hnrss.org/jobs", ItemCategory.JOBS)
 
     private val entry =
         ParsedEntry(
