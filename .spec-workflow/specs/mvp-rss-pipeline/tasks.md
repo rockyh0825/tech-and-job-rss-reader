@@ -55,7 +55,7 @@
   - _Leverage: kuery-client, Flyway_
   - _Requirements: 3.2, 5.1_
 
-- [ ] 8. SinkConsumer(archive)を実装(EmbeddedKafka 結合テスト込み)
+- [x] 8. SinkConsumer(archive)を実装(EmbeddedKafka 結合テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/archive/presentation/SinkConsumer.kt, archive/application/StoreItemsUseCase.kt
   - Test: src/test/kotlin/dev/rockyh/rsswatch/archive/SinkConsumerIntegrationTest.kt
   - EmbeddedKafka で publish → sink → DB を検証(同 guid 再配信で行数が増えない、sink 停止 → 再起動で catch-up)してから、groupId = "sink" のバッチリスナー(バッチ書き込み成功後にオフセットコミット)を実装する
