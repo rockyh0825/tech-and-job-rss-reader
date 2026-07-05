@@ -19,7 +19,7 @@
 - [ ] 3. テスト基盤を Testcontainers(PostgreSQL)へ移行
   - File: src/test/kotlin/dev/rockyh/rsswatch/ 配下のテスト共通設定(共有コンテナ)
   - Test: 接続方法は 2 系統(design.md「テスト基盤」参照)。①Spring コンテキストを立てる RssWatchApplicationTest・SinkConsumerIntegrationTest・LiveConsumerIntegrationTest(現在 `jdbc:sqlite:` をハードコード)は共有コンテナ + `@ServiceConnection` へ、②Spring コンテキストなしの RssItemRepositoryTest(現在 SQLiteDataSource を手組み)は共有コンテナの `jdbcUrl` から DataSource を手組みする形へ切り替える。MockMvc テスト(ReportControllerTest・SseControllerTest は standaloneSetup で DB 不要)は対象外
-  - この段階では `INSERT OR IGNORE` 等の方言差で **Red のまま**でよい(Red の内容が「接続できない」から「SQL 方言エラー」に変わることを確認する)。domain 単体テスト(KeywordExtractor 等)はコンテナを起動しないことも確認する
+  - この段階では `INSERT OR IGNORE` 等の方言差で **Red になってよい**(Red の内容が SQL 方言エラーであることを確認する)。domain 単体テスト(KeywordExtractor 等)はコンテナを起動しないことも確認する
   - Purpose: 本番と同じ DB でテストする基盤(要件 4)
   - _Leverage: spring-boot-testcontainers の @ServiceConnection_
   - _Requirements: 4.1, 4.2, 4.3_

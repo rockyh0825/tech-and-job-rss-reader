@@ -30,7 +30,7 @@ product.md の機能は変更しない(API・UI・Kafka パイプラインの振
 1. WHEN item を保存する THEN リポジトリ SHALL `published_at` / `fetched_at` を `TIMESTAMPTZ` として保存する
 2. WHEN 期間フィルタ・時系列ソートを行う THEN クエリ SHALL 文字列比較ではなくタイムスタンプ型の比較で行う
 3. WHEN 移行が完了した THEN コードベース SHALL 固定桁 ISO-8601 TEXT へのフォーマット処理を含まない
-4. タイムスタンプの精度はマイクロ秒とする(`TIMESTAMPTZ` の精度上限。ナノ秒は切り捨てられることを許容する)
+4. タイムスタンプの精度はマイクロ秒とする(`TIMESTAMPTZ` の精度上限。ナノ秒成分はマイクロ秒に丸められて(四捨五入されて)失われることを許容する)
 
 ### Requirement 3: Docker Compose での DB 運用
 
