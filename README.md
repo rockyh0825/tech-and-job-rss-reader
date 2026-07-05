@@ -62,14 +62,14 @@ SQLite は初回起動時に Flyway が自動でスキーマを作成する(デ�
 
 # 2. 配置(例: /opt/rss-watch)
 sudo mkdir -p /opt/rss-watch/data
-sudo cp build/libs/tech-and-job-rss-reader-*.jar /opt/rss-watch/rss-watch.jar
+sudo cp build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar /opt/rss-watch/rss-watch.jar
 sudo cp feeds.toml /opt/rss-watch/
 
 # 3. Kafka を起動(compose の restart: unless-stopped で再起動後も自動復帰)
 docker compose -f docker/docker-compose.yml up -d
 
-# 4. アプリを起動
-cd /opt/rss-watch && java -jar rss-watch.jar
+# 4. アプリを起動(DB パスは systemd unit 例と合わせておく)
+cd /opt/rss-watch && RSS_WATCH_DB_PATH=/opt/rss-watch/data/rss-watch.db java -jar rss-watch.jar
 ```
 
 環境変数(どちらも省略可):
