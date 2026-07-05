@@ -18,7 +18,7 @@ product.md の機能は変更しない(API・UI・Kafka パイプラインの振
 
 1. WHEN sink consumer がメッセージを受信した THEN sink SHALL PostgreSQL へ冪等に書き込む(同じ `guid` の再配信で重複行を作らない。`ON CONFLICT DO NOTHING`)
 2. WHEN `GET /api/report?days=N` を呼んだ THEN API SHALL 移行前と同じレスポンス構造(クロスセクション・技術記事一覧・求人一覧)を返す
-3. WHEN 全テストを実行した THEN 既存のテストスイート SHALL PostgreSQL に対して全件パスする
+3. WHEN 全テストを実行した THEN 既存のテストスイート SHALL PostgreSQL に対して全件パスする(検証内容は維持する。唯一の例外として、タイムスタンプがマイクロ秒精度になることに伴い、ナノ秒精度に依存する境界値テストはマイクロ秒基準に書き換える)
 4. IF PostgreSQL が一時停止している THEN sink SHALL オフセットをコミットせず、復旧後の再配信で取りこぼしなく蓄積する(既存の at-least-once + 冪等の性質を維持)
 
 ### Requirement 2: ネイティブ型の活用
@@ -30,6 +30,7 @@ product.md の機能は変更しない(API・UI・Kafka パイプラインの振
 1. WHEN item を保存する THEN リポジトリ SHALL `published_at` / `fetched_at` を `TIMESTAMPTZ` として保存する
 2. WHEN 期間フィルタ・時系列ソートを行う THEN クエリ SHALL 文字列比較ではなくタイムスタンプ型の比較で行う
 3. WHEN 移行が完了した THEN コードベース SHALL 固定桁 ISO-8601 TEXT へのフォーマット処理を含まない
+4. タイムスタンプの精度はマイクロ秒とする(`TIMESTAMPTZ` の精度上限。ナノ秒は切り捨てられることを許容する)
 
 ### Requirement 3: Docker Compose での DB 運用
 
@@ -60,7 +61,7 @@ product.md の機能は変更しない(API・UI・Kafka パイプラインの振
 
 1. 既存 SQLite ファイルからのデータ移行は行わない。Kafka の retention 内のメッセージから再蓄積できることを移行手順として文書化する(sink consumer group のオフセットをリセットして catch-up させる)
 2. WHEN 移行が完了した THEN README・systemd unit 例・steering ドキュメント(tech.md 等) SHALL PostgreSQL 前提の記述に更新されている
-3. WHEN 移行が完了した THEN コードベース SHALL SQLite 関連の依存・回避策(sqlite-jdbc、SqliteDialectProvider、HikariCP の単一コネクション制約) SHALL 含まない
+3. WHEN 移行が完了した THEN コードベース SHALL SQLite 関連の依存・回避策(sqlite-jdbc、SqliteDialectProvider、HikariCP の単一コネクション制約)を含まない
 
 ## Non-Functional Requirements
 
