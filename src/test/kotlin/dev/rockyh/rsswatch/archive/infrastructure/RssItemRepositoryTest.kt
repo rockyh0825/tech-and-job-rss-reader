@@ -91,7 +91,7 @@ class RssItemRepositoryTest {
 
         repository.insertIgnore(listOf(item))
 
-        val stored = repository.itemsByKeyword("Kotlin", days = 7)
+        val stored = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
         assertEquals(1, stored.size)
         assertEquals(listOf("Kafka", "Kotlin"), stored.single().keywords)
     }
@@ -250,6 +250,20 @@ class RssItemRepositoryTest {
     // --- itemsByKeyword ---
 
     @Test
+    fun items_by_keyword_returns_only_items_of_the_given_category() {
+        repository.insertIgnore(
+            listOf(
+                rssItem("article", category = "tech", keywords = listOf("Kotlin")),
+                rssItem("job", category = "jobs", keywords = listOf("Kotlin")),
+            ),
+        )
+
+        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
+
+        assertEquals(listOf("article"), items.map { it.guid })
+    }
+
+    @Test
     fun items_by_keyword_returns_only_items_tagged_with_that_keyword() {
         repository.insertIgnore(
             listOf(
@@ -259,7 +273,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
 
         assertEquals(setOf("kotlin-article", "both"), items.map { it.guid }.toSet())
     }
@@ -277,7 +291,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
 
         assertEquals(listOf("recent"), items.map { it.guid })
     }
@@ -292,7 +306,7 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val items = repository.itemsByKeyword("Kotlin", days = 7)
+        val items = repository.itemsByKeyword("Kotlin", category = "tech", days = 7)
 
         assertEquals(listOf("newer", "older"), items.map { it.guid })
     }

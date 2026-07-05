@@ -28,7 +28,7 @@ class ArchiveQueryPortImplTest {
 
         override fun itemsByCategory(category: String, days: Int): List<RssItem> = emptyList()
 
-        override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> = emptyList()
+        override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> = emptyList()
     }
 
     @Test

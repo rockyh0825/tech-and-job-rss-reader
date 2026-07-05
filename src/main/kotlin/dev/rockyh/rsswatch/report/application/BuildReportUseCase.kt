@@ -33,9 +33,7 @@ class BuildReportUseCase(private val archiveQueryPort: ArchiveQueryPort) {
                     keyword = mention.keyword,
                     mentionCount = mention.mentionCount,
                     articles =
-                        archiveQueryPort
-                            .itemsByKeyword(mention.keyword, days)
-                            .filter { it.category == ItemCategory.TECH.value },
+                        archiveQueryPort.itemsByKeyword(mention.keyword, ItemCategory.TECH.value, days),
                 )
             }
         return Report(

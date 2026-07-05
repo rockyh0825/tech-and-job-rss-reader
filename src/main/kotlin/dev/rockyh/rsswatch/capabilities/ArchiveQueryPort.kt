@@ -22,6 +22,6 @@ interface ArchiveQueryPort {
     /** 直近 [days] 日の指定カテゴリ("tech" | "jobs")の item を新しい順で返す。 */
     fun itemsByCategory(category: String, days: Int): List<RssItem>
 
-    /** 直近 [days] 日の、指定キーワードが付いた item を新しい順で返す。 */
-    fun itemsByKeyword(keyword: String, days: Int): List<RssItem>
+    /** 直近 [days] 日の、指定キーワードが付いた指定カテゴリの item を新しい順で返す。 */
+    fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem>
 }

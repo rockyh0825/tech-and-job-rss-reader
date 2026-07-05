@@ -27,7 +27,7 @@ class ReportControllerTest {
             return listOf(TechMention("Kotlin", 2))
         }
 
-        override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> = listOf(rssItem("article-1"))
+        override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> = listOf(rssItem("article-1"))
 
         override fun itemsByCategory(category: String, days: Int): List<RssItem> =
             when (category) {

@@ -98,8 +98,8 @@ class RssItemRepository(
         return assembleItems(rows)
     }
 
-    /** 直近 [days] 日の、指定キーワードが付いた item を新しい順で返す。 */
-    override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> {
+    /** 直近 [days] 日の、指定キーワードが付いた指定カテゴリの item を新しい順で返す。 */
+    override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> {
         val cutoff = cutoff(days)
         val rows =
             kueryClient
@@ -111,6 +111,7 @@ class RssItemRepository(
                     FROM items i
                     JOIN item_keywords k ON k.guid = i.guid
                     WHERE k.keyword = $keyword
+                      AND i.category = $category
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
                     ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
                     """

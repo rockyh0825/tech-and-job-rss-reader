@@ -28,14 +28,16 @@ class BuildReportUseCaseTest {
         private val itemsByCategory: Map<String, List<RssItem>> = emptyMap(),
     ) : ArchiveQueryPort {
         val receivedDays = mutableListOf<Int>()
+        val receivedKeywordCategories = mutableListOf<String>()
 
         override fun techRanking(days: Int): List<TechMention> {
             receivedDays += days
             return ranking
         }
 
-        override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> {
+        override fun itemsByKeyword(keyword: String, category: String, days: Int): List<RssItem> {
             receivedDays += days
+            receivedKeywordCategories += category
             return itemsByKeyword.getOrDefault(keyword, emptyList())
         }
 
@@ -67,25 +69,18 @@ class BuildReportUseCaseTest {
     }
 
     @Test
-    fun cross_section_articles_contain_only_tech_articles() {
-        val useCase =
-            BuildReportUseCase(
-                FakeArchive(
-                    ranking = listOf(TechMention("Kotlin", 2)),
-                    itemsByKeyword =
-                        mapOf(
-                            "Kotlin" to
-                                listOf(
-                                    rssItem("article", category = "tech"),
-                                    rssItem("job-posting", category = "jobs"),
-                                ),
-                        ),
-                ),
+    fun requests_only_tech_category_articles_for_cross_sections() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 2), TechMention("Go", 1)),
+                itemsByKeyword = mapOf("Kotlin" to listOf(rssItem("article", category = "tech"))),
             )
+        val useCase = BuildReportUseCase(archive)
 
         val report = useCase.build(days = 7)
 
-        assertEquals(listOf("article"), report.crossSections.single().articles.map { it.guid })
+        assertEquals(listOf("tech", "tech"), archive.receivedKeywordCategories)
+        assertEquals(listOf("article"), report.crossSections.first().articles.map { it.guid })
     }
 
     @Test
