@@ -5,7 +5,9 @@ import dev.hsbrysk.kuery.core.list
 import dev.rockyh.rsswatch.archive.domain.ItemQueries
 import dev.rockyh.rsswatch.archive.domain.ItemStore
 import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
@@ -24,7 +26,10 @@ import org.springframework.transaction.annotation.Transactional
  *   読み出し時はアルファベット順になる(投入時の順序は保持しない)
  */
 @Repository
-class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStore, ItemQueries {
+class RssItemRepository(
+    private val kueryClient: KueryBlockingClient,
+    private val clock: Clock = Clock.systemUTC(),
+) : ItemStore, ItemQueries {
 
     /** 新規 guid の item のみ挿入し、挿入した件数を返す(既存 guid は無視)。 */
     @Transactional
@@ -58,13 +63,14 @@ class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStor
     /** 直近 [days] 日の求人(category = "jobs")で言及された技術キーワードを言及求人数の降順で返す。 */
     override fun techRanking(days: Int): List<TechRankingEntry> {
         val cutoff = cutoff(days)
+        val jobsCategory = ItemCategory.JOBS.value
         return kueryClient
             .sql {
                 +"""
                 SELECT k.keyword AS keyword, COUNT(*) AS mentionCount
                 FROM item_keywords k
                 JOIN items i ON i.guid = k.guid
-                WHERE i.category = 'jobs'
+                WHERE i.category = $jobsCategory
                   AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
                 GROUP BY k.keyword
                 ORDER BY mentionCount DESC, k.keyword ASC
@@ -137,7 +143,7 @@ class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStor
         }
     }
 
-    private fun cutoff(days: Int): String = formatTimestamp(Instant.now().minus(Duration.ofDays(days.toLong())))
+    private fun cutoff(days: Int): String = formatTimestamp(clock.instant().minus(Duration.ofDays(days.toLong())))
 
     private fun formatTimestamp(instant: Instant): String = TIMESTAMP_FORMAT.format(instant)
 

@@ -1,7 +1,7 @@
 package dev.rockyh.rsswatch.fetch.infrastructure
 
-import dev.rockyh.rsswatch.fetch.domain.FeedCategory
 import dev.rockyh.rsswatch.fetch.domain.FeedDefinition
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
@@ -38,7 +38,7 @@ class FeedConfigLoaderTest {
         val feeds = FeedConfigLoader(feedsPath = path.toString()).feeds()
 
         assertEquals(
-            listOf(FeedDefinition("Zenn", "https://zenn.dev/feed", FeedCategory.TECH)),
+            listOf(FeedDefinition("Zenn", "https://zenn.dev/feed", ItemCategory.TECH)),
             feeds,
         )
     }
@@ -64,8 +64,8 @@ class FeedConfigLoaderTest {
 
         assertEquals(
             listOf(
-                FeedDefinition("Zenn", "https://zenn.dev/feed", FeedCategory.TECH),
-                FeedDefinition("Hacker News Jobs", "https://hnrss.org/jobs", FeedCategory.JOBS),
+                FeedDefinition("Zenn", "https://zenn.dev/feed", ItemCategory.TECH),
+                FeedDefinition("Hacker News Jobs", "https://hnrss.org/jobs", ItemCategory.JOBS),
             ),
             feeds,
         )
@@ -135,7 +135,7 @@ class FeedConfigLoaderTest {
         val feeds = loader.load(Path.of("feeds.toml"))
 
         assertEquals(9, feeds.size)
-        assertEquals(5, feeds.count { it.category == FeedCategory.TECH })
-        assertEquals(4, feeds.count { it.category == FeedCategory.JOBS })
+        assertEquals(5, feeds.count { it.category == ItemCategory.TECH })
+        assertEquals(4, feeds.count { it.category == ItemCategory.JOBS })
     }
 }

@@ -1,6 +1,7 @@
 package dev.rockyh.rsswatch.report.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import org.springframework.stereotype.Service
 
@@ -34,18 +35,13 @@ class BuildReportUseCase(private val archiveQueryPort: ArchiveQueryPort) {
                     articles =
                         archiveQueryPort
                             .itemsByKeyword(mention.keyword, days)
-                            .filter { it.category == CATEGORY_TECH },
+                            .filter { it.category == ItemCategory.TECH.value },
                 )
             }
         return Report(
             crossSections = crossSections,
-            techArticles = archiveQueryPort.itemsByCategory(CATEGORY_TECH, days),
-            jobPostings = archiveQueryPort.itemsByCategory(CATEGORY_JOBS, days),
+            techArticles = archiveQueryPort.itemsByCategory(ItemCategory.TECH.value, days),
+            jobPostings = archiveQueryPort.itemsByCategory(ItemCategory.JOBS.value, days),
         )
-    }
-
-    companion object {
-        private const val CATEGORY_TECH = "tech"
-        private const val CATEGORY_JOBS = "jobs"
     }
 }

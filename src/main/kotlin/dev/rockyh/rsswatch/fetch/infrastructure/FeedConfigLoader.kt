@@ -3,9 +3,9 @@ package dev.rockyh.rsswatch.fetch.infrastructure
 import com.fasterxml.jackson.dataformat.toml.TomlMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
-import dev.rockyh.rsswatch.fetch.domain.FeedCategory
 import dev.rockyh.rsswatch.fetch.domain.FeedConfigSource
 import dev.rockyh.rsswatch.fetch.domain.FeedDefinition
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import java.nio.file.Path
 import kotlin.io.path.readText
 import org.springframework.beans.factory.annotation.Value
@@ -40,7 +40,7 @@ class FeedConfigLoader(
             return FeedDefinition(
                 name = requireField(name, "name", feedLabel),
                 url = requireField(url, "url", feedLabel),
-                category = FeedCategory.from(requireField(category, "category", feedLabel)),
+                category = ItemCategory.from(requireField(category, "category", feedLabel)),
             )
         }
 

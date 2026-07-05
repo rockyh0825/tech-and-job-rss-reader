@@ -1,8 +1,8 @@
 package dev.rockyh.rsswatch.fetch.infrastructure
 
 import com.sun.net.httpserver.HttpServer
-import dev.rockyh.rsswatch.fetch.domain.FeedCategory
 import dev.rockyh.rsswatch.fetch.domain.FeedDefinition
+import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import java.net.InetSocketAddress
 import java.nio.file.Path
 import java.time.Duration
@@ -28,7 +28,7 @@ class RomeFeedParserTest {
     private fun feedFor(xml: String): FeedDefinition {
         val path = tempDir.resolve("feed.xml")
         path.writeText(xml)
-        return FeedDefinition("テストフィード", path.toUri().toString(), FeedCategory.TECH)
+        return FeedDefinition("テストフィード", path.toUri().toString(), ItemCategory.TECH)
     }
 
     @Test
@@ -174,7 +174,7 @@ class RomeFeedParserTest {
                 FeedDefinition(
                     "ハングするフィード",
                     "http://localhost:${server.address.port}/feed",
-                    FeedCategory.TECH,
+                    ItemCategory.TECH,
                 )
 
             assertTimeoutPreemptively(Duration.ofSeconds(5)) {
@@ -218,7 +218,7 @@ class RomeFeedParserTest {
                 FeedDefinition(
                     "UA検証フィード",
                     "http://localhost:${server.address.port}/feed",
-                    FeedCategory.TECH,
+                    ItemCategory.TECH,
                 )
 
             parser.parse(feed)
