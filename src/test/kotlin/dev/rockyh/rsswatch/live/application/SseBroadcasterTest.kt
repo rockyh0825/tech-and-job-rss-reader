@@ -22,10 +22,39 @@ class SseBroadcasterTest {
         }
     }
 
-    private class FailingEmitter : SseEmitter(0L) {
+    /** register 時の初期送信(1 回目)は成功し、以降の send で失敗する emitter。 */
+    private class FailingAfterRegisterEmitter : SseEmitter(0L) {
+        private var sends = 0
+
+        override fun send(builder: SseEventBuilder) {
+            if (sends++ > 0) throw IOException("client disconnected")
+        }
+    }
+
+    private class AlwaysFailingEmitter : SseEmitter(0L) {
         override fun send(builder: SseEventBuilder) {
             throw IOException("client disconnected")
         }
+    }
+
+    @Test
+    fun register_sends_an_initial_comment_to_flush_response_headers() {
+        val broadcaster = SseBroadcaster()
+        val emitter = RecordingEmitter()
+
+        broadcaster.register(emitter)
+
+        assertEquals(1, emitter.sentData.size)
+        assertTrue(emitter.sentData.single().contains("connected"))
+    }
+
+    @Test
+    fun register_removes_client_whose_initial_send_fails() {
+        val broadcaster = SseBroadcaster()
+
+        broadcaster.register(AlwaysFailingEmitter())
+
+        assertEquals(0, broadcaster.clientCount())
     }
 
     @Test
@@ -38,8 +67,8 @@ class SseBroadcasterTest {
 
         broadcaster.broadcast("""{"guid":"a"}""")
 
-        assertTrue(first.sentData.single().contains("""{"guid":"a"}"""))
-        assertTrue(second.sentData.single().contains("""{"guid":"a"}"""))
+        assertTrue(first.sentData.last().contains("""{"guid":"a"}"""))
+        assertTrue(second.sentData.last().contains("""{"guid":"a"}"""))
     }
 
     @Test
@@ -54,7 +83,7 @@ class SseBroadcasterTest {
     @Test
     fun broadcast_removes_clients_that_fail_to_receive_and_keeps_delivering_to_others() {
         val broadcaster = SseBroadcaster()
-        val failing = FailingEmitter()
+        val failing = FailingAfterRegisterEmitter()
         val healthy = RecordingEmitter()
         broadcaster.register(failing)
         broadcaster.register(healthy)
@@ -63,7 +92,8 @@ class SseBroadcasterTest {
         broadcaster.broadcast("second")
 
         assertEquals(1, broadcaster.clientCount())
-        assertEquals(2, healthy.sentData.size)
+        // 初期コメント + first + second
+        assertEquals(3, healthy.sentData.size)
     }
 
     @Test

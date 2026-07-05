@@ -22,6 +22,14 @@ class SseBroadcaster {
         emitter.onCompletion { emitters.remove(emitter) }
         emitter.onTimeout { emitters.remove(emitter) }
         emitter.onError { emitters.remove(emitter) }
+        // 初期コメントを送ってレスポンスヘッダを即時 flush する
+        // (これがないと最初の item まで EventSource の open が発火しない)
+        try {
+            emitter.send(SseEmitter.event().comment("connected"))
+        } catch (e: Exception) {
+            log.debug("removing SSE client that failed the initial send", e)
+            emitters.remove(emitter)
+        }
         return emitter
     }
 
