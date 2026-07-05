@@ -1,6 +1,7 @@
 package dev.rockyh.rsswatch.archive.infrastructure
 
 import dev.hsbrysk.kuery.spring.jdbc.SpringJdbcKueryClient
+import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.nio.file.Path
 import java.time.Duration

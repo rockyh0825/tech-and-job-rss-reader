@@ -2,7 +2,9 @@ package dev.rockyh.rsswatch.archive.infrastructure
 
 import dev.hsbrysk.kuery.core.KueryBlockingClient
 import dev.hsbrysk.kuery.core.list
+import dev.rockyh.rsswatch.archive.domain.ItemQueries
 import dev.rockyh.rsswatch.archive.domain.ItemStore
+import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Duration
 import java.time.Instant
@@ -10,12 +12,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
-
-/** 求人で言及された技術キーワードのランキング 1 行(言及求人数の降順)。 */
-data class TechRankingEntry(
-    val keyword: String,
-    val mentionCount: Int,
-)
 
 /**
  * SQLite への冪等書き込みと集計クエリ。SQLite 依存(INSERT OR IGNORE 等)をこのクラスに閉じ込める。
@@ -28,7 +24,7 @@ data class TechRankingEntry(
  *   読み出し時はアルファベット順になる(投入時の順序は保持しない)
  */
 @Repository
-class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStore {
+class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStore, ItemQueries {
 
     /** 新規 guid の item のみ挿入し、挿入した件数を返す(既存 guid は無視)。 */
     @Transactional
@@ -60,7 +56,7 @@ class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStor
     }
 
     /** 直近 [days] 日の求人(category = "jobs")で言及された技術キーワードを言及求人数の降順で返す。 */
-    fun techRanking(days: Int): List<TechRankingEntry> {
+    override fun techRanking(days: Int): List<TechRankingEntry> {
         val cutoff = cutoff(days)
         return kueryClient
             .sql {
@@ -78,7 +74,7 @@ class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStor
     }
 
     /** 直近 [days] 日の指定カテゴリの item を新しい順で返す。 */
-    fun itemsByCategory(category: String, days: Int): List<RssItem> {
+    override fun itemsByCategory(category: String, days: Int): List<RssItem> {
         val cutoff = cutoff(days)
         val rows =
             kueryClient
@@ -97,7 +93,7 @@ class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStor
     }
 
     /** 直近 [days] 日の、指定キーワードが付いた item を新しい順で返す。 */
-    fun itemsByKeyword(keyword: String, days: Int): List<RssItem> {
+    override fun itemsByKeyword(keyword: String, days: Int): List<RssItem> {
         val cutoff = cutoff(days)
         val rows =
             kueryClient
