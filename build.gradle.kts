@@ -3,6 +3,9 @@ plugins {
     kotlin("plugin.spring") version "2.2.20"
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
+    // kuery-client のコンパイラプラグインは Kotlin バージョンと結合する(0.11.0 = Kotlin 2.2.20)。
+    // Kotlin 更新時は https://kuery-client.hsbrysk.dev/compatibility の対応表を確認すること
+    id("dev.hsbrysk.kuery-client") version "0.11.0"
 }
 
 group = "dev.rockyh"
@@ -25,6 +28,9 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-toml")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.rometools:rome:2.1.0")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("dev.hsbrysk.kuery-client:kuery-client-spring-data-jdbc:0.11.0")
+    implementation("org.flywaydb:flyway-core")
     implementation("org.xerial:sqlite-jdbc:3.50.3.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
