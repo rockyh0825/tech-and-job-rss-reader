@@ -63,7 +63,7 @@
   - _Leverage: RssItemRepository, spring-kafka-test_
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 9. live feature を実装(テスト込み)
+- [x] 9. live feature を実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/live/presentation/LiveConsumer.kt, live/presentation/SseController.kt, live/application/SseBroadcaster.kt
   - Test: src/test/kotlin/dev/rockyh/rsswatch/live/application/SseBroadcasterTest.kt, live/LiveConsumerIntegrationTest.kt
   - 接続クライアントへの配信・切断クライアントのクリーンアップを単体テストで、groupId = "live" の即時消費 → SSE 到達を EmbeddedKafka で検証してから実装する

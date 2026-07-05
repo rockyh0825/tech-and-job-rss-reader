@@ -51,6 +51,26 @@ class KafkaConfig {
         return factory
     }
 
+    /**
+     * live 用の 1 件ずつ処理するリスナーファクトリ。
+     *
+     * live はリアルタイム配信専用で過去分の replay は不要なため、
+     * グローバル設定(earliest)を latest で上書きする(初回起動時に topic 全件を
+     * SSE へ流し込まない)。取りこぼしても蓄積は sink が担うため影響はない。
+     */
+    @Bean
+    fun liveKafkaListenerContainerFactory(
+        kafkaProperties: KafkaProperties,
+    ): ConcurrentKafkaListenerContainerFactory<String, String> {
+        val props = kafkaProperties.buildConsumerProperties(null)
+        props[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
+        props[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
+        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
+        val factory = ConcurrentKafkaListenerContainerFactory<String, String>()
+        factory.consumerFactory = DefaultKafkaConsumerFactory(props)
+        return factory
+    }
+
     companion object {
         private const val RETRY_INTERVAL_MS = 1000L
     }
