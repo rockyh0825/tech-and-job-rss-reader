@@ -2,6 +2,7 @@ package dev.rockyh.rsswatch.archive.infrastructure
 
 import dev.hsbrysk.kuery.core.KueryBlockingClient
 import dev.hsbrysk.kuery.core.list
+import dev.rockyh.rsswatch.archive.domain.ItemStore
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Duration
 import java.time.Instant
@@ -27,11 +28,11 @@ data class TechRankingEntry(
  *   読み出し時はアルファベット順になる(投入時の順序は保持しない)
  */
 @Repository
-class RssItemRepository(private val kueryClient: KueryBlockingClient) {
+class RssItemRepository(private val kueryClient: KueryBlockingClient) : ItemStore {
 
     /** 新規 guid の item のみ挿入し、挿入した件数を返す(既存 guid は無視)。 */
     @Transactional
-    fun insertIgnore(items: List<RssItem>): Int {
+    override fun insertIgnore(items: List<RssItem>): Int {
         var inserted = 0
         for (item in items) {
             val publishedAt = item.publishedAt?.let(::formatTimestamp)

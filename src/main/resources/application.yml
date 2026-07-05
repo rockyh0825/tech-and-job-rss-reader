@@ -3,6 +3,9 @@ spring:
     name: tech-and-job-rss-reader
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      # sink 初回起動時に topic の先頭から catch-up する(要件 3.3)
+      auto-offset-reset: earliest
   datasource:
     url: jdbc:sqlite:${RSS_WATCH_DB_PATH:rss-watch.db}
     hikari:
