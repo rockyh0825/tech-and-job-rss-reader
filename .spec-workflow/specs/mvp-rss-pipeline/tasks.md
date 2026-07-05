@@ -70,7 +70,7 @@
   - Purpose: リアルタイム新着表示(DB を経由しない)
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 10. report feature を実装(テスト込み)
+- [x] 10. report feature を実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/capabilities/ArchiveQueryPort.kt, archive/application/ArchiveQueryPortImpl.kt, report/application/BuildReportUseCase.kt, report/presentation/ReportController.kt(クロスリンク組み立てにロジックが出たら report/domain/ へ)
   - Test: src/test/kotlin/dev/rockyh/rsswatch/report/application/BuildReportUseCaseTest.kt, report/presentation/ReportControllerTest.kt
   - ArchiveQueryPort をモックした BuildReportUseCase の単体テスト(クロスセクションの組み立て)と、GET /api/report?days=N のレスポンス構造(①求人技術 × 関連記事クロスセクション ②技術記事一覧 ③求人一覧)・days の境界値・不正値の MockMvc テストを先に書いてから実装する
