@@ -82,7 +82,7 @@
   - クロスリンク表示(求人言及数順)+ SSE 新着欄。素の HTML/JS で作る(静的 UI のため自動テスト対象外。ブラウザで手動確認する)
   - _Requirements: 5.2, 5.3_
 
-- [ ] 12. 自宅サーバー向けの起動手順を整備
+- [x] 12. 自宅サーバー向けの起動手順を整備
   - File: README.md, docker/docker-compose.yml(必要なら systemd unit 例)
   - bootJar ビルド → Docker Compose(Kafka)→ アプリ起動までの手順。systemd 自動再起動の設定例
   - _Requirements: Non-Functional(Reliability)_
