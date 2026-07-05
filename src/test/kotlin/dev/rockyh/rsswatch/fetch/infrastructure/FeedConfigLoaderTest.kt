@@ -24,6 +24,26 @@ class FeedConfigLoaderTest {
     }
 
     @Test
+    fun feeds_reads_from_the_configured_path_as_feed_config_source() {
+        val path =
+            tomlFile(
+                """
+                [[feeds]]
+                name = "Zenn"
+                url = "https://zenn.dev/feed"
+                category = "tech"
+                """.trimIndent(),
+            )
+
+        val feeds = FeedConfigLoader(feedsPath = path.toString()).feeds()
+
+        assertEquals(
+            listOf(FeedDefinition("Zenn", "https://zenn.dev/feed", FeedCategory.TECH)),
+            feeds,
+        )
+    }
+
+    @Test
     fun parses_feeds_with_name_url_and_category() {
         val path =
             tomlFile(

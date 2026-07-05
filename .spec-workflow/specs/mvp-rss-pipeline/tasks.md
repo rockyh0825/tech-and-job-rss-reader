@@ -39,7 +39,7 @@
   - Purpose: 記事・求人テキストからの技術キーワード抽出(最重要ドメインロジック)
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 6. fetch feature を実装(テスト込み)
+- [x] 6. fetch feature を実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/fetch/application/FetchFeedsUseCase.kt, fetch/presentation/FetchScheduler.kt, fetch/infrastructure/RomeFeedParser.kt, fetch/infrastructure/KafkaItemPublisher.kt
   - Test: src/test/kotlin/dev/rockyh/rsswatch/fetch/application/FetchFeedsUseCaseTest.kt
   - パース → キーワード抽出(KeywordExtractionPort)→ publish(key = フィード名)の流れと、1 フィードの失敗が他フィードに波及しないことを、parser/publisher/Port をモックした単体テストで先に固める。@Scheduled は presentation の FetchScheduler で結線する

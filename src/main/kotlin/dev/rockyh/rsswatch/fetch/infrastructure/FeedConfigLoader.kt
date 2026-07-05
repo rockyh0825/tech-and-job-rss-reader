@@ -4,14 +4,22 @@ import com.fasterxml.jackson.dataformat.toml.TomlMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.rockyh.rsswatch.fetch.domain.FeedCategory
+import dev.rockyh.rsswatch.fetch.domain.FeedConfigSource
 import dev.rockyh.rsswatch.fetch.domain.FeedDefinition
 import java.nio.file.Path
 import kotlin.io.path.readText
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 
-/** feeds.toml を読み込んで [FeedDefinition] のリストに変換する。 */
-class FeedConfigLoader {
+/** feeds.toml を読み込んで [FeedDefinition] のリストに変換する [FeedConfigSource] 実装。 */
+@Component
+class FeedConfigLoader(
+    @Value("\${rss-watch.feeds-path:feeds.toml}") private val feedsPath: String = "feeds.toml",
+) : FeedConfigSource {
 
     private val tomlMapper = TomlMapper.builder().addModule(kotlinModule()).build()
+
+    override fun feeds(): List<FeedDefinition> = load(Path.of(feedsPath))
 
     fun load(path: Path): List<FeedDefinition> {
         val file: FeedsFile = tomlMapper.readValue(path.readText())
