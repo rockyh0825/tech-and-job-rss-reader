@@ -1,1 +1,0 @@
-org.springframework.data.jdbc.core.dialect.DialectResolver$JdbcDialectProvider=dev.rockyh.rsswatch.archive.infrastructure.SqliteDialectProvider

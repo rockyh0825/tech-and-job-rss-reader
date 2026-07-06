@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
  *
  * - レイヤー配置: UseCase → application、Controller/Consumer/Scheduler → presentation、
  *   Port → capabilities、PortImpl → application
- * - domain は純 Kotlin(Spring・Kafka・Rome・SQLite に非依存)
+ * - domain は純 Kotlin(Spring・Kafka・Rome・PostgreSQL に非依存)
  * - feature 間の直接 import は禁止(capabilities の Port 経由のみ)
  * - feature 内のレイヤー依存は外側から内側への一方向のみ:
  *   - domain はプロジェクト内では同 feature の domain と shared.contract のみ import 可
@@ -44,7 +44,7 @@ class ArchitectureTest {
                 "org.springframework.",
                 "org.apache.kafka.",
                 "com.rometools.",
-                "org.sqlite.",
+                "org.postgresql.",
                 "java.sql.",
                 "javax.sql.",
             )
@@ -124,7 +124,7 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `domain files do not import Spring Kafka Rome or SQLite`() {
+    fun `domain files do not import Spring Kafka Rome or PostgreSQL`() {
         productionScope
             .files
             .filter { it.packagee?.name.orEmpty().contains(".domain") }
@@ -135,7 +135,7 @@ class ArchitectureTest {
                     }
                 assertTrue(violations.isEmpty()) {
                     "${file.name} is in a domain package and must not depend on " +
-                        "Spring/Kafka/Rome/SQLite, but imports: ${violations.map { it.name }}"
+                        "Spring/Kafka/Rome/PostgreSQL, but imports: ${violations.map { it.name }}"
                 }
             }
     }
