@@ -14,7 +14,7 @@
   - Purpose: オリジンへの唯一の経路(アウトバウンド)を確立
   - _Requirements: 1.3, 4.1, 4.2, 4.3_
 
-- [ ] 3. cloudflared を自宅サーバーに常駐させる
+- [x] 3. cloudflared を自宅サーバーに常駐させる
   - File: docker/docker-compose.yml(`cloudflare/cloudflared` サービス追加。トークンは環境変数参照)/ または systemd 常駐(`cloudflared service install`)
   - トークンは compose に直書きせず `.env` / 環境変数で注入し、`.gitignore` を確認
   - Purpose: トンネルを張り続ける(再起動後も自動復帰)
