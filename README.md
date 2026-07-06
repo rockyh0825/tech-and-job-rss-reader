@@ -22,6 +22,7 @@ fetcher (@Scheduled + Rome + キーワード抽出)
 - [.spec-workflow/steering/tech.md](.spec-workflow/steering/tech.md) — 技術スタック・アーキテクチャ・決定ログ要約
 - [.spec-workflow/steering/structure.md](.spec-workflow/steering/structure.md) — ディレクトリ構成・レイヤー責務
 - [.spec-workflow/specs/mvp-rss-pipeline/](.spec-workflow/specs/mvp-rss-pipeline/) — MVP の requirements / design / tasks
+- [.spec-workflow/specs/postgres-migration/](.spec-workflow/specs/postgres-migration/) — SQLite → PostgreSQL 移行の requirements / design / tasks
 
 ## フィードの追加
 
