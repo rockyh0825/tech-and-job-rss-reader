@@ -11,7 +11,7 @@
 ## Alignment with Product Vision
 
 - product.md「技術トレンドの把握を日常のワークフローにする」の延長。ブラウザを開かなくても、毎朝 Discord に "今日のおすすめ" が届く
-- fetcher と同じ `@Scheduled` を後段にもう 1 つ足すだけで、既存パイプライン(fetch → Kafka → sink → DB)には手を入れない(archive の読み取り Port を 1 つ拡張するのみ)
+- fetcher と同じ `@Scheduled` を後段にもう 1 つ足すだけで、既存パイプライン(fetch → Kafka → sink → DB)には手を入れない(archive の既存読み取り Port `itemsByCategory` をそのまま再利用し、Port の追加もしない)
 - 対象は当面 **tech 記事のみ**。日本語求人が柔軟に扱えるようになった段階で jobs 対応を将来課題とする([[rss-watch-direction]])
 
 ## Requirements
@@ -55,7 +55,7 @@
 
 1. notifier は DB の**読み取り**(archive の Query Port 経由)+ 外部 API 呼び出しのみを行い、fetch / sink / live の動作に影響しないこと
 2. WHEN notifier のジョブが失敗・例外終了した THEN 次回スケジュールで通常どおり再実行され、パイプライン本体は影響を受けないこと
-3. WHEN Webhook URL 未設定で起動した THEN notifier の Bean は登録されず、アプリは通常起動すること
+3. WHEN Webhook URL 未設定で起動した THEN notify feature の Bean は一切登録されず(`@ConditionalOnProperty` で feature 一式を無効化)、アプリは通常起動すること。なお API キー未設定は「無効化」ではなく実行時フォールバック(要件 2.2)であり、トグル条件には含めない
 
 ## Non-Functional Requirements
 
