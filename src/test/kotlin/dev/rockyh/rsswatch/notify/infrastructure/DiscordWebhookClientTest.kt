@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.test.web.client.ExpectedCount
 import org.springframework.test.web.client.MockRestServiceServer
 import org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath
@@ -187,6 +188,76 @@ class DiscordWebhookClientTest {
 
         assertEquals(256, expectedTitle.length)
         assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun drops_trailing_embeds_when_total_character_count_exceeds_limit() {
+        // description 2500 文字 × 4 件 = 10000 > 6000。合計 6000 に収まる先頭 2 件だけ載せる
+        val bigEntries =
+            (1..4).map {
+                DigestEntry(
+                    title = "記事 $it",
+                    url = "https://example.com/$it",
+                    summary = "x".repeat(2500),
+                    keywords = emptyList(),
+                )
+            }
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds.length()").value(2))
+            .andRespond(withSuccess())
+
+        val result = client().post(bigEntries)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun clamp_does_not_split_surrogate_pairs() {
+        // 😀(U+1F600)は UTF-16 で 2 code unit。256 境界がペアの途中に落ちても壊れた文字を残さない
+        val emojiTitle = "😀".repeat(200) // 400 code unit
+        val entry =
+            listOf(
+                DigestEntry(
+                    title = emojiTitle,
+                    url = "https://example.com/emoji",
+                    summary = null,
+                    keywords = emptyList(),
+                ),
+            )
+        // 255 code unit 枠 → 直前が high surrogate なので 254 で切る = 完全な 😀 ×127 + 省略記号
+        val expectedTitle = "😀".repeat(127) + "…"
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].title").value(expectedTitle))
+            .andRespond(withSuccess())
+
+        val result = client().post(entry)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun retries_using_retry_after_from_json_body_when_header_absent() {
+        // Retry-After ヘッダ無し・ボディに retry_after のみ → ボディ値を尊重してリトライ
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(
+                withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("""{"message":"rate limited","retry_after":3,"global":false}""")
+                    .contentType(MediaType.APPLICATION_JSON),
+            )
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(withSuccess())
+
+        val result = client(maxRetries = 2).post(entries)
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf(3000L), sleeps)
         server.verify()
     }
 }
