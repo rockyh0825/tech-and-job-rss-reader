@@ -68,6 +68,27 @@ services:
       ]
     restart: "no"
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: rss-watch-postgres
+    ports:
+      # 認証はローカル用デフォルト値のため LAN に露出しないようループバック限定で bind
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: rsswatch
+      POSTGRES_USER: rsswatch
+      # ループバック限定 bind のため秘匿性は要求しない(compose 内デフォルト値)
+      POSTGRES_PASSWORD: rsswatch
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rsswatch -d rsswatch"]
+      interval: 30s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui:v1.3.0
     container_name: rss-watch-kafka-ui
@@ -84,3 +105,4 @@ services:
 
 volumes:
   kafka-data:
+  postgres-data:
