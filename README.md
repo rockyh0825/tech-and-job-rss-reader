@@ -202,7 +202,28 @@ Zero Trust ダッシュボード → **Access → Applications** で **Self-host
 - [ ] Access Policy の**許可メールを最小限**にする(必要な数人のみ)
 - [ ] グローバル IP を公開しない(DNS はトンネルの CNAME を指す)
 
-> **注意**: Cloudflare Access を経由しない経路(自宅 LAN からの `:8080` 直アクセス)は認証されない。これは現状の信頼レベル(自宅 LAN 内)と同じで個人ツールとして許容する。より厳格にしたい場合は、オリジンでの `Cf-Access-Jwt-Assertion` 検証(防御多層化)を spec の「任意の追加ハードニング」に沿って追加する。
+> **注意**: Cloudflare Access を経由しない経路(自宅 LAN からの `:8080` 直アクセス)は認証されない。これは現状の信頼レベル(自宅 LAN 内)と同じで個人ツールとして許容する。より厳格にしたい場合は、下記「任意ハードニング」でオリジン側の JWT 検証を有効化する。
+
+### 任意ハードニング: オリジンでの JWT 検証(防御多層化)
+
+自宅 LAN からの `:8080` 直アクセスも塞ぎたい場合、アプリ側で Cloudflare Access が付与する `Cf-Access-Jwt-Assertion`(署名済み JWT)を JWKS で検証し、**Access を経由しない全リクエストを 401 で拒否**できる。
+
+**設定した時だけ有効**になる(未設定なら従来どおり無認証で起動)。有効化には Access アプリの **AUD タグ**(手順 4 のアプリ詳細に表示)と **team ドメイン**が必要。
+
+```bash
+export RSS_WATCH_ACCESS_TEAM_DOMAIN="myteam.cloudflareaccess.com"
+export RSS_WATCH_ACCESS_AUD="<Access アプリの AUD タグ>"
+java -jar rss-watch.jar
+```
+
+| 変数 | 意味 | デフォルト |
+|---|---|---|
+| `RSS_WATCH_ACCESS_TEAM_DOMAIN` | Zero Trust の team ドメイン(`https://` は省略可) | (未設定) |
+| `RSS_WATCH_ACCESS_AUD` | Access アプリの AUD タグ。**設定時のみ検証が有効**(未設定=無効) | (未設定) |
+
+- 検証内容: 署名(Cloudflare の JWKS で RS256 検証)・`aud`・`iss`(team ドメイン)・有効期限
+- JWKS は `https://<team>/cdn-cgi/access/certs` から取得しキャッシュ・鍵ローテーションに追従する
+- 有効化すると **LAN からの直アクセスも 401** になる。デバッグで直に叩きたい場合は環境変数を外して起動する
 
 ## デイリーダイジェスト(Discord 通知)
 

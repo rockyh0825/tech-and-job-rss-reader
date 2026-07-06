@@ -41,7 +41,7 @@
   - Purpose: 自宅サーバーからの安全な外部公開手順
   - _Requirements: Non-Functional(Documentation)_
 
-- [ ] 7.(任意 / Phase 2)オリジンでの Cf-Access-Jwt-Assertion 検証を追加(テスト込み)
+- [x] 7.(任意 / Phase 2)オリジンでの Cf-Access-Jwt-Assertion 検証を追加(テスト込み)
   - 実施するのは「LAN からの :8080 直アクセスも塞ぎたい」場合のみ。既定ではアプリ無改造を維持
   - File: src/main/kotlin/dev/rockyh/rsswatch/shared/config/AccessJwtFilter.kt ほか
   - Test: 有効 JWT で通過・無し/不正 JWT で 401 を MockMvc + JWKS スタブでテストしてから実装(TDD)

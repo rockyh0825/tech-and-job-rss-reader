@@ -18,6 +18,15 @@ server:
 rss-watch:
   topic: rss.items
   feeds-path: feeds.toml
+  # 任意ハードニング(Phase 2): オリジンで Cloudflare Access の Cf-Access-Jwt-Assertion を検証する。
+  # team-domain と aud を設定したときだけ有効化され、Access を経由しない全リクエスト(LAN 直アクセス含む)を 401 で拒否する。
+  # ここにデフォルト値は置かない(未設定=未定義で @ConditionalOnProperty により無効=フィルタ未登録にするため)。
+  # 有効化する場合の例(環境変数で渡す。relaxed binding):
+  #   RSS_WATCH_ACCESS_TEAM_DOMAIN=myteam.cloudflareaccess.com
+  #   RSS_WATCH_ACCESS_AUD=<Access アプリの AUD タグ>
+  # access:
+  #   team-domain: ...
+  #   aud: ...
   fetch:
     initial-delay-ms: 10000
     interval-ms: 900000
