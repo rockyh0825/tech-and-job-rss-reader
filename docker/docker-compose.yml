@@ -116,6 +116,9 @@ services:
     command: tunnel --no-autoupdate run
     environment:
       # named tunnel のトークン。リポジトリにはコミットせず docker/.env から注入する。
+      # 注意: `--profile tunnel` 起動時にこの値が未設定/空だと cloudflared は認証に失敗し、
+      # restart: unless-stopped により再起動ループになる。必ず docker/.env を用意してから起動する。
+      # (`:?` によるフェイルファストは profile 無しのローカル開発 up -d まで壊すため使わない)
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
     # アプリはホスト上(fat jar / bootRun)で :8080 を listen するため、
     # コンテナから見た localhost をホストに一致させる(Linux ホスト前提)。
