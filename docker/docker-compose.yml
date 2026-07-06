@@ -103,6 +103,29 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Cloudflare Tunnel コネクタ。自宅サーバーから Cloudflare へアウトバウンドでトンネルを張り、
+  # 公開ホスト名(例 rss.example.com)→ ホストの :8080 を結ぶ(ポート開放不要)。
+  # 公開ルーティング(Public Hostname → http://localhost:8080)と認証(Access)は
+  # Cloudflare ダッシュボード側で設定する。ここはコネクタを常駐させるだけ。
+  cloudflared:
+    image: cloudflare/cloudflared:2025.6.1
+    container_name: rss-watch-cloudflared
+    # ローカル開発の `docker compose up -d` では起動させない。
+    # 公開時のみ `--profile tunnel` を付けて明示的に起動する(トークン未設定での restart ループを避ける)。
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      # named tunnel のトークン。リポジトリにはコミットせず docker/.env から注入する。
+      # 注意: `--profile tunnel` 起動時にこの値が未設定/空だと cloudflared は認証に失敗し、
+      # restart: unless-stopped により再起動ループになる。必ず docker/.env を用意してから起動する。
+      # (`:?` によるフェイルファストは profile 無しのローカル開発 up -d まで壊すため使わない)
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    # アプリはホスト上(fat jar / bootRun)で :8080 を listen するため、
+    # コンテナから見た localhost をホストに一致させる(Linux ホスト前提)。
+    # これによりダッシュボードの Service `http://localhost:8080` がそのまま到達する。
+    network_mode: host
+    restart: unless-stopped
+
 volumes:
   kafka-data:
   postgres-data:
