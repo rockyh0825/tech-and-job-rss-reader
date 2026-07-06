@@ -25,7 +25,7 @@ class DiscordWebhookClientTest {
     private lateinit var server: MockRestServiceServer
     private val sleeps = mutableListOf<Long>()
 
-    private fun client(maxRetries: Int = 2): DiscordWebhookClient =
+    private fun client(maxRetries: Int = 2, webhookUrl: String = this.webhookUrl): DiscordWebhookClient =
         DiscordWebhookClient(
             restClientBuilder = builder,
             webhookUrl = webhookUrl,
@@ -128,6 +128,64 @@ class DiscordWebhookClientTest {
 
         val result = client().post(entries)
 
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun returns_failure_and_does_not_send_when_webhook_url_is_blank() {
+        // MockRestServiceServer に expect を一切設定しない = リクエストが飛べば verify で検出される
+
+        val result = client(webhookUrl = "   ").post(entries)
+
+        assertTrue(result.isFailure)
+        server.verify()
+    }
+
+    @Test
+    fun caps_embeds_at_ten_when_more_entries_are_given() {
+        val elevenEntries =
+            (1..11).map {
+                DigestEntry(
+                    title = "記事 $it",
+                    url = "https://example.com/$it",
+                    summary = null,
+                    keywords = emptyList(),
+                )
+            }
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds.length()").value(10))
+            .andRespond(withSuccess())
+
+        val result = client().post(elevenEntries)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun clamps_title_to_max_length_when_it_exceeds_the_limit() {
+        val longTitle = "あ".repeat(300)
+        val entry =
+            listOf(
+                DigestEntry(
+                    title = longTitle,
+                    url = "https://example.com/long",
+                    summary = null,
+                    keywords = emptyList(),
+                ),
+            )
+        // 256 文字以内(255 文字 + 省略記号)に切り詰められること
+        val expectedTitle = "あ".repeat(255) + "…"
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].title").value(expectedTitle))
+            .andRespond(withSuccess())
+
+        val result = client().post(entry)
+
+        assertEquals(256, expectedTitle.length)
         assertTrue(result.isSuccess)
         server.verify()
     }

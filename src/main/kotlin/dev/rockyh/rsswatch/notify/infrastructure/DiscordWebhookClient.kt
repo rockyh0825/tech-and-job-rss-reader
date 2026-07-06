@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.DigestEntry
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
@@ -28,7 +29,11 @@ class DiscordWebhookClient(
     private val restClient: RestClient = restClientBuilder.build()
 
     override fun post(entries: List<DigestEntry>): Result<Unit> {
-        val payload = WebhookPayload(embeds = entries.map(::toEmbed))
+        if (webhookUrl.isBlank()) {
+            log.warn("Discord Webhook URL が空のため投稿をスキップします。RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL を設定してください。")
+            return Result.failure(IllegalStateException("Discord Webhook URL が設定されていません(空文字)"))
+        }
+        val payload = WebhookPayload(embeds = entries.take(MAX_EMBEDS).map(::toEmbed))
         var attempt = 0
         while (true) {
             val outcome = runCatching { send(payload) }
@@ -62,14 +67,22 @@ class DiscordWebhookClient(
 
     private fun toEmbed(entry: DigestEntry): Embed =
         Embed(
-            title = entry.title,
+            title = entry.title.clampTo(MAX_TITLE_LENGTH),
             url = entry.url,
-            description = entry.summary,
+            description = entry.summary?.clampTo(MAX_DESCRIPTION_LENGTH),
             fields =
                 entry.keywords
                     .takeIf { it.isNotEmpty() }
-                    ?.let { listOf(EmbedField(name = "キーワード", value = it.joinToString(", "))) },
+                    ?.let {
+                        listOf(
+                            EmbedField(name = "キーワード", value = it.joinToString(", ").clampTo(MAX_FIELD_VALUE_LENGTH)),
+                        )
+                    },
         )
+
+    /** Discord の文字数上限を超える場合は末尾を省略記号で切り詰める。上限内はそのまま返す。 */
+    private fun String.clampTo(max: Int): String =
+        if (length <= max) this else take(max - ELLIPSIS.length) + ELLIPSIS
 
     private data class WebhookPayload(val embeds: List<Embed>)
 
@@ -82,4 +95,22 @@ class DiscordWebhookClient(
     )
 
     private data class EmbedField(val name: String, val value: String)
+
+    companion object {
+        private val log = LoggerFactory.getLogger(DiscordWebhookClient::class.java)
+
+        /** Discord が 1 通の Webhook で受け付ける embed の最大数。 */
+        private const val MAX_EMBEDS = 10
+
+        /** Discord embed の title 最大文字数。 */
+        private const val MAX_TITLE_LENGTH = 256
+
+        /** Discord embed の description 最大文字数。 */
+        private const val MAX_DESCRIPTION_LENGTH = 4096
+
+        /** Discord embed field の value 最大文字数。 */
+        private const val MAX_FIELD_VALUE_LENGTH = 1024
+
+        private const val ELLIPSIS = "…"
+    }
 }

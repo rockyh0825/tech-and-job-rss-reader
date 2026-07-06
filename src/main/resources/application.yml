@@ -33,11 +33,10 @@ rss-watch:
     limit: 5
     # 投稿済み guid の照会窓(日)。日跨ぎの二重投稿防止に取得窓+αを見る
     posted-lookback-days: 2
-    # 人気フィード(選抜で優先する feedName。feeds.toml の name と一致させる)
-    popular-feeds:
-      - はてなブックマーク テクノロジー
-      - Qiita 人気記事
-      - Hacker News
+    # 人気フィード(選抜で優先する feedName。feeds.toml の name と一致させる)。
+    # カンマ区切りのスカラー文字列で指定する(Spring が String -> List<String> に分割・トリムする)。
+    # YAML シーケンスで書くと添字付きキーでしか保持されず、@Value のカンマ区切り束縛に流れない dead config になるため注意。
+    popular-feeds: "はてなブックマーク テクノロジー,Qiita 人気記事,Hacker News"
     claude:
       # 既定は再現性のため dated スナップショット。undated エイリアスは将来挙動が変わり得る
       model: claude-haiku-4-5-20251001
