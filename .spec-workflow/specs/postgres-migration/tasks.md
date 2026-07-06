@@ -38,7 +38,7 @@
   - _Leverage: 既存の SQL 資産(集計クエリは ANSI 準拠のため流用)_
   - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 6. SQLite 残滓の除去と接続設定の差し替え
+- [x] 6. SQLite 残滓の除去と接続設定の差し替え
   - File: build.gradle.kts(`sqlite-jdbc` 削除), src/main/kotlin/dev/rockyh/rsswatch/archive/infrastructure/SqliteDialectProvider.kt(削除), src/main/resources/META-INF/spring.factories(この登録 1 行だけのファイルのため、ファイルごと削除), src/main/resources/application.yml, src/test/kotlin/dev/rockyh/rsswatch/architecture/ArchitectureTest.kt(domain 禁止 import の `org.sqlite.` を `org.postgresql.` に差し替え)
   - Test: `./gradlew test` 全件 Green(ArchitectureTest 含む)
   - datasource を `RSS_WATCH_DB_URL` / `RSS_WATCH_DB_USER` / `RSS_WATCH_DB_PASSWORD`(デフォルトは compose のローカル値)に変更し、HikariCP の `maximum-pool-size: 1` を削除

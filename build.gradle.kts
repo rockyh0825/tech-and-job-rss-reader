@@ -34,9 +34,6 @@ dependencies {
     // Flyway 10 以降は DB ごとのモジュールが分離されている
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
-    // sqlite-jdbc は Task 6 で削除する(RssItemRepositoryTest が SQLiteDataSource を
-    // import しており、先に消すとテスト全体がコンパイルエラーになるため)
-    implementation("org.xerial:sqlite-jdbc:3.50.3.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")

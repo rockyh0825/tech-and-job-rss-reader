@@ -7,10 +7,10 @@ spring:
       # sink 初回起動時に topic の先頭から catch-up する(要件 3.3)
       auto-offset-reset: earliest
   datasource:
-    url: jdbc:sqlite:${RSS_WATCH_DB_PATH:rss-watch.db}
-    hikari:
-      # SQLite は同時書き込みに弱いため、単一コネクションで直列化する
-      maximum-pool-size: 1
+    # デフォルトは docker/docker-compose.yml の postgres サービスのローカル値
+    url: ${RSS_WATCH_DB_URL:jdbc:postgresql://localhost:5432/rsswatch}
+    username: ${RSS_WATCH_DB_USER:rsswatch}
+    password: ${RSS_WATCH_DB_PASSWORD:rsswatch}
 
 server:
   port: 8080
