@@ -11,6 +11,9 @@ fetcher (@Scheduled + Rome + キーワード抽出)
    └─ publish → Kafka topic: rss.items
                    ├─ sink consumer  → PostgreSQL(冪等書き込み)→ レポート / 集計 API
                    └─ live consumer  → SSE → ブラウザ(リアルタイム新着)
+
+notifier (@Scheduled 毎朝8:00)
+   └─ PostgreSQL(当日分 tech)集計 → 上位N件選抜 → Claude で3行要約 → Discord へ1通投稿
 ```
 
 - **クロスリンク(目玉機能)**: 記事・求人から技術キーワードを辞書ベースで抽出し、「求人で言及回数の多い技術」ランキングと「その技術の記事」を一画面に並べる
@@ -23,6 +26,7 @@ fetcher (@Scheduled + Rome + キーワード抽出)
 - [.spec-workflow/steering/structure.md](.spec-workflow/steering/structure.md) — ディレクトリ構成・レイヤー責務
 - [.spec-workflow/specs/mvp-rss-pipeline/](.spec-workflow/specs/mvp-rss-pipeline/) — MVP の requirements / design / tasks
 - [.spec-workflow/specs/postgres-migration/](.spec-workflow/specs/postgres-migration/) — SQLite → PostgreSQL 移行の requirements / design / tasks
+- [.spec-workflow/specs/discord-notifier/](.spec-workflow/specs/discord-notifier/) — デイリーダイジェスト(Discord 通知)の requirements / design / tasks
 
 ## フィードの追加
 
@@ -113,6 +117,34 @@ sudo systemctl enable --now rss-watch
 ```
 
 Kafka が一時停止していてもアプリは落ちない(producer/consumer がバックグラウンドで再接続し、fetcher は次周期で再巡回する)。
+
+## デイリーダイジェスト(Discord 通知)
+
+`notify` feature を有効にすると、毎朝 1 回 当日分の tech 記事から「おすすめ N 件」を選び、Claude で 3 行要約を付けて Discord に 1 通投稿する(詳細は [discord-notifier spec](.spec-workflow/specs/discord-notifier/))。
+
+**有効化には Discord Webhook URL の設定が必須**。未設定なら notify feature の Bean は一切登録されず、他の機能に影響なく通常起動する(=無効化)。API キー未設定は「無効化」ではなく実行時フォールバックで、要約なし(タイトル + リンク + キーワードのみ)で投稿を続ける。
+
+```bash
+# 最小構成: Webhook URL を渡すと有効化される(要約を付けたい場合は API キーも)
+export RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/xxxx/yyyy"
+export ANTHROPIC_API_KEY="sk-ant-..."
+java -jar rss-watch.jar
+```
+
+設定(いずれも省略可。`application.yml` の `rss-watch.notify` にデフォルトあり):
+
+| 変数 / 設定キー | 意味 | デフォルト |
+|---|---|---|
+| `RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL` | Discord Webhook URL。**設定時のみ notify feature が有効**(未設定=無効) | (未設定) |
+| `ANTHROPIC_API_KEY` | Claude API キー。未設定なら要約なしでフォールバック | (未設定) |
+| `rss-watch.notify.cron` | 配信時刻(Spring cron 式) | `0 0 8 * * *`(毎朝 8:00) |
+| `rss-watch.notify.limit` | 1 通に載せる最大件数 | `5` |
+| `rss-watch.notify.popular-feeds` | 選抜で優先する人気フィード名(`feeds.toml` の `name` と一致) | はてなブックマーク テクノロジー / Qiita 人気記事 / Hacker News |
+| `rss-watch.notify.claude.model` | 要約モデル ID | `claude-haiku-4-5-20251001` |
+| `rss-watch.notify.claude.max-tokens` | 要約の最大トークン数 | `256` |
+| `rss-watch.notify.posted-lookback-days` | 投稿済み guid の照会窓(日跨ぎの二重投稿防止) | `2` |
+
+> Webhook URL・API キーは機密情報。リポジトリにコミットせず、環境変数(systemd なら `Environment=` か `EnvironmentFile=`)で渡すこと。
 
 ## 動作確認(ローカル)
 
@@ -243,3 +275,4 @@ docker exec rss-watch-kafka /opt/kafka/bin/kafka-consumer-groups.sh \
 
 MVP 実装完了(Task 1〜12。内訳は [mvp-rss-pipeline/tasks.md](.spec-workflow/specs/mvp-rss-pipeline/tasks.md))。
 SQLite → PostgreSQL 移行完了(内訳は [postgres-migration/tasks.md](.spec-workflow/specs/postgres-migration/tasks.md))。
+デイリーダイジェスト(Discord 通知)実装完了(内訳は [discord-notifier/tasks.md](.spec-workflow/specs/discord-notifier/tasks.md))。
