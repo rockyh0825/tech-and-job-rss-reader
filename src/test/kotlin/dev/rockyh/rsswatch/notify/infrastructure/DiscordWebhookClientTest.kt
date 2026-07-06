@@ -26,12 +26,17 @@ class DiscordWebhookClientTest {
     private lateinit var server: MockRestServiceServer
     private val sleeps = mutableListOf<Long>()
 
-    private fun client(maxRetries: Int = 2, webhookUrl: String = this.webhookUrl): DiscordWebhookClient =
+    private fun client(
+        maxRetries: Int = 2,
+        webhookUrl: String = this.webhookUrl,
+        maxTotalEmbedChars: Int = 6000,
+    ): DiscordWebhookClient =
         DiscordWebhookClient(
             restClientBuilder = builder,
             webhookUrl = webhookUrl,
             maxRetries = maxRetries,
             sleeper = { sleeps.add(it) },
+            maxTotalEmbedChars = maxTotalEmbedChars,
         )
 
     private val entries =
@@ -258,23 +263,26 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun always_keeps_the_first_embed_so_the_payload_is_never_empty() {
-        // クランプ済みの単一 embed でも必ず先頭 1 件は載り、空ペイロード({"embeds":[]})=400 にならない
-        val hugeEntry =
-            listOf(
+    fun keeps_only_the_first_embed_via_fallback_when_no_embed_fits_the_total_limit() {
+        // 合計上限を極小(10)にすると、どの embed も単体で上限を超え通常ループでは 1 件も収まらない。
+        // このとき空ペイロード({"embeds":[]})=400 を避けるフォールバックが働き、先頭 1 件だけが載ること。
+        val entriesExceedingLimit =
+            (1..3).map {
                 DigestEntry(
-                    title = "あ".repeat(1000),
-                    url = "https://example.com/huge",
-                    summary = "x".repeat(10000),
-                    keywords = (1..50).map { "keyword$it" },
-                ),
-            )
+                    title = "記事 $it",
+                    url = "https://example.com/$it",
+                    summary = "x".repeat(20), // 単体で characterCount > 10 になり通常ループでは 1 件も収まらない
+                    keywords = emptyList(),
+                )
+            }
         server
             .expect(requestTo(webhookUrl))
             .andExpect(jsonPath("$.embeds.length()").value(1))
+            .andExpect(jsonPath("$.embeds[0].title").value("記事 1"))
+            .andExpect(jsonPath("$.embeds[0].url").value("https://example.com/1"))
             .andRespond(withSuccess())
 
-        val result = client().post(hugeEntry)
+        val result = client(maxTotalEmbedChars = 10).post(entriesExceedingLimit)
 
         assertTrue(result.isSuccess)
         server.verify()

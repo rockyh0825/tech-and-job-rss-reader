@@ -26,6 +26,7 @@ class DiscordWebhookClient(
     @Value("\${rss-watch.notify.discord-webhook-url:}") private val webhookUrl: String,
     @Value("\${rss-watch.notify.discord.max-retries:2}") private val maxRetries: Int,
     private val sleeper: (Long) -> Unit = { Thread.sleep(it) },
+    private val maxTotalEmbedChars: Int = DEFAULT_MAX_TOTAL_EMBED_CHARS,
 ) : DigestPublisher {
 
     private val restClient: RestClient = restClientBuilder.build()
@@ -81,7 +82,7 @@ class DiscordWebhookClient(
         runCatching { error.getResponseBodyAs(RateLimitBody::class.java)?.retryAfter }.getOrNull()
 
     /**
-     * embed を先頭から累積し、合計文字数が [MAX_TOTAL_EMBED_CHARS] を超えない範囲だけ残す。
+     * embed を先頭から累積し、合計文字数が [maxTotalEmbedChars] を超えない範囲だけ残す。
      *
      * 単一 embed は [toEmbed] でクランプ済みのため最大でも約 5381 文字(title 256 + description 4096 +
      * field name/value 1024+α)であり、6000 未満なので通常このループの先頭で break することはない。
@@ -93,7 +94,7 @@ class DiscordWebhookClient(
         var total = 0
         for (embed in embeds) {
             val chars = embed.characterCount()
-            if (total + chars > MAX_TOTAL_EMBED_CHARS) break
+            if (total + chars > maxTotalEmbedChars) break
             fitted += embed
             total += chars
         }
@@ -167,7 +168,7 @@ class DiscordWebhookClient(
         private const val MAX_EMBEDS = 10
 
         /** Discord が 1 通の全 embed 合計で受け付ける最大文字数(超過で 400)。 */
-        private const val MAX_TOTAL_EMBED_CHARS = 6000
+        private const val DEFAULT_MAX_TOTAL_EMBED_CHARS = 6000
 
         /** Discord embed の title 最大文字数。 */
         private const val MAX_TITLE_LENGTH = 256
