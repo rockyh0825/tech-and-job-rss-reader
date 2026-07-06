@@ -5,6 +5,7 @@ import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import dev.rockyh.rsswatch.testing.PostgresTestConfiguration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -43,8 +44,9 @@ class SinkConsumerIntegrationTest {
             title = "title of $guid",
             url = "https://example.com/$guid",
             summary = "summary",
-            publishedAt = Instant.now(),
-            fetchedAt = Instant.now(),
+            // TIMESTAMPTZ の格納精度(マイクロ秒)に切り詰め、DB 往復後の完全一致比較を成立させる
+            publishedAt = Instant.now().truncatedTo(ChronoUnit.MICROS),
+            fetchedAt = Instant.now().truncatedTo(ChronoUnit.MICROS),
             keywords = listOf("Kotlin"),
         )
 

@@ -10,6 +10,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.flywaydb.core.Flyway
@@ -45,12 +46,14 @@ class RssItemRepositoryTest {
         repository = RssItemRepository(kueryClient)
     }
 
+    // タイムスタンプは TIMESTAMPTZ の格納精度(マイクロ秒)に切り詰める。
+    // Instant.now() の精度は OS 依存(Linux はナノ秒)で、往復後の完全一致比較が壊れるため
     private fun rssItem(
         guid: String,
         category: String = "tech",
         title: String = "title of $guid",
-        publishedAt: Instant? = Instant.now().minus(Duration.ofHours(1)),
-        fetchedAt: Instant = Instant.now(),
+        publishedAt: Instant? = Instant.now().truncatedTo(ChronoUnit.MICROS).minus(Duration.ofHours(1)),
+        fetchedAt: Instant = Instant.now().truncatedTo(ChronoUnit.MICROS),
         keywords: List<String> = emptyList(),
     ): RssItem =
         RssItem(
@@ -108,8 +111,8 @@ class RssItemRepositoryTest {
 
     @Test
     fun round_trip_preserves_all_fields_with_keywords_sorted_alphabetically() {
-        val publishedAt = Instant.now().minus(Duration.ofHours(2))
-        val fetchedAt = Instant.now().minusSeconds(30)
+        val publishedAt = Instant.now().truncatedTo(ChronoUnit.MICROS).minus(Duration.ofHours(2))
+        val fetchedAt = Instant.now().truncatedTo(ChronoUnit.MICROS).minusSeconds(30)
         val item =
             RssItem(
                 guid = "guid-1",
