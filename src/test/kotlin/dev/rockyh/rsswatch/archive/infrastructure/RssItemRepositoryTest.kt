@@ -130,6 +130,22 @@ class RssItemRepositoryTest {
     }
 
     @Test
+    fun round_trip_preserves_instant_at_microsecond_precision() {
+        // TIMESTAMPTZ の格納精度はマイクロ秒。ナノ秒を含む Instant は
+        // 最近接のマイクロ秒に丸められて往復する(それ以上は失われない)ことを確認する
+        val fixedNow = Instant.parse("2026-07-05T15:00:00Z")
+        val fixedClockRepository = RssItemRepository(kueryClient, Clock.fixed(fixedNow, ZoneOffset.UTC))
+        val publishedAt = Instant.parse("2026-07-05T12:34:56.123456789Z")
+        val fetchedAt = Instant.parse("2026-07-05T13:00:00.000000999Z")
+        fixedClockRepository.insertIgnore(listOf(rssItem("a", publishedAt = publishedAt, fetchedAt = fetchedAt)))
+
+        val stored = fixedClockRepository.itemsByCategory(ItemCategory.TECH, days = 7).single()
+
+        assertEquals(Instant.parse("2026-07-05T12:34:56.123457Z"), stored.publishedAt)
+        assertEquals(Instant.parse("2026-07-05T13:00:00.000001Z"), stored.fetchedAt)
+    }
+
+    @Test
     fun round_trip_preserves_null_published_at() {
         repository.insertIgnore(listOf(rssItem("a", publishedAt = null)))
 
@@ -251,14 +267,15 @@ class RssItemRepositoryTest {
     }
 
     @Test
-    fun items_by_category_includes_item_published_exactly_at_cutoff_but_excludes_one_nanosecond_older() {
+    fun items_by_category_includes_item_published_exactly_at_cutoff_but_excludes_one_microsecond_older() {
+        // 境界は TIMESTAMPTZ の格納精度(マイクロ秒)に合わせる。1 ナノ秒差は格納時の丸めで失われるため
         val fixedNow = Instant.parse("2026-07-05T00:00:00Z")
         val fixedClockRepository = RssItemRepository(kueryClient, Clock.fixed(fixedNow, ZoneOffset.UTC))
         val cutoff = fixedNow.minus(Duration.ofDays(7))
         fixedClockRepository.insertIgnore(
             listOf(
                 rssItem("at-cutoff", publishedAt = cutoff),
-                rssItem("just-before-cutoff", publishedAt = cutoff.minusNanos(1)),
+                rssItem("just-before-cutoff", publishedAt = cutoff.minusNanos(1_000)),
             ),
         )
 

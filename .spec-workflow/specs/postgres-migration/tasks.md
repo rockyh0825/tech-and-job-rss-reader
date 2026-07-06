@@ -16,7 +16,7 @@
   - Purpose: PostgreSQL 移行に必要な依存を揃える(全中間状態をコンパイル可能に保つ)
   - _Requirements: 3.4, 4.1_
 
-- [ ] 3. テスト基盤を Testcontainers(PostgreSQL)へ移行
+- [x] 3. テスト基盤を Testcontainers(PostgreSQL)へ移行
   - File: src/test/kotlin/dev/rockyh/rsswatch/ 配下のテスト共通設定(共有コンテナ)
   - Test: 接続方法は 2 系統(design.md「テスト基盤」参照)。①Spring コンテキストを立てる RssWatchApplicationTest・SinkConsumerIntegrationTest・LiveConsumerIntegrationTest(現在 `jdbc:sqlite:` をハードコード)は共有コンテナ + `@ServiceConnection` へ、②Spring コンテキストなしの RssItemRepositoryTest(現在 SQLiteDataSource を手組み)は共有コンテナの `jdbcUrl` から DataSource を手組みする形へ切り替える。MockMvc テスト(ReportControllerTest・SseControllerTest は standaloneSetup で DB 不要)は対象外
   - この段階では `INSERT OR IGNORE` 等の方言差で **Red になってよい**(Red の内容が SQL 方言エラーであることを確認する)。domain 単体テスト(KeywordExtractor 等)はコンテナを起動しないことも確認する
@@ -24,13 +24,13 @@
   - _Leverage: spring-boot-testcontainers の @ServiceConnection_
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 4. Flyway マイグレーションを PostgreSQL 用に書き直し
+- [x] 4. Flyway マイグレーションを PostgreSQL 用に書き直し
   - File: src/main/resources/db/migration/V1__archive_initial.sql
   - タイムスタンプ 2 列を `TIMESTAMPTZ` に変更(design.md の DDL)。履歴を引き継ぐ既存環境がないため V1 を書き換える
   - Purpose: スキーマの PostgreSQL 化(要件 2.1, 3.4)
   - _Requirements: 2.1, 3.4_
 
-- [ ] 5. RssItemRepository を PostgreSQL 対応に修正(Green 化)
+- [x] 5. RssItemRepository を PostgreSQL 対応に修正(Green 化)
   - File: src/main/kotlin/dev/rockyh/rsswatch/archive/infrastructure/RssItemRepository.kt
   - Test: 既存 RssItemRepositoryTest を Green に戻す。加えて「保存 → 読み出しで Instant がマイクロ秒精度で一致する」往復テストを先に追加する。ナノ秒境界のケース(cutoff より 1 ナノ秒古い item の除外)は TIMESTAMPTZ の格納精度(マイクロ秒)に合わせて書き換える — これは格納精度という仕様変更に伴う正当なテスト更新(design.md「タイムスタンプ精度」参照)
   - `INSERT OR IGNORE` → `ON CONFLICT DO NOTHING`、固定桁 TEXT フォーマッタを廃止して `Instant` ⇔ `OffsetDateTime`(UTC)のバインドに変更、KDoc を PostgreSQL 前提に更新
