@@ -5,48 +5,55 @@ import dev.hsbrysk.kuery.spring.jdbc.SpringJdbcKueryClient
 import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
-import java.nio.file.Path
+import dev.rockyh.rsswatch.testing.SharedPostgresContainer
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import org.sqlite.SQLiteDataSource
+import org.postgresql.ds.PGSimpleDataSource
 
 class RssItemRepositoryTest {
-
-    @TempDir
-    lateinit var tempDir: Path
 
     private lateinit var kueryClient: KueryBlockingClient
     private lateinit var repository: RssItemRepository
 
     @BeforeEach
     fun setUp() {
-        // Arrange(共通): 一時ファイル SQLite に Flyway マイグレーションを適用する
+        // Arrange(共通): 共有 PostgreSQL コンテナに Flyway マイグレーションを適用する。
+        // Spring コンテキストなしの素の JUnit のため、DataSource は jdbcUrl から手組みする
+        val container = SharedPostgresContainer.instance
         val dataSource =
-            SQLiteDataSource().apply {
-                url = "jdbc:sqlite:${tempDir.resolve("archive-test.db")}"
+            PGSimpleDataSource().apply {
+                setUrl(container.jdbcUrl)
+                user = container.username
+                password = container.password
             }
         Flyway.configure()
             .dataSource(dataSource)
             .load()
             .migrate()
+        // DB はテスト全体で共有のため、各テストの独立性はテーブルを空にして担保する
+        dataSource.connection.use { connection ->
+            connection.createStatement().execute("TRUNCATE TABLE items, item_keywords")
+        }
         kueryClient = SpringJdbcKueryClient.builder().dataSource(dataSource).build()
         repository = RssItemRepository(kueryClient)
     }
 
+    // タイムスタンプは TIMESTAMPTZ の格納精度(マイクロ秒)に切り詰める。
+    // Instant.now() の精度は OS 依存(Linux はナノ秒)で、往復後の完全一致比較が壊れるため
     private fun rssItem(
         guid: String,
         category: String = "tech",
         title: String = "title of $guid",
-        publishedAt: Instant? = Instant.now().minus(Duration.ofHours(1)),
-        fetchedAt: Instant = Instant.now(),
+        publishedAt: Instant? = Instant.now().truncatedTo(ChronoUnit.MICROS).minus(Duration.ofHours(1)),
+        fetchedAt: Instant = Instant.now().truncatedTo(ChronoUnit.MICROS),
         keywords: List<String> = emptyList(),
     ): RssItem =
         RssItem(
@@ -104,8 +111,8 @@ class RssItemRepositoryTest {
 
     @Test
     fun round_trip_preserves_all_fields_with_keywords_sorted_alphabetically() {
-        val publishedAt = Instant.now().minus(Duration.ofHours(2))
-        val fetchedAt = Instant.now().minusSeconds(30)
+        val publishedAt = Instant.now().truncatedTo(ChronoUnit.MICROS).minus(Duration.ofHours(2))
+        val fetchedAt = Instant.now().truncatedTo(ChronoUnit.MICROS).minusSeconds(30)
         val item =
             RssItem(
                 guid = "guid-1",
@@ -123,6 +130,22 @@ class RssItemRepositoryTest {
         val stored = repository.itemsByCategory(ItemCategory.TECH, days = 7).single()
 
         assertEquals(item.copy(keywords = listOf("Kafka", "Kotlin")), stored)
+    }
+
+    @Test
+    fun round_trip_preserves_instant_at_microsecond_precision() {
+        // TIMESTAMPTZ の格納精度はマイクロ秒。ナノ秒を含む Instant は
+        // 最近接のマイクロ秒に丸められて往復する(それ以上は失われない)ことを確認する
+        val fixedNow = Instant.parse("2026-07-05T15:00:00Z")
+        val fixedClockRepository = RssItemRepository(kueryClient, Clock.fixed(fixedNow, ZoneOffset.UTC))
+        val publishedAt = Instant.parse("2026-07-05T12:34:56.123456789Z")
+        val fetchedAt = Instant.parse("2026-07-05T13:00:00.000000999Z")
+        fixedClockRepository.insertIgnore(listOf(rssItem("a", publishedAt = publishedAt, fetchedAt = fetchedAt)))
+
+        val stored = fixedClockRepository.itemsByCategory(ItemCategory.TECH, days = 7).single()
+
+        assertEquals(Instant.parse("2026-07-05T12:34:56.123457Z"), stored.publishedAt)
+        assertEquals(Instant.parse("2026-07-05T13:00:00.000001Z"), stored.fetchedAt)
     }
 
     @Test
@@ -247,14 +270,15 @@ class RssItemRepositoryTest {
     }
 
     @Test
-    fun items_by_category_includes_item_published_exactly_at_cutoff_but_excludes_one_nanosecond_older() {
+    fun items_by_category_includes_item_published_exactly_at_cutoff_but_excludes_one_microsecond_older() {
+        // 境界は TIMESTAMPTZ の格納精度(マイクロ秒)に合わせる。1 ナノ秒差は格納時の丸めで失われるため
         val fixedNow = Instant.parse("2026-07-05T00:00:00Z")
         val fixedClockRepository = RssItemRepository(kueryClient, Clock.fixed(fixedNow, ZoneOffset.UTC))
         val cutoff = fixedNow.minus(Duration.ofDays(7))
         fixedClockRepository.insertIgnore(
             listOf(
                 rssItem("at-cutoff", publishedAt = cutoff),
-                rssItem("just-before-cutoff", publishedAt = cutoff.minusNanos(1)),
+                rssItem("just-before-cutoff", publishedAt = cutoff.minusNanos(1_000)),
             ),
         )
 

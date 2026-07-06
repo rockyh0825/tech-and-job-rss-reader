@@ -3,40 +3,29 @@ package dev.rockyh.rsswatch.archive
 import dev.rockyh.rsswatch.archive.infrastructure.RssItemRepository
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
-import java.nio.file.Path
+import dev.rockyh.rsswatch.testing.PostgresTestConfiguration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.test.context.EmbeddedKafka
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 
-// initial-delay を大きくして、テスト中に @Scheduled の巡回(実フィードへのアクセス)が走らないようにする
+// initial-delay を大きくして、テスト中に @Scheduled の巡回(実フィードへのアクセス)が走らないようにする。
+// DB は共有の PostgreSQL コンテナ(PostgresTestConfiguration)に接続する
 @SpringBootTest(properties = ["rss-watch.fetch.initial-delay-ms=3600000"])
 @EmbeddedKafka(
     partitions = 1,
     topics = ["rss.items"],
     bootstrapServersProperty = "spring.kafka.bootstrap-servers",
 )
+@Import(PostgresTestConfiguration::class)
 class SinkConsumerIntegrationTest {
-
-    companion object {
-        @TempDir
-        @JvmStatic
-        lateinit var tempDir: Path
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun databaseProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { "jdbc:sqlite:${tempDir.resolve("sink-it.db")}" }
-        }
-    }
 
     @Autowired
     lateinit var kafkaTemplate: KafkaTemplate<String, String>
@@ -55,8 +44,9 @@ class SinkConsumerIntegrationTest {
             title = "title of $guid",
             url = "https://example.com/$guid",
             summary = "summary",
-            publishedAt = Instant.now(),
-            fetchedAt = Instant.now(),
+            // TIMESTAMPTZ の格納精度(マイクロ秒)に切り詰め、DB 往復後の完全一致比較を成立させる
+            publishedAt = Instant.now().truncatedTo(ChronoUnit.MICROS),
+            fetchedAt = Instant.now().truncatedTo(ChronoUnit.MICROS),
             keywords = listOf("Kotlin"),
         )
 

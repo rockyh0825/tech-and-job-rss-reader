@@ -10,17 +10,18 @@ import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * SQLite への冪等書き込みと集計クエリ。SQLite 依存(INSERT OR IGNORE 等)をこのクラスに閉じ込める。
+ * PostgreSQL への冪等書き込みと集計クエリ。方言依存(ON CONFLICT 等)をこのクラスに閉じ込める。
  * スキーマは Flyway(db/migration)が唯一の正本。
  *
- * - タイムスタンプは固定桁の ISO-8601 UTC(ナノ秒 9 桁)の TEXT で保存する。
- *   桁が固定なので辞書順比較 = 時系列比較が成立し、期間フィルタを文字列比較で行える
+ * - タイムスタンプは TIMESTAMPTZ(マイクロ秒精度)。[Instant] は UTC の [OffsetDateTime] に
+ *   変換してバインドし、読み出しも [OffsetDateTime] から [Instant] に戻す(JDBC 4.2 の標準マッピング)。
+ *   ナノ秒は格納時に最近接のマイクロ秒へ丸められる
  * - 「直近 N 日」の判定は published_at、なければ fetched_at で行う
  * - keywords は item_keywords テーブル(guid + keyword の複合主キー)に正規化して保存するため、
  *   読み出し時はアルファベット順になる(投入時の順序は保持しない)
@@ -36,24 +37,28 @@ class RssItemRepository(
     override fun insertIgnore(items: List<RssItem>): Int {
         var inserted = 0
         for (item in items) {
-            val publishedAt = item.publishedAt?.let(::formatTimestamp)
-            val fetchedAt = formatTimestamp(item.fetchedAt)
+            val publishedAt = item.publishedAt?.let(::toUtcOffset)
+            val fetchedAt = toUtcOffset(item.fetchedAt)
             val rows =
                 kueryClient
                     .sql {
                         +"""
-                        INSERT OR IGNORE INTO items
+                        INSERT INTO items
                             (guid, feed_name, category, title, url, summary, published_at, fetched_at)
                         VALUES
                             (${item.guid}, ${item.feedName}, ${item.category}, ${item.title},
                              ${item.url}, ${item.summary}, $publishedAt, $fetchedAt)
+                        ON CONFLICT (guid) DO NOTHING
                         """
                     }.rowsUpdated()
             if (rows > 0) inserted++
             for (keyword in item.keywords) {
                 kueryClient
                     .sql {
-                        +"INSERT OR IGNORE INTO item_keywords (guid, keyword) VALUES (${item.guid}, $keyword)"
+                        +"""
+                        INSERT INTO item_keywords (guid, keyword) VALUES (${item.guid}, $keyword)
+                        ON CONFLICT (guid, keyword) DO NOTHING
+                        """
                     }.rowsUpdated()
             }
         }
@@ -139,16 +144,16 @@ class RssItemRepository(
                 title = row.title,
                 url = row.url,
                 summary = row.summary,
-                publishedAt = row.publishedAt?.let(Instant::parse),
-                fetchedAt = Instant.parse(row.fetchedAt),
+                publishedAt = row.publishedAt?.toInstant(),
+                fetchedAt = row.fetchedAt.toInstant(),
                 keywords = keywordsByGuid[row.guid].orEmpty(),
             )
         }
     }
 
-    private fun cutoff(days: Int): String = formatTimestamp(clock.instant().minus(Duration.ofDays(days.toLong())))
+    private fun cutoff(days: Int): OffsetDateTime = toUtcOffset(clock.instant().minus(Duration.ofDays(days.toLong())))
 
-    private fun formatTimestamp(instant: Instant): String = TIMESTAMP_FORMAT.format(instant)
+    private fun toUtcOffset(instant: Instant): OffsetDateTime = instant.atOffset(ZoneOffset.UTC)
 
     private data class ItemRow(
         val guid: String,
@@ -157,17 +162,11 @@ class RssItemRepository(
         val title: String,
         val url: String,
         val summary: String,
-        val publishedAt: String?,
-        val fetchedAt: String,
+        val publishedAt: OffsetDateTime?,
+        val fetchedAt: OffsetDateTime,
     )
 
     private data class KeywordRow(val guid: String, val keyword: String)
 
     private data class TechRankingRow(val keyword: String, val mentionCount: Long)
-
-    companion object {
-        /** ナノ秒 9 桁固定の ISO-8601 UTC(Instant.toString() は桁が変動し辞書順が崩れるため使わない)。 */
-        private val TIMESTAMP_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS'Z'").withZone(ZoneOffset.UTC)
-    }
 }

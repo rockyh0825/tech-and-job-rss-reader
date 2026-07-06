@@ -1,6 +1,6 @@
 -- archive feature の初期スキーマ(design.md「Data Models」参照)
--- published_at / fetched_at は固定桁の ISO-8601 UTC(ナノ秒 9 桁)の TEXT。
--- 桁が固定なので辞書順比較 = 時系列比較が成立する(RssItemRepository が書式を保証する)
+-- published_at / fetched_at は TIMESTAMPTZ(マイクロ秒精度)。
+-- アプリは Instant を UTC の OffsetDateTime に変換してバインドする(RssItemRepository 参照)
 
 CREATE TABLE items (
     guid TEXT PRIMARY KEY,
@@ -9,8 +9,8 @@ CREATE TABLE items (
     title TEXT NOT NULL,
     url TEXT NOT NULL,
     summary TEXT,
-    published_at TEXT,
-    fetched_at TEXT NOT NULL
+    published_at TIMESTAMPTZ,
+    fetched_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE item_keywords (

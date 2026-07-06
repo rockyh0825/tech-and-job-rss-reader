@@ -2,42 +2,30 @@ package dev.rockyh.rsswatch.live
 
 import dev.rockyh.rsswatch.live.application.SseBroadcaster
 import dev.rockyh.rsswatch.shared.contract.RssItem
-import java.nio.file.Path
+import dev.rockyh.rsswatch.testing.PostgresTestConfiguration
 import java.time.Instant
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.kafka.test.utils.ContainerTestUtils
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 
-// initial-delay を大きくして、テスト中に @Scheduled の巡回(実フィードへのアクセス)が走らないようにする
+// initial-delay を大きくして、テスト中に @Scheduled の巡回(実フィードへのアクセス)が走らないようにする。
+// DB は共有の PostgreSQL コンテナ(PostgresTestConfiguration)に接続する
 @SpringBootTest(properties = ["rss-watch.fetch.initial-delay-ms=3600000"])
 @EmbeddedKafka(
     partitions = 1,
     topics = ["rss.items"],
     bootstrapServersProperty = "spring.kafka.bootstrap-servers",
 )
+@Import(PostgresTestConfiguration::class)
 class LiveConsumerIntegrationTest {
-
-    companion object {
-        @TempDir
-        @JvmStatic
-        lateinit var tempDir: Path
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun databaseProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url") { "jdbc:sqlite:${tempDir.resolve("live-it.db")}" }
-        }
-    }
 
     @Autowired
     lateinit var kafkaTemplate: KafkaTemplate<String, String>
