@@ -1,37 +1,49 @@
 # Tasks Document
 
-各タスクは TDD(Red → Green → Refactor)で進める。テストが先・実装が後。Security 設定は `shared/config/` に置き、feature パッケージは変更しない。
+この spec はアプリのコード/振る舞いを変えない(認証は Cloudflare エッジで行う)。したがって大半は**インフラ・運用・ドキュメントのタスク**であり、TDD の対象外(tasks の TDD ルールはコード実装タスクに適用)。任意の追加ハードニング(タスク 7)を実装する場合のみ TDD を適用する。
 
-- [ ] 1. RssWatchUsersProperties(ユーザー外部化設定)を実装(テスト込み)
-  - File: build.gradle.kts(spring-boot-starter-security, spring-security-test 追加), src/main/kotlin/dev/rockyh/rsswatch/shared/config/RssWatchUsersProperties.kt
-  - Test: src/test/kotlin/dev/rockyh/rsswatch/shared/config/RssWatchUsersPropertiesTest.kt
-  - 複数ユーザーのバインド、bcrypt ハッシュのままの保持、ユーザー空で起動 → fail-fast(明確なメッセージ)をテストしてから実装する
-  - Purpose: DB なしで数人分のユーザーを設定管理する
-  - _Requirements: 2.1, 2.2, 2.3_
+- [ ] 1. Cloudflare の前提を整備
+  - 対象: Cloudflare アカウント / Zero Trust(Free)組織、DNS を Cloudflare に向けたドメイン(既存所有 or 新規登録)
+  - 公開ホスト名(例 `rss.example.com`)を決める。ここではまだトンネル/Access は作らない
+  - Purpose: 無料枠(50 ユーザーまで)で公開する土台
+  - _Requirements: Non-Functional(前提条件)_
 
-- [ ] 2. SecurityConfig(認証必須化 + フォームログイン)を実装(テスト込み)
-  - File: src/main/kotlin/dev/rockyh/rsswatch/shared/config/SecurityConfig.kt, src/main/resources/application.yml(auth 設定例)
-  - Test: src/test/kotlin/dev/rockyh/rsswatch/shared/config/SecurityConfigTest.kt
-  - MockMvc で 未認証 `/api/report` → 401/302、未認証 `/` → ログイン誘導、認証済み → 200、`/logout` → セッション無効化 を先にテストしてから、SecurityFilterChain + InMemoryUserDetailsManager で実装する
-  - Purpose: 全エンドポイントの認証必須化
-  - _Leverage: RssWatchUsersProperties_
-  - _Requirements: 1.1, 1.2, 1.3, 3.1, 3.3_
+- [ ] 2. named tunnel を作成し、公開ホスト名 → localhost:8080 を登録
+  - 対象: Zero Trust → Networks → Tunnels で named tunnel を作成。Public Hostname に `rss.example.com` → Service `http://localhost:8080`
+  - トンネルトークンを取得し、サーバー上で**シークレットとして保管**(リポジトリにコミットしない)
+  - Purpose: オリジンへの唯一の経路(アウトバウンド)を確立
+  - _Requirements: 1.3, 4.1, 4.2, 4.3_
 
-- [ ] 3. 既存テストを認証込みでグリーンに戻す
-  - File: src/test/kotlin/dev/rockyh/rsswatch/report/presentation/ReportControllerTest.kt ほか MockMvc を使うテスト
-  - `@WithMockUser` / SecurityMockMvcRequestPostProcessors を適用し、全テストスイート(EmbeddedKafka 統合テスト含む)がグリーンであることを確認する
-  - Purpose: 認証追加による既存機能のデグレ検知
-  - _Requirements: 4.1, 4.2_
+- [ ] 3. cloudflared を自宅サーバーに常駐させる
+  - File: docker/docker-compose.yml(`cloudflare/cloudflared` サービス追加。トークンは環境変数参照)/ または systemd 常駐(`cloudflared service install`)
+  - トークンは compose に直書きせず `.env` / 環境変数で注入し、`.gitignore` を確認
+  - Purpose: トンネルを張り続ける(再起動後も自動復帰)
+  - _Requirements: 4.1, 5.3_
 
-- [ ] 4. SSE の認証下動作を検証(テスト込み)
-  - File: (必要な場合のみ)src/main/kotlin/dev/rockyh/rsswatch/shared/config/SecurityConfig.kt の調整
-  - Test: src/test/kotlin/dev/rockyh/rsswatch/live/SseAuthIntegrationTest.kt
-  - 未認証で `/api/stream` → 401/302、認証済みセッションで SSE 接続 → イベント受信できることを検証する(EventSource は Cookie 認証で動くことの担保)
-  - Purpose: ログイン後に SSE が追加操作なしで機能すること
-  - _Requirements: 1.1, 3.2_
+- [ ] 4. Cloudflare Access アプリ + ポリシーを設定
+  - 対象: Zero Trust → Access → Applications で Self-hosted アプリを作成し、ドメインに公開ホスト名を指定
+  - Policy: 許可する数人のメールアドレス(または信頼ドメイン)を Allow。認証方式は One-time PIN を既定に
+  - Session Duration を設定
+  - Purpose: エッジでの認証ゲート(許可 ID のみ到達)
+  - _Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 3.1, 3.3_
 
-- [ ] 5. README に外部公開手順を追記
+- [ ] 5. 全機能の疎通確認(手動 E2E)
+  - 許可アカウント: 公開 URL → Access 認証 → クロスリンク UI → SSE 新着受信 まで通ること
+  - 許可外アカウント: Access で拒否され、UI・API がオリジンに到達しないこと
+  - ポリシー即時反映: 許可メール追加/削除がアプリ再起動なしで反映されること
+  - フェイルセーフ: `cloudflared` 停止で公開のみ止まり、LAN 内・パイプラインが継続すること
+  - Purpose: 要件どおりに公開・遮断・SSE が機能することの担保
+  - _Requirements: 1.1, 1.2, 3.2, 5.1, 5.3_
+
+- [ ] 6. README に外部公開手順を追記
   - File: README.md
-  - ユーザー設定(環境変数 + bcrypt ハッシュの作り方)、HTTPS 化の選択肢(リバースプロキシ / Cloudflare Tunnel 等)、公開前チェックリスト(ユーザー未設定なら起動しないこと)を記載する
+  - 手順(ドメイン準備 → Tunnel 作成 → cloudflared 常駐 → Access ポリシー)、公開前チェックリスト(トークンをコミットしない・ポート開放しない・許可メールを最小限に)、無料枠の条件(50 ユーザー・要ドメイン)を記載
   - Purpose: 自宅サーバーからの安全な外部公開手順
+  - _Requirements: Non-Functional(Documentation)_
+
+- [ ] 7.(任意 / Phase 2)オリジンでの Cf-Access-Jwt-Assertion 検証を追加(テスト込み)
+  - 実施するのは「LAN からの :8080 直アクセスも塞ぎたい」場合のみ。既定ではアプリ無改造を維持
+  - File: src/main/kotlin/dev/rockyh/rsswatch/shared/config/AccessJwtFilter.kt ほか
+  - Test: 有効 JWT で通過・無し/不正 JWT で 401 を MockMvc + JWKS スタブでテストしてから実装(TDD)
+  - Purpose: 防御多層化(Access を経由しないリクエストの拒否)
   - _Requirements: Non-Functional(Security)_

@@ -9,7 +9,7 @@
 ### Technical Standards (tech.md)
 
 - 「新しい後段処理は topic `rss.items` を新しい consumer group で購読する feature として追加する」(structure.md 発展方針)にそのまま従う
-- Kafka はパイプに徹し、投稿済み管理は DB(SQLite)に置く
+- Kafka はパイプに徹し、投稿済み管理は DB(PostgreSQL)に置く
 
 ### Project Structure (structure.md)
 
@@ -37,7 +37,7 @@ flowchart LR
     T[("topic: rss.items")] -->|"groupId = notify"| C["NotifyConsumer<br/>(presentation)"]
     C --> U["NotifyItemUseCase<br/>(application)"]
     U --> P["NotificationPolicy<br/>(domain: 選別・レート制限)"]
-    U --> G["PostedGuidRepository<br/>(infrastructure: SQLite)"]
+    U --> G["PostedGuidRepository<br/>(infrastructure: PostgreSQL)"]
     U --> S["ClaudeSummarizer<br/>(infrastructure: Claude API)"]
     U --> D["DiscordWebhookClient<br/>(infrastructure: Webhook POST)"]
 ```
@@ -79,12 +79,14 @@ flowchart LR
 
 ## Data Models
 
-Flyway マイグレーション(SQLite):
+Flyway マイグレーション(PostgreSQL)。既存 `V1__archive_initial.sql` と同じく `posted_at` は
+TIMESTAMPTZ とし、アプリは Instant を UTC の OffsetDateTime に変換してバインドする
+(`RssItemRepository` と同じ作法):
 
 ```sql
 CREATE TABLE notify_posted (
   guid TEXT PRIMARY KEY,
-  posted_at TEXT NOT NULL
+  posted_at TIMESTAMPTZ NOT NULL
 );
 ```
 
@@ -108,7 +110,7 @@ CREATE TABLE notify_posted (
 
 - NotificationPolicy: tech/jobs・キーワード有無・投稿済み・レート制限超過の表駆動テスト
 - NotifyItemUseCase: Summarizer / WebhookClient / Repository をモックし、フォールバック(要約失敗 → 要約なし投稿)とスキップ(投稿済み)を検証
-- PostedGuidRepository: 一時ファイル SQLite で記録・照会・件数集計
+- PostedGuidRepository: 共有 Testcontainers PostgreSQL(`SharedPostgresContainer`)で記録・照会・件数集計
 
 ### Integration Testing
 

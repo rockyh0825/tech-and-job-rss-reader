@@ -12,9 +12,9 @@
 - [ ] 2. PostedGuidRepository(infrastructure)を実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/notify/infrastructure/PostedGuidRepository.kt, src/main/resources/db/migration/V2__notify_posted_guids.sql
   - Test: src/test/kotlin/dev/rockyh/rsswatch/notify/infrastructure/PostedGuidRepositoryTest.kt
-  - 一時ファイル SQLite + Flyway で、markPosted → isPosted、同 guid 二重 mark の冪等性、countPostedSince の境界値をテストしてから kuery-client で実装する
+  - 共有 Testcontainers PostgreSQL(`SharedPostgresContainer`)+ Flyway で、markPosted → isPosted、同 guid 二重 mark の冪等性、countPostedSince の境界値をテストしてから kuery-client で実装する
   - Purpose: 再配信・再起動での二重投稿防止
-  - _Leverage: RssItemRepositoryTest のテスト基盤_
+  - _Leverage: RssItemRepositoryTest のテスト基盤(PostgresTestSupport / SharedPostgresContainer)_
   - _Requirements: 1.2, 4.3_
 
 - [ ] 3. ClaudeSummarizer(infrastructure)を実装(テスト込み)
