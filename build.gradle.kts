@@ -34,6 +34,8 @@ dependencies {
     // Flyway 10 以降は DB ごとのモジュールが分離されている
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.postgresql:postgresql")
+    // Cloudflare Access の Cf-Access-Jwt-Assertion(JWT)を JWKS で検証する(任意ハードニング)。
+    implementation("com.nimbusds:nimbus-jose-jwt:9.48")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
