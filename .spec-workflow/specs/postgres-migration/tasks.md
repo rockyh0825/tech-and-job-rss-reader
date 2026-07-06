@@ -2,14 +2,14 @@
 
 各タスクは TDD(Red → Green → Refactor)で進める。**テストと実装は同一タスク**であり、テストが先・実装が後(インフラ・ドキュメントのタスクは除く)。移行の性質上「既存テストを PostgreSQL に向けて Red にする → 実装を直して Green に戻す」がサイクルの中心になる。
 
-- [ ] 1. docker-compose に PostgreSQL サービスを追加
+- [x] 1. docker-compose に PostgreSQL サービスを追加
   - File: docker/docker-compose.yml
   - `postgres:17-alpine` + named volume + healthcheck(`pg_isready`)+ ループバック限定 bind(`127.0.0.1:5432`)+ `restart: unless-stopped`。DB 名/ユーザーは `rsswatch`
   - Purpose: ローカル・自宅サーバー共通の PostgreSQL 実行環境
   - _Leverage: kafka サービスで確立した compose パターン_
   - _Requirements: 3.1, 3.2_
 
-- [ ] 2. PostgreSQL + Testcontainers の依存関係を追加
+- [x] 2. PostgreSQL + Testcontainers の依存関係を追加
   - File: build.gradle.kts
   - 追加: `org.postgresql:postgresql`, `org.flywaydb:flyway-database-postgresql`, `org.springframework.boot:spring-boot-testcontainers`, `org.testcontainers:postgresql`, `org.testcontainers:junit-jupiter`
   - `sqlite-jdbc` の削除はここでは行わない(RssItemRepositoryTest が SQLiteDataSource を import しており、先に消すとテスト全体がコンパイルエラーになる。削除は Task 6)

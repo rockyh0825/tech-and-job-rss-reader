@@ -31,9 +31,17 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("dev.hsbrysk.kuery-client:kuery-client-spring-data-jdbc:0.11.0")
     implementation("org.flywaydb:flyway-core")
+    // Flyway 10 以降は DB ごとのモジュールが分離されている
+    implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("org.postgresql:postgresql")
+    // sqlite-jdbc は Task 6 で削除する(RssItemRepositoryTest が SQLiteDataSource を
+    // import しており、先に消すとテスト全体がコンパイルエラーになるため)
     implementation("org.xerial:sqlite-jdbc:3.50.3.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
