@@ -241,6 +241,46 @@ class DiscordWebhookClientTest {
     }
 
     @Test
+    fun uses_default_one_second_wait_when_429_has_no_retry_after_header_or_body() {
+        // Retry-After ヘッダ無し・ボディ無しの 429 → 既定 1000ms を採用してリトライ(即リトライで叩き続けない)
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(withSuccess())
+
+        val result = client(maxRetries = 2).post(entries)
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf(1000L), sleeps)
+        server.verify()
+    }
+
+    @Test
+    fun always_keeps_the_first_embed_so_the_payload_is_never_empty() {
+        // クランプ済みの単一 embed でも必ず先頭 1 件は載り、空ペイロード({"embeds":[]})=400 にならない
+        val hugeEntry =
+            listOf(
+                DigestEntry(
+                    title = "あ".repeat(1000),
+                    url = "https://example.com/huge",
+                    summary = "x".repeat(10000),
+                    keywords = (1..50).map { "keyword$it" },
+                ),
+            )
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds.length()").value(1))
+            .andRespond(withSuccess())
+
+        val result = client().post(hugeEntry)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
     fun retries_using_retry_after_from_json_body_when_header_absent() {
         // Retry-After ヘッダ無し・ボディに retry_after のみ → ボディ値を尊重してリトライ
         server

@@ -64,6 +64,9 @@ class DiscordWebhookClient(
     /**
      * 429 のときだけ待機ミリ秒を返す。それ以外は null(リトライしない)。
      * 待機時間は `Retry-After` ヘッダ(秒)→ JSON ボディの `retry_after`(秒)→ 既定値の順に採用する。
+     *
+     * RFC 7231 上 `Retry-After` は HTTP-date 形式も取り得るが、Discord は常に数値秒を返す。
+     * よって数値秒(`toDoubleOrNull`)のみ対応し、date 形式ならボディ→既定値へフォールバックする。
      */
     private fun retryAfterMsOrNull(error: Throwable): Long? {
         if (error !is HttpClientErrorException.TooManyRequests) return null
@@ -77,7 +80,14 @@ class DiscordWebhookClient(
     private fun bodyRetryAfterSeconds(error: HttpClientErrorException): Double? =
         runCatching { error.getResponseBodyAs(RateLimitBody::class.java)?.retryAfter }.getOrNull()
 
-    /** embed を先頭から累積し、合計文字数が [MAX_TOTAL_EMBED_CHARS] を超えない範囲だけ残す。 */
+    /**
+     * embed を先頭から累積し、合計文字数が [MAX_TOTAL_EMBED_CHARS] を超えない範囲だけ残す。
+     *
+     * 単一 embed は [toEmbed] でクランプ済みのため最大でも約 5381 文字(title 256 + description 4096 +
+     * field name/value 1024+α)であり、6000 未満なので通常このループの先頭で break することはない。
+     * ただし将来クランプ定数を引き上げた場合に静かに空ペイロード({"embeds":[]})=400 を送らないよう、
+     * 入力が非空なのに 1 件も収まらなかったときは先頭 1 件だけは必ず残すフォールバックを置く。
+     */
     private fun fitWithinTotalLimit(embeds: List<Embed>): List<Embed> {
         val fitted = mutableListOf<Embed>()
         var total = 0
@@ -87,10 +97,16 @@ class DiscordWebhookClient(
             fitted += embed
             total += chars
         }
+        if (fitted.isEmpty() && embeds.isNotEmpty()) return listOf(embeds.first())
         return fitted
     }
 
-    /** Discord が合計 6000 文字上限で数える対象(title + description + 各 field name/value)。 */
+    /**
+     * Discord が合計 6000 文字上限で数える対象(title + description + 各 field name/value)。
+     * 文字数は UTF-16 code unit(`.length`)で数える。Discord の上限は本来 Unicode コードポイント基準だが、
+     * code unit 計数は常にコードポイント数以上になるため保守的(安全側)であり、400 を招かない
+     * (絵文字主体のテキストでは必要以上に切る可能性はある)。これは意図的な選択。
+     */
     private fun Embed.characterCount(): Int =
         title.length +
             (description?.length ?: 0) +
@@ -115,6 +131,9 @@ class DiscordWebhookClient(
      * Discord の文字数上限を超える場合は末尾を省略記号で切り詰める。上限内はそのまま返す。
      * サロゲートペア(絵文字等)の途中で切って壊れた文字を残さないよう、境界直前が
      * high surrogate なら 1 code unit 手前で切る。
+     *
+     * 上限 [max] は UTF-16 code unit(`.length`)で判定する。[characterCount] と同じく
+     * コードポイント基準より保守的(安全側)な意図的選択。
      */
     private fun String.clampTo(max: Int): String {
         if (length <= max) return this
