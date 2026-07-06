@@ -1,0 +1,619 @@
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :processResources
+
+> Task :compileKotlin
+w: file:///private/tmp/worktree-pg-task7/src/main/kotlin/dev/rockyh/rsswatch/fetch/infrastructure/FeedConfigLoader.kt:17:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///private/tmp/worktree-pg-task7/src/main/kotlin/dev/rockyh/rsswatch/fetch/infrastructure/KafkaItemPublisher.kt:18:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///private/tmp/worktree-pg-task7/src/main/kotlin/dev/rockyh/rsswatch/fetch/infrastructure/RomeFeedParser.kt:19:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///private/tmp/worktree-pg-task7/src/main/kotlin/dev/rockyh/rsswatch/fetch/infrastructure/RomeFeedParser.kt:20:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+
+> Task :compileJava NO-SOURCE
+> Task :classes
+> Task :resolveMainClassName
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.6)
+
+2026-07-06T10:51:56.101+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] d.rockyh.rsswatch.RssWatchApplicationKt  : Starting RssWatchApplicationKt using Java 21.0.11 with PID 88606 (/private/tmp/worktree-pg-task7/build/classes/kotlin/main started by rockyh in /private/tmp/worktree-pg-task7)
+2026-07-06T10:51:56.101+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] d.rockyh.rsswatch.RssWatchApplicationKt  : No active profile set, falling back to 1 default profile: "default"
+2026-07-06T10:51:56.352+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JDBC repositories in DEFAULT mode.
+2026-07-06T10:51:56.360+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 5 ms. Found 0 JDBC repository interfaces.
+2026-07-06T10:51:56.518+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-07-06T10:51:56.524+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-06T10:51:56.524+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-07-06T10:51:56.538+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-07-06T10:51:56.538+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 419 ms
+2026-07-06T10:51:56.577+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-07-06T10:51:56.661+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6da4feeb
+2026-07-06T10:51:56.662+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-07-06T10:51:56.754+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-07-06T10:51:56.872+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/rsswatch (PostgreSQL 17.10)
+2026-07-06T10:51:56.898+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-07-06T10:51:56.899+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.006s)
+2026-07-06T10:51:56.911+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-07-06T10:51:56.933+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-07-06T10:51:56.936+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - archive initial"
+2026-07-06T10:51:56.949+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 1 migration to schema "public", now at version v1 (execution time 00:00.006s)
+2026-07-06T10:51:57.023+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-07-06T10:51:57.055+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-sink-1
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = sink
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-07-06T10:51:57.075+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-07-06T10:51:57.122+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-07-06T10:51:57.122+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-07-06T10:51:57.122+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1783302717122
+2026-07-06T10:51:57.123+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-sink-1, groupId=sink] Subscribed to topic(s): rss.items
+2026-07-06T10:51:57.125+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = latest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-live-2
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = live
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-07-06T10:51:57.125+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-07-06T10:51:57.127+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-07-06T10:51:57.127+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-07-06T10:51:57.127+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1783302717127
+2026-07-06T10:51:57.127+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-live-2, groupId=live] Subscribed to topic(s): rss.items
+2026-07-06T10:51:57.131+09:00  INFO 88606 --- [tech-and-job-rss-reader] [           main] d.rockyh.rsswatch.RssWatchApplicationKt  : Started RssWatchApplicationKt in 1.163 seconds (process running for 1.255)
+2026-07-06T10:51:57.253+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-live-2, groupId=live] Cluster ID: bNOKlPo8R0Gn-Evx3rNT8w
+2026-07-06T10:51:57.253+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-sink-1, groupId=sink] Cluster ID: bNOKlPo8R0Gn-Evx3rNT8w
+2026-07-06T10:51:57.255+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-07-06T10:51:57.255+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-07-06T10:51:57.255+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] (Re-)joining group
+2026-07-06T10:51:57.255+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] (Re-)joining group
+2026-07-06T10:51:57.274+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] Request joining group due to: need to re-join with the given member-id: consumer-live-2-4552e976-6018-4cd0-8a1d-d5f017ffc5fc
+2026-07-06T10:51:57.274+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] Request joining group due to: need to re-join with the given member-id: consumer-sink-1-35700e14-a906-4e85-bd33-2517bf9b3557
+2026-07-06T10:51:57.274+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] (Re-)joining group
+2026-07-06T10:51:57.274+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] (Re-)joining group
+2026-07-06T10:52:00.294+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] Successfully joined group with generation Generation{generationId=7, memberId='consumer-sink-1-35700e14-a906-4e85-bd33-2517bf9b3557', protocol='range'}
+2026-07-06T10:52:00.294+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] Successfully joined group with generation Generation{generationId=7, memberId='consumer-live-2-4552e976-6018-4cd0-8a1d-d5f017ffc5fc', protocol='range'}
+2026-07-06T10:52:00.303+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] Finished assignment for group at generation 7: {consumer-live-2-4552e976-6018-4cd0-8a1d-d5f017ffc5fc=Assignment(partitions=[rss.items-0, rss.items-1, rss.items-2])}
+2026-07-06T10:52:00.303+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] Finished assignment for group at generation 7: {consumer-sink-1-35700e14-a906-4e85-bd33-2517bf9b3557=Assignment(partitions=[rss.items-0, rss.items-1, rss.items-2])}
+2026-07-06T10:52:00.337+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] Successfully synced group in generation Generation{generationId=7, memberId='consumer-sink-1-35700e14-a906-4e85-bd33-2517bf9b3557', protocol='range'}
+2026-07-06T10:52:00.337+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] Successfully synced group in generation Generation{generationId=7, memberId='consumer-live-2-4552e976-6018-4cd0-8a1d-d5f017ffc5fc', protocol='range'}
+2026-07-06T10:52:00.338+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-sink-1, groupId=sink] Notifying assignor about the new Assignment(partitions=[rss.items-0, rss.items-1, rss.items-2])
+2026-07-06T10:52:00.338+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-live-2, groupId=live] Notifying assignor about the new Assignment(partitions=[rss.items-0, rss.items-1, rss.items-2])
+2026-07-06T10:52:00.341+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-sink-1, groupId=sink] Adding newly assigned partitions: rss.items-0, rss.items-1, rss.items-2
+2026-07-06T10:52:00.341+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-live-2, groupId=live] Adding newly assigned partitions: rss.items-0, rss.items-1, rss.items-2
+2026-07-06T10:52:00.357+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition rss.items-2 to the committed offset FetchPosition{offset=270, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-07-06T10:52:00.358+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition rss.items-1 to the committed offset FetchPosition{offset=510, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-07-06T10:52:00.358+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition rss.items-0 to the committed offset FetchPosition{offset=60, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-07-06T10:52:00.359+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : sink: partitions assigned: [rss.items-0, rss.items-1, rss.items-2]
+2026-07-06T10:52:00.360+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition rss.items-2 to the committed offset FetchPosition{offset=270, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-07-06T10:52:00.361+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition rss.items-1 to the committed offset FetchPosition{offset=510, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-07-06T10:52:00.361+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition rss.items-0 to the committed offset FetchPosition{offset=60, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-07-06T10:52:00.361+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     live-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : live: partitions assigned: [rss.items-0, rss.items-1, rss.items-2]
+2026-07-06T10:52:07.465+09:00  INFO 88606 --- [tech-and-job-rss-reader] [   scheduling-1] o.a.k.clients.producer.ProducerConfig    : ProducerConfig values: 
+	acks = -1
+	auto.include.jmx.reporter = true
+	batch.size = 16384
+	bootstrap.servers = [localhost:9092]
+	buffer.memory = 33554432
+	client.dns.lookup = use_all_dns_ips
+	client.id = producer-1
+	compression.gzip.level = -1
+	compression.lz4.level = 9
+	compression.type = none
+	compression.zstd.level = 3
+	connections.max.idle.ms = 540000
+	delivery.timeout.ms = 120000
+	enable.idempotence = true
+	enable.metrics.push = true
+	interceptor.classes = []
+	key.serializer = class org.apache.kafka.common.serialization.StringSerializer
+	linger.ms = 0
+	max.block.ms = 60000
+	max.in.flight.requests.per.connection = 5
+	max.request.size = 1048576
+	metadata.max.age.ms = 300000
+	metadata.max.idle.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partitioner.adaptive.partitioning.enable = true
+	partitioner.availability.timeout.ms = 0
+	partitioner.class = null
+	partitioner.ignore.keys = false
+	receive.buffer.bytes = 32768
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	transaction.timeout.ms = 60000
+	transactional.id = null
+	value.serializer = class org.apache.kafka.common.serialization.StringSerializer
+
+2026-07-06T10:52:07.465+09:00  INFO 88606 --- [tech-and-job-rss-reader] [   scheduling-1] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-07-06T10:52:07.468+09:00  INFO 88606 --- [tech-and-job-rss-reader] [   scheduling-1] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=producer-1] Instantiated an idempotent producer.
+2026-07-06T10:52:07.472+09:00  INFO 88606 --- [tech-and-job-rss-reader] [   scheduling-1] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-07-06T10:52:07.472+09:00  INFO 88606 --- [tech-and-job-rss-reader] [   scheduling-1] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-07-06T10:52:07.472+09:00  INFO 88606 --- [tech-and-job-rss-reader] [   scheduling-1] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1783302727472
+2026-07-06T10:52:07.477+09:00  INFO 88606 --- [tech-and-job-rss-reader] [ad | producer-1] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-1] Cluster ID: bNOKlPo8R0Gn-Evx3rNT8w
+2026-07-06T10:52:07.481+09:00  INFO 88606 --- [tech-and-job-rss-reader] [ad | producer-1] o.a.k.c.p.internals.TransactionManager   : [Producer clientId=producer-1] ProducerId set to 3 with epoch 0
+2026-07-06T10:52:07.522+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:07.528+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 5 new items (5 received)
+2026-07-06T10:52:07.554+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 24 new items (24 received)
+2026-07-06T10:52:07.593+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:07.596+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 0 new items (1 received)
+2026-07-06T10:52:07.605+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (4 received)
+2026-07-06T10:52:07.610+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (3 received)
+2026-07-06T10:52:07.616+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 5 new items (5 received)
+2026-07-06T10:52:07.620+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:07.624+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:07.776+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:07.785+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 8 new items (8 received)
+2026-07-06T10:52:07.795+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 14 new items (14 received)
+2026-07-06T10:52:07.802+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 6 new items (6 received)
+2026-07-06T10:52:07.882+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:07.886+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:07.895+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 6 new items (6 received)
+2026-07-06T10:52:07.899+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 4 new items (4 received)
+2026-07-06T10:52:07.903+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:08.861+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:08.867+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:08.874+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 5 new items (5 received)
+2026-07-06T10:52:08.879+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:08.887+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 5 new items (5 received)
+2026-07-06T10:52:08.890+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:08.892+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:09.087+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:09.092+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.098+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 4 new items (4 received)
+2026-07-06T10:52:09.105+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:09.112+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:09.124+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 4 new items (4 received)
+2026-07-06T10:52:09.129+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 3 new items (3 received)
+2026-07-06T10:52:09.485+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.489+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.498+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.506+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.509+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.515+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.519+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.523+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:09.528+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:09.532+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.535+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:09.539+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:09.541+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.544+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.546+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.549+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.881+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.889+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.894+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.912+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.915+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.930+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.950+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.974+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.979+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:09.998+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.005+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.013+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.027+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.037+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.045+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.055+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.062+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.071+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.082+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.097+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.106+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.126+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.131+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.140+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:10.177+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.688+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.714+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.718+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.726+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.734+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.741+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.743+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.755+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.777+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.791+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.801+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.815+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.824+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.833+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.840+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.846+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.858+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.868+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.875+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.897+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.921+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.928+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.935+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.947+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.955+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.967+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.981+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:11.995+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.012+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.021+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.037+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.041+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.043+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.054+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.057+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.072+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.077+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.085+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.106+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.112+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.127+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.133+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.145+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.158+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.163+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.167+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.179+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.194+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.195+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.201+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.210+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.223+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.229+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.233+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.234+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.242+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.252+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.257+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.266+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.284+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.285+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.288+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.301+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.306+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.324+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.325+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.341+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.344+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.350+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.352+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.354+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.364+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.365+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.374+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.384+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.385+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.398+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.400+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.402+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.408+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.417+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.429+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.430+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.500+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.512+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.518+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.521+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.522+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 2 new items (2 received)
+2026-07-06T10:52:12.523+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.535+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.544+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.580+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.585+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.593+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.595+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.601+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.602+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.610+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:52:12.611+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)
+2026-07-06T10:53:48.178+09:00  INFO 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-07-06T10:53:48.178+09:00  INFO 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-07-06T10:53:48.183+09:00  INFO 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2026-07-06T10:54:43.011+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@6da4feeb (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.012+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@4b865437 (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.012+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@6d694a37 (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.012+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@3a4ca54a (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.012+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@66304a0a (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.012+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@1f6e9d17 (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.012+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@38f1443f (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.013+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@6748d09e (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.013+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@34cb667 (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:54:43.013+09:00  WARN 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection org.postgresql.jdbc.PgConnection@6821053c (このコネクションは既にクローズされています。). Possibly consider using a shorter maxLifetime value.
+2026-07-06T10:55:13.027+09:00 ERROR 88606 --- [tech-and-job-rss-reader] [nio-8080-exec-5] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection] with root cause
+
+java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method) ~[na:na]
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:694) ~[na:na]
+	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:549) ~[na:na]
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:592) ~[na:na]
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327) ~[na:na]
+	at java.base/java.net.Socket.connect(Socket.java:751) ~[na:na]
+	at org.postgresql.core.PGStream.createSocket(PGStream.java:261) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.core.PGStream.<init>(PGStream.java:122) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:146) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:289) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:57) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:277) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.Driver.makeConnection(Driver.java:448) ~[postgresql-42.7.7.jar:42.7.7]
+	at org.postgresql.Driver.connect(Driver.java:298) ~[postgresql-42.7.7.jar:42.7.7]
+	at com.zaxxer.hikari.util.DriverDataSource.getConnection(DriverDataSource.java:144) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.PoolBase.newConnection(PoolBase.java:370) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.PoolBase.newPoolEntry(PoolBase.java:207) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariPool.createPoolEntry(HikariPool.java:488) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariPool$PoolEntryCreator.call(HikariPool.java:752) ~[HikariCP-6.3.3.jar:na]
+	at com.zaxxer.hikari.pool.HikariPool$PoolEntryCreator.call(HikariPool.java:731) ~[HikariCP-6.3.3.jar:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-07-06T10:55:38.300+09:00  INFO 88606 --- [tech-and-job-rss-reader] [     sink-0-C-1] d.r.r.a.application.StoreItemsUseCase    : stored 1 new items (1 received)

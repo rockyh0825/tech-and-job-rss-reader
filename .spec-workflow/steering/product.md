@@ -48,8 +48,9 @@
 除外(将来の拡張):
 
 - キーワード抽出の Kafka Streams enricher への切り出し
-- PostgreSQL への移行(まず SQLite)
 - 通知(notifier)・全文検索
+
+(MVP 時点では「まず SQLite、PostgreSQL への移行は将来」としていたが、spec `postgres-migration` で PostgreSQL への移行を完了済み)
 
 ## Success Metrics
 

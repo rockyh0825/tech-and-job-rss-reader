@@ -6,7 +6,7 @@
 
 - コードは**機能(feature)単位**でパッケージを切る
 - 各 feature の内部は**レイヤー(presentation / application / domain / infrastructure)**で整理する
-- **domain 中心**: domain は Spring・Kafka・Rome・SQLite に依存しない純 Kotlin。依存は必ず外側(presentation / infrastructure)から内側(domain)へ向ける
+- **domain 中心**: domain は Spring・Kafka・Rome・PostgreSQL に依存しない純 Kotlin。依存は必ず外側(presentation / infrastructure)から内側(domain)へ向ける
 - feature をまたぐ依存は **`capabilities/` の Port(インターフェース)経由**のみ。他 feature を直接 import しない
 - **空のレイヤーは作らない**。このアプリはパイプラインで、feature によっては domain がほぼ無い(live 等)。不要なレイヤーのディレクトリは置かないが、「その種のコードを書くならこのレイヤー」という置き場所のルールは固定
 
@@ -41,7 +41,7 @@ tech-and-job-rss-reader/
     │   │   ├── archive/                 # feature: 蓄積
     │   │   │   ├── presentation/        # SinkConsumer(Kafka リスナー、groupId = "sink")
     │   │   │   ├── application/         # StoreItemsUseCase・ArchiveQueryPortImpl(Port 実装)
-    │   │   │   └── infrastructure/      # RssItemRepository(kuery-client で SQLite に生 SQL。スキーマは Flyway)
+    │   │   │   └── infrastructure/      # RssItemRepository(kuery-client で PostgreSQL に生 SQL。スキーマは Flyway)
     │   │   ├── live/                    # feature: リアルタイム新着(domain なし: Kafka → SSE 直結)
     │   │   │   ├── presentation/        # LiveConsumer(groupId = "live")・SseController
     │   │   │   └── application/         # SseBroadcaster(接続管理・配信)
@@ -65,8 +65,8 @@ tech-and-job-rss-reader/
 |---|---|---|
 | `presentation/` | 外部からの入力アダプタ: HTTP・Kafka リスナー・@Scheduled。入出力の変換のみ | `application/` |
 | `application/` | ユースケース実装。Port 実装もここに置く | `domain/`, `capabilities/` |
-| `domain/` | ビジネスルール。Spring・Kafka・Rome・SQLite に非依存(純 Kotlin) | なし(`shared/contract/` のみ可) |
-| `infrastructure/` | 外部への出力アダプタ: SQLite・Rome・Kafka producer・ファイル読み込み | `domain/`, `shared/` |
+| `domain/` | ビジネスルール。Spring・Kafka・Rome・PostgreSQL に非依存(純 Kotlin) | なし(`shared/contract/` のみ可) |
+| `infrastructure/` | 外部への出力アダプタ: PostgreSQL・Rome・Kafka producer・ファイル読み込み | `domain/`, `shared/` |
 
 ※ cleaning-app では presentation = HTTP だが、このアプリの入口は Kafka リスナーと @Scheduled も含むため「外部からの入力アダプタ」に拡張して定義する。
 
