@@ -3,6 +3,7 @@ package dev.rockyh.rsswatch.shared.config
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.proc.JWTProcessor
 import java.net.URI
+import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -32,9 +33,16 @@ class AccessJwtConfig {
             requireNotNull(properties.aud?.takeIf { it.isNotBlank() }) {
                 "rss-watch.access.aud must not be blank"
             }
-        val host = teamDomain.removePrefix("https://").removePrefix("http://").trimEnd('/')
+        val host = teamDomain.removePrefix("https://").removePrefix("http://").trim().trimEnd('/')
+        // team ドメインは素のホスト(例 myteam.cloudflareaccess.com)。パス/ポート/空白が混じると
+        // issuer・JWKS URL が黙って壊れる(誤設定は iss 不一致で全 401 に倒れるが、原因が分かりにくい)ため弾く。
+        require(host.isNotEmpty() && '/' !in host && ':' !in host && ' ' !in host) {
+            "rss-watch.access.team-domain must be a bare host like myteam.cloudflareaccess.com, but was: $teamDomain"
+        }
         val issuer = "https://$host"
         val certsUrl = URI.create("https://$host/cdn-cgi/access/certs").toURL()
+        // 運用者が導出結果を確認できるよう起動時に出す(トークンではないので秘匿不要)。
+        logger.info("Cloudflare Access JWT verification enabled (issuer={}, jwks={})", issuer, certsUrl)
         return AccessJwtProcessors.remote(certsUrl, issuer, aud)
     }
 
@@ -47,5 +55,9 @@ class AccessJwtConfig {
         registration.order = Ordered.HIGHEST_PRECEDENCE
         registration.addUrlPatterns("/*")
         return registration
+    }
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(AccessJwtConfig::class.java)
     }
 }

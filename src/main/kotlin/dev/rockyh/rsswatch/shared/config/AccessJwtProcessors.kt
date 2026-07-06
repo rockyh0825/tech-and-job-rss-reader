@@ -2,7 +2,7 @@ package dev.rockyh.rsswatch.shared.config
 
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.source.JWKSource
-import com.nimbusds.jose.jwk.source.RemoteJWKSet
+import com.nimbusds.jose.jwk.source.JWKSourceBuilder
 import com.nimbusds.jose.proc.JWSVerificationKeySelector
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.JWTClaimsSet
@@ -43,7 +43,11 @@ object AccessJwtProcessors {
         return processor
     }
 
-    /** Cloudflare の JWKS エンドポイントからネットワーク取得する本番用検証器。 */
+    /**
+     * Cloudflare の JWKS エンドポイントからネットワーク取得する本番用検証器。
+     * [JWKSourceBuilder] がキャッシュ・失敗リトライ・レート制限・アウテージ時の鍵保持を担う
+     * (JWKS 一時不達でも直近の鍵で検証を継続できる)。
+     */
     fun remote(certsUrl: URL, issuer: String, audience: String): JWTProcessor<SecurityContext> =
-        create(RemoteJWKSet(certsUrl), issuer, audience)
+        create(JWKSourceBuilder.create<SecurityContext>(certsUrl).build(), issuer, audience)
 }
