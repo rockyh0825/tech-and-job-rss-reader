@@ -5,7 +5,7 @@ import dev.hsbrysk.kuery.spring.jdbc.SpringJdbcKueryClient
 import dev.rockyh.rsswatch.archive.domain.TechRankingEntry
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
-import java.nio.file.Path
+import dev.rockyh.rsswatch.testing.SharedPostgresContainer
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -15,28 +15,32 @@ import kotlin.test.assertNull
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import org.sqlite.SQLiteDataSource
+import org.postgresql.ds.PGSimpleDataSource
 
 class RssItemRepositoryTest {
-
-    @TempDir
-    lateinit var tempDir: Path
 
     private lateinit var kueryClient: KueryBlockingClient
     private lateinit var repository: RssItemRepository
 
     @BeforeEach
     fun setUp() {
-        // Arrange(共通): 一時ファイル SQLite に Flyway マイグレーションを適用する
+        // Arrange(共通): 共有 PostgreSQL コンテナに Flyway マイグレーションを適用する。
+        // Spring コンテキストなしの素の JUnit のため、DataSource は jdbcUrl から手組みする
+        val container = SharedPostgresContainer.instance
         val dataSource =
-            SQLiteDataSource().apply {
-                url = "jdbc:sqlite:${tempDir.resolve("archive-test.db")}"
+            PGSimpleDataSource().apply {
+                setUrl(container.jdbcUrl)
+                user = container.username
+                password = container.password
             }
         Flyway.configure()
             .dataSource(dataSource)
             .load()
             .migrate()
+        // DB はテスト全体で共有のため、各テストの独立性はテーブルを空にして担保する
+        dataSource.connection.use { connection ->
+            connection.createStatement().execute("TRUNCATE TABLE items, item_keywords")
+        }
         kueryClient = SpringJdbcKueryClient.builder().dataSource(dataSource).build()
         repository = RssItemRepository(kueryClient)
     }
