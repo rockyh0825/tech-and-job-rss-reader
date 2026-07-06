@@ -27,6 +27,7 @@ notifier (@Scheduled 毎朝8:00)
 - [.spec-workflow/specs/mvp-rss-pipeline/](.spec-workflow/specs/mvp-rss-pipeline/) — MVP の requirements / design / tasks
 - [.spec-workflow/specs/postgres-migration/](.spec-workflow/specs/postgres-migration/) — SQLite → PostgreSQL 移行の requirements / design / tasks
 - [.spec-workflow/specs/discord-notifier/](.spec-workflow/specs/discord-notifier/) — デイリーダイジェスト(Discord 通知)の requirements / design / tasks
+- [.spec-workflow/specs/private-web-access/](.spec-workflow/specs/private-web-access/) — Cloudflare Tunnel + Access による外部公開の requirements / design / tasks
 
 ## フィードの追加
 
@@ -164,11 +165,14 @@ docker compose --env-file docker/.env -f docker/docker-compose.yml --profile tun
 ```
 
 - `--profile tunnel` を付けたときだけ `cloudflared` が起動する(通常のローカル開発 `docker compose up -d` では起動しない)
-- `--env-file docker/.env` は**省略不可**。省略すると Compose はリポジトリルートの `.env` を探し、`docker/.env` は読まれない
+- `--env-file docker/.env` を明示しておくと、実行ディレクトリや Compose のバージョンに依存せず確実に `docker/.env` が読まれる(推奨)。`-f docker/docker-compose.yml` 指定時は既定でも `docker/.env` が読まれるが、明示しておくと安全
 - `restart: unless-stopped` により、サーバー再起動後も自動でトンネルが復帰する
 - `cloudflared` のイメージはタグ固定(`cloudflare/cloudflared:<version>`)。更新は `docker-compose.yml` のタグを上げて `up -d` し直す
+- 本 compose 構成は **Linux ホスト前提**(cloudflared を `network_mode: host` で動かし、ホスト上のアプリの `:8080` に到達させる)。macOS/Windows の Docker Desktop では同挙動にならない点に注意
 
-> systemd で常駐させたい場合は compose の代わりに `cloudflared service install <TOKEN>` → `systemctl enable --now cloudflared` でもよい。
+> **順序に注意**: 手順 4(Access アプリ + ポリシー)を**先に作成・有効化してから**この cloudflared 起動で公開を live にすること。ポリシー未設定のまま公開すると、URL を知る第三者が一時的に無認証でオリジンに到達しうる(要件 1.1)。
+
+> systemd で常駐させたい場合は compose の代わりに `cloudflared service install <TOKEN>` でもよい(install が systemd unit の作成・起動まで行う。`systemctl status cloudflared` で稼働を確認)。
 
 **4. Cloudflare Access アプリ + ポリシーを設定**
 
