@@ -6,10 +6,6 @@
 .gradle/
 build/
 
-# ランタイム生成物
-*.db
-*.db-journal
-
 # OS
 .DS_Store
 

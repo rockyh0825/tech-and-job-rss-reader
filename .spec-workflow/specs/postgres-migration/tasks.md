@@ -45,7 +45,7 @@
   - Purpose: SQLite 依存の完全除去(要件 5.3)
   - _Requirements: 1.3, 3.3, 5.3_
 
-- [ ] 7. ドキュメント更新と移行手順の実地確認
+- [x] 7. ドキュメント更新と移行手順の実地確認
   - File: README.md, .spec-workflow/steering/tech.md, .spec-workflow/steering/structure.md, .spec-workflow/steering/product.md
   - README: 起動手順・環境変数表・「動作確認(ローカル)」の SQLite 記述を PostgreSQL(`psql` コマンド)に更新し、既存環境向けの移行手順(SQLite ファイルは移行せず、sink group のオフセットリセットで Kafka から再蓄積。retention 超過分は失われる)を追記。tech.md: Data Storage・アーキテクチャ図・決定ログ 6/8・Known Limitations を更新。structure.md / product.md の SQLite 言及(「まず SQLite」等)も更新
   - 最後に README の動作確認手順を一通り実地で流し、パイプライン全体(fetch → Kafka → sink → PostgreSQL → report/UI、冪等性、オフセットリセットでの catch-up)を確認する。あわせて PostgreSQL を一時停止 → 再開しても sink が取りこぼしなく回復すること(要件 1.4)も確認する
