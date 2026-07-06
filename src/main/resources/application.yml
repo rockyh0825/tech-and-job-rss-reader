@@ -23,3 +23,24 @@ rss-watch:
     interval-ms: 900000
     connect-timeout-ms: 10000
     read-timeout-ms: 10000
+  notify:
+    # Discord Webhook URL は環境変数 RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL で渡す(Spring Boot の relaxed binding)。
+    # ここには宣言しない(未設定=未定義のとき @ConditionalOnProperty で notify feature 一式を無効化=Bean 未登録
+    # にして通常起動させるため。空文字デフォルトを置くと条件が真になってしまう)。
+    # 配信時刻(cron)。既定は毎朝 8:00
+    cron: "0 0 8 * * *"
+    # ダイジェストに載せる最大件数
+    limit: 5
+    # 投稿済み guid の照会窓(日)。日跨ぎの二重投稿防止に取得窓+αを見る
+    posted-lookback-days: 2
+    # 人気フィード(選抜で優先する feedName。feeds.toml の name と一致させる)。
+    # カンマ区切りのスカラー文字列で指定する(Spring が String -> List<String> に分割・トリムする)。
+    # YAML シーケンスで書くと添字付きキーでしか保持されず、@Value のカンマ区切り束縛に流れない dead config になるため注意。
+    popular-feeds: "はてなブックマーク テクノロジー,Qiita 人気記事,Hacker News"
+    claude:
+      # 既定は再現性のため dated スナップショット。undated エイリアスは将来挙動が変わり得る
+      model: claude-haiku-4-5-20251001
+      api-key: ${ANTHROPIC_API_KEY:}
+      max-tokens: 256
+    discord:
+      max-retries: 2

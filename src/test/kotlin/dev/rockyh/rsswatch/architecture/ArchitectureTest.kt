@@ -22,7 +22,7 @@ class ArchitectureTest {
     companion object {
         private const val BASE_PACKAGE = "dev.rockyh.rsswatch"
 
-        private val featurePackages = setOf("fetch", "keywords", "archive", "live", "report")
+        private val featurePackages = setOf("fetch", "keywords", "archive", "live", "report", "notify")
 
         private val layerPackages = setOf("presentation", "application", "domain", "infrastructure")
 
