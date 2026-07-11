@@ -22,3 +22,41 @@ jobs:
 
       - name: Build and test
         run: ./gradlew build
+
+      # main への push 時のみ、自宅サーバーへのデプロイ用に成果物を渡す
+      - name: Upload deploy artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rss-watch-deploy
+          path: |
+            build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar
+            feeds.toml
+          retention-days: 3
+          if-no-files-found: error
+
+  # 自宅サーバー常駐の self-hosted runner が jar を配置してサービスを再起動する。
+  # セットアップ手順は README の「自動デプロイ」参照。
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    concurrency:
+      group: deploy-home-server
+      cancel-in-progress: false
+    steps:
+      - name: Download deploy artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rss-watch-deploy
+
+      - name: Deploy jar and restart service
+        run: |
+          cp build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar /opt/rss-watch/rss-watch.jar
+          cp feeds.toml /opt/rss-watch/feeds.toml
+          sudo systemctl restart rss-watch
+
+      - name: Verify service is active
+        run: |
+          sleep 10
+          systemctl is-active rss-watch

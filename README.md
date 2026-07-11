@@ -119,6 +119,37 @@ sudo systemctl enable --now rss-watch
 
 Kafka が一時停止していてもアプリは落ちない(producer/consumer がバックグラウンドで再接続し、fetcher は次周期で再巡回する)。
 
+## 自動デプロイ(GitHub Actions self-hosted runner)
+
+main へ push(PR マージ)されると、GitHub ホストの runner でビルド・テストした jar を、自宅サーバー常駐の self-hosted runner が受け取って `/opt/rss-watch/` に配置し、`rss-watch.service` を再起動する(`.github/workflows/ci.yml` の `deploy` ジョブ)。runner は GitHub へ**アウトバウンド**で long-poll するだけなので、ポート開放は不要。
+
+### サーバー側の初回セットアップ
+
+```bash
+# 1. runner を配置ディレクトリに書き込めるユーザー(rocky)でインストール
+#    GitHub → リポジトリの Settings → Actions → Runners → New self-hosted runner の
+#    表示手順どおりに config.sh まで実行する(--url と --token はそこに表示される)
+mkdir ~/actions-runner && cd ~/actions-runner
+# (curl でダウンロード → tar 展開 → ./config.sh --url ... --token ...)
+
+# 2. systemd サービスとして常駐させる
+sudo ./svc.sh install rocky
+sudo ./svc.sh start
+
+# 3. 配置先を runner ユーザーが書き込めるようにする
+sudo chown -R rocky:rocky /opt/rss-watch
+
+# 4. サービス再起動だけパスワードなし sudo を許可する
+echo 'rocky ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart rss-watch' | sudo tee /etc/sudoers.d/rss-watch-deploy
+sudo chmod 440 /etc/sudoers.d/rss-watch-deploy
+```
+
+### セキュリティ設定(public リポジトリでは必須)
+
+このリポジトリは public のため、フォークからの PR が workflow を書き換えて self-hosted runner 上でコードを実行するのを防ぐ必要がある。リポジトリの **Settings → Actions → General → Fork pull request workflows from outside collaborators** で **「Require approval for all outside collaborators」** を選択すること(外部からの PR は承認するまで workflow が一切走らなくなる)。`deploy` ジョブ自体も `push` + `main` のときだけ動く条件になっており、PR では self-hosted runner を使わない。
+
+> feeds.toml もデプロイのたびにリポジトリの内容で上書きされる。フィードの追加・変更はサーバー上で直接編集せず、リポジトリ側を変更して main にマージすること。
+
 ## 外部公開(Cloudflare Tunnel + Access)
 
 自宅サーバーの Web UI(クロスリンク表示 + SSE 新着)を、**自分と許可した数人だけ**がアクセスできる状態でインターネット公開する手順。**アプリ本体は無改造**で、認証・TLS 終端・アクセス制御はすべて Cloudflare エッジで行う。ルーターのポート開放・グローバル IP 公開・DDNS のいずれも不要(`cloudflared` が Cloudflare へ**アウトバウンド**でトンネルを張るため)。
