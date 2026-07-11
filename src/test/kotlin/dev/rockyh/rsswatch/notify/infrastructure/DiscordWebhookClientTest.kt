@@ -1,6 +1,7 @@
 package dev.rockyh.rsswatch.notify.infrastructure
 
-import dev.rockyh.rsswatch.notify.domain.DigestEntry
+import dev.rockyh.rsswatch.notify.domain.DigestArticle
+import dev.rockyh.rsswatch.notify.domain.TechDigest
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -21,6 +22,7 @@ import org.springframework.web.client.RestClient
 class DiscordWebhookClientTest {
 
     private val webhookUrl = "https://discord.example/webhook/abc"
+    private val siteUrl = "https://site.example/"
 
     private lateinit var builder: RestClient.Builder
     private lateinit var server: MockRestServiceServer
@@ -34,24 +36,24 @@ class DiscordWebhookClientTest {
         DiscordWebhookClient(
             restClientBuilder = builder,
             webhookUrl = webhookUrl,
+            siteUrl = siteUrl,
             maxRetries = maxRetries,
             sleeper = { sleeps.add(it) },
             maxTotalEmbedChars = maxTotalEmbedChars,
         )
 
-    private val entries =
+    private fun article(title: String, url: String, summary: String?): DigestArticle = DigestArticle(title, url, summary)
+
+    private val digests =
         listOf(
-            DigestEntry(
-                title = "Kotlin の記事",
-                url = "https://example.com/1",
-                summary = "1行目\n2行目\n3行目",
-                keywords = listOf("Kotlin", "Kafka"),
-            ),
-            DigestEntry(
-                title = "要約なしの記事",
-                url = "https://example.com/2",
-                summary = null,
-                keywords = listOf("Go"),
+            TechDigest(
+                keyword = "Kotlin",
+                mentionCount = 5,
+                articles =
+                    listOf(
+                        article("Kotlin の記事", "https://example.com/1", "1行目\n2行目\n3行目"),
+                        article("要約なしの記事", "https://example.com/2", null),
+                    ),
             ),
         )
 
@@ -63,19 +65,50 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun posts_all_entries_as_embeds_in_a_single_request() {
+    fun posts_articles_as_embeds_with_tech_author_and_fixed_summary_field_then_cta() {
         server
             .expect(requestTo(webhookUrl))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(jsonPath("$.embeds.length()").value(2))
+            // 記事 2 件 + 末尾 CTA = 3 embed
+            .andExpect(jsonPath("$.embeds.length()").value(3))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 求人 5 件で言及"))
             .andExpect(jsonPath("$.embeds[0].title").value("Kotlin の記事"))
             .andExpect(jsonPath("$.embeds[0].url").value("https://example.com/1"))
-            .andExpect(jsonPath("$.embeds[0].description").value("1行目\n2行目\n3行目"))
-            .andExpect(jsonPath("$.embeds[0].fields[0].value").value("Kotlin, Kafka"))
+            .andExpect(jsonPath("$.embeds[0].fields[0].name").value("要約"))
+            .andExpect(jsonPath("$.embeds[0].fields[0].value").value("1行目\n2行目\n3行目"))
             .andExpect(jsonPath("$.embeds[1].title").value("要約なしの記事"))
+            // 末尾 CTA embed はサイトへのリンク
+            .andExpect(jsonPath("$.embeds[2].url").value(siteUrl))
             .andRespond(withSuccess())
 
-        val result = client().post(entries)
+        val result = client().post(digests)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun omits_summary_field_when_summary_is_null() {
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[1].fields").doesNotExist())
+            .andRespond(withSuccess())
+
+        val result = client().post(digests)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
+    fun appends_cta_embed_linking_to_site_as_the_last_embed() {
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[2].url").value(siteUrl))
+            .andExpect(jsonPath("$.embeds[2].author").doesNotExist())
+            .andRespond(withSuccess())
+
+        val result = client().post(digests)
 
         assertTrue(result.isSuccess)
         server.verify()
@@ -91,7 +124,7 @@ class DiscordWebhookClientTest {
             .expect(requestTo(webhookUrl))
             .andRespond(withSuccess())
 
-        val result = client(maxRetries = 2).post(entries)
+        val result = client(maxRetries = 2).post(digests)
 
         assertTrue(result.isSuccess)
         assertEquals(listOf(2000L), sleeps)
@@ -104,7 +137,7 @@ class DiscordWebhookClientTest {
             .expect(ExpectedCount.times(3), requestTo(webhookUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
 
-        val result = client(maxRetries = 2).post(entries)
+        val result = client(maxRetries = 2).post(digests)
 
         assertTrue(result.isFailure)
         // 初回 + 2 リトライ = 3 回試行、リトライ前に 2 回スリープ
@@ -118,7 +151,7 @@ class DiscordWebhookClientTest {
             .expect(ExpectedCount.once(), requestTo(webhookUrl))
             .andRespond(withStatus(HttpStatus.BAD_REQUEST))
 
-        val result = client().post(entries)
+        val result = client().post(digests)
 
         assertTrue(result.isFailure)
         assertTrue(sleeps.isEmpty())
@@ -126,45 +159,27 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun omits_description_when_summary_is_null() {
-        server
-            .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds[1].description").doesNotExist())
-            .andRespond(withSuccess())
-
-        val result = client().post(entries)
-
-        assertTrue(result.isSuccess)
-        server.verify()
-    }
-
-    @Test
     fun returns_failure_and_does_not_send_when_webhook_url_is_blank() {
         // MockRestServiceServer に expect を一切設定しない = リクエストが飛べば verify で検出される
 
-        val result = client(webhookUrl = "   ").post(entries)
+        val result = client(webhookUrl = "   ").post(digests)
 
         assertTrue(result.isFailure)
         server.verify()
     }
 
     @Test
-    fun caps_embeds_at_ten_when_more_entries_are_given() {
-        val elevenEntries =
-            (1..11).map {
-                DigestEntry(
-                    title = "記事 $it",
-                    url = "https://example.com/$it",
-                    summary = null,
-                    keywords = emptyList(),
-                )
-            }
+    fun caps_article_embeds_at_nine_and_still_appends_cta() {
+        // 記事 11 件 → 記事 embed は MAX_EMBEDS-1=9 件に丸め、末尾 CTA と合わせて計 10 embed
+        val manyArticles = (1..11).map { article("記事 $it", "https://example.com/$it", null) }
+        val digest = listOf(TechDigest(keyword = "Kotlin", mentionCount = 1, articles = manyArticles))
         server
             .expect(requestTo(webhookUrl))
             .andExpect(jsonPath("$.embeds.length()").value(10))
+            .andExpect(jsonPath("$.embeds[9].url").value(siteUrl))
             .andRespond(withSuccess())
 
-        val result = client().post(elevenEntries)
+        val result = client().post(digest)
 
         assertTrue(result.isSuccess)
         server.verify()
@@ -173,15 +188,7 @@ class DiscordWebhookClientTest {
     @Test
     fun clamps_title_to_max_length_when_it_exceeds_the_limit() {
         val longTitle = "あ".repeat(300)
-        val entry =
-            listOf(
-                DigestEntry(
-                    title = longTitle,
-                    url = "https://example.com/long",
-                    summary = null,
-                    keywords = emptyList(),
-                ),
-            )
+        val digest = listOf(TechDigest("Kotlin", 1, listOf(article(longTitle, "https://example.com/long", null))))
         // 256 文字以内(255 文字 + 省略記号)に切り詰められること
         val expectedTitle = "あ".repeat(255) + "…"
         server
@@ -189,7 +196,7 @@ class DiscordWebhookClientTest {
             .andExpect(jsonPath("$.embeds[0].title").value(expectedTitle))
             .andRespond(withSuccess())
 
-        val result = client().post(entry)
+        val result = client().post(digest)
 
         assertEquals(256, expectedTitle.length)
         assertTrue(result.isSuccess)
@@ -197,23 +204,18 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun drops_trailing_embeds_when_total_character_count_exceeds_limit() {
-        // description 2500 文字 × 4 件 = 10000 > 6000。合計 6000 に収まる先頭 2 件だけ載せる
-        val bigEntries =
-            (1..4).map {
-                DigestEntry(
-                    title = "記事 $it",
-                    url = "https://example.com/$it",
-                    summary = "x".repeat(2500),
-                    keywords = emptyList(),
-                )
-            }
+    fun drops_trailing_article_embeds_when_total_character_count_exceeds_limit() {
+        // 要約は field(上限 1024)へ入るので 1 記事あたり約 1051 文字。CTA ぶんも予約するため、
+        // 合計上限 3000 に収まる先頭 2 件だけ載せ、末尾に CTA(計 3)。
+        val bigArticles = (1..4).map { article("記事 $it", "https://example.com/$it", "x".repeat(2000)) }
+        val digest = listOf(TechDigest("Kotlin", 1, bigArticles))
         server
             .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds.length()").value(2))
+            .andExpect(jsonPath("$.embeds.length()").value(3))
+            .andExpect(jsonPath("$.embeds[2].url").value(siteUrl))
             .andRespond(withSuccess())
 
-        val result = client().post(bigEntries)
+        val result = client(maxTotalEmbedChars = 3000).post(digest)
 
         assertTrue(result.isSuccess)
         server.verify()
@@ -223,15 +225,7 @@ class DiscordWebhookClientTest {
     fun clamp_does_not_split_surrogate_pairs() {
         // 😀(U+1F600)は UTF-16 で 2 code unit。256 境界がペアの途中に落ちても壊れた文字を残さない
         val emojiTitle = "😀".repeat(200) // 400 code unit
-        val entry =
-            listOf(
-                DigestEntry(
-                    title = emojiTitle,
-                    url = "https://example.com/emoji",
-                    summary = null,
-                    keywords = emptyList(),
-                ),
-            )
+        val digest = listOf(TechDigest("Kotlin", 1, listOf(article(emojiTitle, "https://example.com/emoji", null))))
         // 255 code unit 枠 → 直前が high surrogate なので 254 で切る = 完全な 😀 ×127 + 省略記号
         val expectedTitle = "😀".repeat(127) + "…"
         server
@@ -239,7 +233,7 @@ class DiscordWebhookClientTest {
             .andExpect(jsonPath("$.embeds[0].title").value(expectedTitle))
             .andRespond(withSuccess())
 
-        val result = client().post(entry)
+        val result = client().post(digest)
 
         assertTrue(result.isSuccess)
         server.verify()
@@ -255,7 +249,7 @@ class DiscordWebhookClientTest {
             .expect(requestTo(webhookUrl))
             .andRespond(withSuccess())
 
-        val result = client(maxRetries = 2).post(entries)
+        val result = client(maxRetries = 2).post(digests)
 
         assertTrue(result.isSuccess)
         assertEquals(listOf(1000L), sleeps)
@@ -263,26 +257,19 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun keeps_only_the_first_embed_via_fallback_when_no_embed_fits_the_total_limit() {
-        // 合計上限を極小(10)にすると、どの embed も単体で上限を超え通常ループでは 1 件も収まらない。
-        // このとき空ペイロード({"embeds":[]})=400 を避けるフォールバックが働き、先頭 1 件だけが載ること。
-        val entriesExceedingLimit =
-            (1..3).map {
-                DigestEntry(
-                    title = "記事 $it",
-                    url = "https://example.com/$it",
-                    summary = "x".repeat(20), // 単体で characterCount > 10 になり通常ループでは 1 件も収まらない
-                    keywords = emptyList(),
-                )
-            }
+    fun keeps_first_article_via_fallback_when_no_article_fits_but_still_appends_cta() {
+        // 合計上限を極小(10)にすると CTA 予約だけで超過し、どの記事も収まらない。
+        // 空にせず先頭 1 件だけ残すフォールバックが働き、末尾に CTA を足して計 2 embed になること。
+        val articles = (1..3).map { article("記事 $it", "https://example.com/$it", "x".repeat(20)) }
+        val digest = listOf(TechDigest("Kotlin", 1, articles))
         server
             .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds.length()").value(1))
+            .andExpect(jsonPath("$.embeds.length()").value(2))
             .andExpect(jsonPath("$.embeds[0].title").value("記事 1"))
-            .andExpect(jsonPath("$.embeds[0].url").value("https://example.com/1"))
+            .andExpect(jsonPath("$.embeds[1].url").value(siteUrl))
             .andRespond(withSuccess())
 
-        val result = client(maxTotalEmbedChars = 10).post(entriesExceedingLimit)
+        val result = client(maxTotalEmbedChars = 10).post(digest)
 
         assertTrue(result.isSuccess)
         server.verify()
@@ -302,7 +289,7 @@ class DiscordWebhookClientTest {
             .expect(requestTo(webhookUrl))
             .andRespond(withSuccess())
 
-        val result = client(maxRetries = 2).post(entries)
+        val result = client(maxRetries = 2).post(digests)
 
         assertTrue(result.isSuccess)
         assertEquals(listOf(3000L), sleeps)

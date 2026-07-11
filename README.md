@@ -13,7 +13,7 @@ fetcher (@Scheduled + Rome + キーワード抽出)
                    └─ live consumer  → SSE → ブラウザ(リアルタイム新着)
 
 notifier (@Scheduled 毎朝8:00)
-   └─ PostgreSQL(当日分 tech)集計 → 上位N件選抜 → Claude で3行要約 → Discord へ1通投稿
+   └─ PostgreSQL(求人で言及の多い技術 × その技術の記事)集計 → 上位技術+関連記事を選抜 → Claude で要約 → Discord へ1通投稿
 ```
 
 - **クロスリンク(目玉機能)**: 記事・求人から技術キーワードを辞書ベースで抽出し、「求人で言及回数の多い技術」ランキングと「その技術の記事」を一画面に並べる
@@ -227,9 +227,9 @@ java -jar rss-watch.jar
 
 ## デイリーダイジェスト(Discord 通知)
 
-`notify` feature を有効にすると、毎朝 1 回 当日分の tech 記事から「おすすめ N 件」を選び、Claude で 3 行要約を付けて Discord に 1 通投稿する(詳細は [discord-notifier spec](.spec-workflow/specs/discord-notifier/))。
+`notify` feature を有効にすると、毎朝 1 回「**求人で言及されている技術**」の上位を選び、各技術に「**その技術の記事**」を添えて Claude 要約付きで Discord に 1 通投稿する(report のクロスリンクと同じ組み立て)。技術ごとに author 見出し(技術名 + 求人言及数)・記事タイトル・「要約」フィールドを並べ、末尾にサイト一覧への導線リンクを添える。一度通知した記事は二度と載せない(通知済み guid 全件を除外)。
 
-**有効化には Discord Webhook URL の設定が必須**。未設定なら notify feature の Bean は一切登録されず、他の機能に影響なく通常起動する(=無効化)。API キー未設定は「無効化」ではなく実行時フォールバックで、要約なし(タイトル + リンク + キーワードのみ)で投稿を続ける。
+**有効化には Discord Webhook URL の設定が必須**。未設定なら notify feature の Bean は一切登録されず、他の機能に影響なく通常起動する(=無効化)。API キー未設定は「無効化」ではなく実行時フォールバックで、要約なし(技術見出し + 記事タイトル + リンクのみ)で投稿を続ける。
 
 ```bash
 # 最小構成: Webhook URL を渡すと有効化される(要約を付けたい場合は API キーも)
@@ -245,11 +245,12 @@ java -jar rss-watch.jar
 | `RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL` | Discord Webhook URL。**設定時のみ notify feature が有効**(未設定=無効) | (未設定) |
 | `ANTHROPIC_API_KEY` | Claude API キー。未設定なら要約なしでフォールバック | (未設定) |
 | `rss-watch.notify.cron` | 配信時刻(Spring cron 式) | `0 0 8 * * *`(毎朝 8:00) |
-| `rss-watch.notify.limit` | 1 通に載せる最大件数 | `5` |
-| `rss-watch.notify.popular-feeds` | 選抜で優先する人気フィード名(`feeds.toml` の `name` と一致) | はてなブックマーク テクノロジー / Qiita 人気記事 / Hacker News |
+| `rss-watch.notify.window-days` | 求人で言及された技術の集計窓(日) | `7` |
+| `rss-watch.notify.tech-limit` | 載せる技術の上位件数(求人言及数の多い順) | `3` |
+| `rss-watch.notify.articles-per-tech` | 各技術に載せる関連記事の最大件数 | `3` |
+| `rss-watch.notify.site-url` | 通知末尾に添えるサイト一覧への導線 URL | `https://rss-watch.rocky-ha.com/` |
 | `rss-watch.notify.claude.model` | 要約モデル ID | `claude-haiku-4-5-20251001` |
 | `rss-watch.notify.claude.max-tokens` | 要約の最大トークン数 | `256` |
-| `rss-watch.notify.posted-lookback-days` | 投稿済み guid の照会窓(日跨ぎの二重投稿防止) | `2` |
 
 > Webhook URL・API キーは機密情報。リポジトリにコミットせず、環境変数(systemd なら `Environment=` か `EnvironmentFile=`)で渡すこと。
 

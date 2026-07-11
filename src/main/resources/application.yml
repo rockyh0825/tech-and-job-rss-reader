@@ -38,14 +38,14 @@ rss-watch:
     # にして通常起動させるため。空文字デフォルトを置くと条件が真になってしまう)。
     # 配信時刻(cron)。既定は毎朝 8:00
     cron: "0 0 8 * * *"
-    # ダイジェストに載せる最大件数
-    limit: 5
-    # 投稿済み guid の照会窓(日)。日跨ぎの二重投稿防止に取得窓+αを見る
-    posted-lookback-days: 2
-    # 人気フィード(選抜で優先する feedName。feeds.toml の name と一致させる)。
-    # カンマ区切りのスカラー文字列で指定する(Spring が String -> List<String> に分割・トリムする)。
-    # YAML シーケンスで書くと添字付きキーでしか保持されず、@Value のカンマ区切り束縛に流れない dead config になるため注意。
-    popular-feeds: "はてなブックマーク テクノロジー,Qiita 人気記事,Hacker News"
+    # 求人で言及された技術の集計窓(日)。求人は日々変わらないため取得窓は広めにとる
+    window-days: 7
+    # ダイジェストに載せる技術の上位件数(言及求人数の多い順)
+    tech-limit: 3
+    # 各技術につき載せる関連記事の最大件数
+    articles-per-tech: 3
+    # 通知末尾に添えるサイト一覧への導線 URL
+    site-url: "https://rss-watch.rocky-ha.com/"
     claude:
       # 既定は再現性のため dated スナップショット。undated エイリアスは将来挙動が変わり得る
       model: claude-haiku-4-5-20251001

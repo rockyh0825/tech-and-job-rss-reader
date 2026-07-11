@@ -10,7 +10,7 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.body
 
 /**
- * タイトル + 概要から日本語 3 行要約を生成する(infrastructure)。
+ * タイトル + 概要から日本語の簡潔な要約を生成する(infrastructure)。
  *
  * Claude Messages API(`POST {baseUrl}/v1/messages`)を Spring RestClient で直接呼ぶ(SDK 依存を増やさない)。
  * 既定モデルは再現性のため dated スナップショット `claude-haiku-4-5-20251001`。モデル・プロンプト・
@@ -71,8 +71,10 @@ class ClaudeSummarizer(
 
     companion object {
         private const val ANTHROPIC_VERSION = "2023-06-01"
+        // 見出しは通知側で「要約」に固定するため、本文には見出し・前置きを含めさせない。
         const val DEFAULT_SYSTEM_PROMPT =
             "あなたは技術記事を日本語で簡潔に要約するアシスタントです。" +
-                "与えられたタイトルと概要をもとに、要点を3行で要約してください。各行は簡潔にすること。"
+                "与えられたタイトルと概要の要点を1〜2文でまとめてください。" +
+                "「要約」などの見出しや前置きは付けず、要約本文だけを出力すること。"
     }
 }
