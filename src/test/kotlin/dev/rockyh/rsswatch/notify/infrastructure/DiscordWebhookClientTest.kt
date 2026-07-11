@@ -101,6 +101,21 @@ class DiscordWebhookClientTest {
     }
 
     @Test
+    fun omits_summary_field_when_summary_is_blank() {
+        // 空白のみの要約は field ごと省く(field value 空は Discord が 400 で弾くため)
+        val digest = listOf(TechDigest("Kotlin", 1, listOf(article("記事", "https://example.com/1", "   \n "))))
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].fields").doesNotExist())
+            .andRespond(withSuccess())
+
+        val result = client().post(digest)
+
+        assertTrue(result.isSuccess)
+        server.verify()
+    }
+
+    @Test
     fun appends_cta_embed_linking_to_site_as_the_last_embed() {
         server
             .expect(requestTo(webhookUrl))

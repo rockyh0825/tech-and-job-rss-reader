@@ -140,8 +140,10 @@ class DiscordWebhookClient(
             title = article.title.clampTo(MAX_TITLE_LENGTH),
             url = article.url,
             description = null,
+            // 要約が空白のみの場合も field ごと省く。Discord は field value 空(0 文字)を 400 で弾くため。
             fields =
                 article.summary
+                    ?.takeIf { it.isNotBlank() }
                     ?.let { listOf(EmbedField(name = SUMMARY_FIELD_NAME, value = it.clampTo(MAX_FIELD_VALUE_LENGTH))) },
         )
 
