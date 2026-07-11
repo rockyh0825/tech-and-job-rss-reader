@@ -68,7 +68,7 @@ PostgreSQL のスキーマは初回起動時に Flyway が自動で作成する(
 
 # 2. 配置(例: /opt/rss-watch)
 sudo mkdir -p /opt/rss-watch
-sudo cp build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar /opt/rss-watch/rss-watch.jar
+sudo cp build/libs/rss-watch.jar /opt/rss-watch/rss-watch.jar
 sudo cp feeds.toml /opt/rss-watch/
 
 # 3. Kafka + PostgreSQL を起動(compose の restart: unless-stopped で再起動後も自動復帰)
@@ -99,6 +99,9 @@ After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
+# root で実行しない(自動デプロイで jar を書き込むユーザーと同じにする。
+# root 実行だと jar を書き換えられること = root 権限奪取になってしまう)
+User=rocky
 WorkingDirectory=/opt/rss-watch
 ExecStart=/usr/bin/java -jar /opt/rss-watch/rss-watch.jar
 Environment=RSS_WATCH_DB_URL=jdbc:postgresql://localhost:5432/rsswatch
@@ -149,6 +152,15 @@ sudo chmod 440 /etc/sudoers.d/rss-watch-deploy
 このリポジトリは public のため、フォークからの PR が workflow を書き換えて self-hosted runner 上でコードを実行するのを防ぐ必要がある。リポジトリの **Settings → Actions → General → Fork pull request workflows from outside collaborators** で **「Require approval for all outside collaborators」** を選択すること(外部からの PR は承認するまで workflow が一切走らなくなる)。`deploy` ジョブ自体も `push` + `main` のときだけ動く条件になっており、PR では self-hosted runner を使わない。
 
 > feeds.toml もデプロイのたびにリポジトリの内容で上書きされる。フィードの追加・変更はサーバー上で直接編集せず、リポジトリ側を変更して main にマージすること。
+
+### ロールバック
+
+デプロイ時に直前の jar が `/opt/rss-watch/rss-watch.jar.prev` として残る。新しい jar で起動に失敗した場合は手動で戻す:
+
+```bash
+cp -p /opt/rss-watch/rss-watch.jar.prev /opt/rss-watch/rss-watch.jar
+sudo systemctl restart rss-watch
+```
 
 ## 外部公開(Cloudflare Tunnel + Access)
 

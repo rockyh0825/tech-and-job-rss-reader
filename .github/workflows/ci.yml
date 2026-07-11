@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# self-hosted runner にも渡る GITHUB_TOKEN を読み取り専用に絞る
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,7 +34,7 @@ jobs:
         with:
           name: rss-watch-deploy
           path: |
-            build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar
+            build/libs/rss-watch.jar
             feeds.toml
           retention-days: 3
           if-no-files-found: error
@@ -51,12 +55,28 @@ jobs:
           name: rss-watch-deploy
 
       - name: Deploy jar and restart service
+        # 稼働中の jar を直接上書きしない: 同一 FS に置いてから mv でアトミックに差し替え、
+        # 直前の jar は .prev として残す(起動不能時に手で戻せるように)
         run: |
-          cp build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar /opt/rss-watch/rss-watch.jar
+          cp build/libs/rss-watch.jar /opt/rss-watch/rss-watch.jar.new
+          if [ -f /opt/rss-watch/rss-watch.jar ]; then
+            cp -p /opt/rss-watch/rss-watch.jar /opt/rss-watch/rss-watch.jar.prev
+          fi
+          mv /opt/rss-watch/rss-watch.jar.new /opt/rss-watch/rss-watch.jar
           cp feeds.toml /opt/rss-watch/feeds.toml
           sudo systemctl restart rss-watch
 
-      - name: Verify service is active
+      - name: Verify service is up
+        # Access JWT 検証が有効だとローカルからは 401 が返るため、
+        # ステータスコードは問わず「HTTP 応答が返ること」を起動成功とみなす
         run: |
-          sleep 10
-          systemctl is-active rss-watch
+          for _ in $(seq 1 12); do
+            if curl -s -o /dev/null --max-time 5 http://localhost:8080/; then
+              echo "service is responding"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "service did not respond within 60s"
+          systemctl status rss-watch --no-pager || true
+          exit 1
