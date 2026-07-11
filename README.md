@@ -128,7 +128,18 @@ main へ push(PR マージ)されると、GitHub ホストの runner でビル�
 
 ### サーバー側の初回セットアップ
 
+**既存の unit が clone 内の jar(`<clone>/build/libs/*.jar`)を直接指している場合は、先に `/opt/rss-watch` 配置へ移行する。** この変更以降 `./gradlew bootJar` の出力名は `build/libs/rss-watch.jar` の固定名になるため、`...-SNAPSHOT.jar` を指す旧 ExecStart は次回ビルドから起動しなくなる点にも注意。
+
 ```bash
+# 0. (clone 運用からの移行)配置先を作り、unit を /opt/rss-watch 向けに更新する
+#    - WorkingDirectory=/opt/rss-watch(feeds.toml をここから読む)
+#    - ExecStart=/usr/bin/java -jar /opt/rss-watch/rss-watch.jar
+#    - User=rocky / Environment・EnvironmentFile は既存のまま維持
+sudo mkdir -p /opt/rss-watch
+cp <clone>/build/libs/*.jar /opt/rss-watch/rss-watch.jar   # 現在稼働中の jar をそのまま初期配置
+cp <clone>/feeds.toml /opt/rss-watch/
+sudo systemctl daemon-reload && sudo systemctl restart rss-watch
+
 # 1. runner を配置ディレクトリに書き込めるユーザー(rocky)でインストール
 #    GitHub → リポジトリの Settings → Actions → Runners → New self-hosted runner の
 #    表示手順どおりに config.sh まで実行する(--url と --token はそこに表示される)
