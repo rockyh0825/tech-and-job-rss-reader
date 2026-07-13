@@ -82,7 +82,7 @@ infrastructure/ → domain/
 - feature 内のレイヤーは外側から内側への一方向依存のみ
 - `<feature A>/` から `<feature B>/` への直接 import は**禁止**。必ず `capabilities/` の Port 経由(fetch → keywords は `KeywordExtractionPort`、report → archive は `ArchiveQueryPort`)
 - Port は**使う側のニーズに合わせて**定義し、**提供する側の application/** に実装を置く。結合は Spring DI(コンストラクタインジェクション)が行う(cleaning-app の di.ts に相当する配線ファイルは不要)
-- `shared/contract/` の RssItem は Kafka メッセージ契約であり、全 feature から参照可。厳密な DTO/ドメインモデル分離はしない(パイプラインアプリでは過剰)。振る舞いが必要な feature だけ自前のドメイン型に写す
+- `shared/contract/` は Kafka メッセージ契約(RssItem)と feature 横断の語彙(ItemCategory・TechCategory)を置く場所で、全 feature から参照可。厳密な DTO/ドメインモデル分離はしない(パイプラインアプリでは過剰)。振る舞いが必要な feature だけ自前のドメイン型に写す
 - これらのルールは `src/test/kotlin/.../architecture/ArchitectureTest.kt`(Konsist)で強制する
 
 ## マイクロサービスへの発展方針
