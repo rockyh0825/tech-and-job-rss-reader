@@ -3,11 +3,14 @@ package dev.rockyh.rsswatch.notify.application
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
+import dev.rockyh.rsswatch.notify.domain.FeaturedTechStore
+import dev.rockyh.rsswatch.notify.domain.NotifyInterests
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import dev.rockyh.rsswatch.notify.domain.TechDigest
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
+import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -58,11 +61,23 @@ class BuildDigestUseCaseTest {
         }
     }
 
+    private class FakeFeaturedTechStore(private val featured: Map<String, Instant> = emptyMap()) : FeaturedTechStore {
+        var marked: List<String>? = null
+
+        override fun lastFeaturedAt(): Map<String, Instant> = featured
+
+        override fun markFeatured(keywords: List<String>) {
+            marked = keywords
+        }
+    }
+
     private fun useCase(
         archive: ArchiveQueryPort,
         summarizer: Summarizer = FakeSummarizer(Result.success("要約")),
         publisher: DigestPublisher = FakePublisher(Result.success(Unit)),
         store: PostedGuidStore = FakePostedGuidStore(),
+        interests: NotifyInterests = NotifyInterests(emptySet()),
+        featuredStore: FeaturedTechStore = FakeFeaturedTechStore(),
         techLimit: Int = 3,
         articlesPerTech: Int = 3,
         windowDays: Int = 7,
@@ -72,6 +87,8 @@ class BuildDigestUseCaseTest {
             summarizer = summarizer,
             webhookClient = publisher,
             postedGuidRepository = store,
+            interests = interests,
+            featuredTechStore = featuredStore,
             techLimit = techLimit,
             articlesPerTech = articlesPerTech,
             windowDays = windowDays,
@@ -235,5 +252,109 @@ class BuildDigestUseCaseTest {
         useCase(archive, publisher = publisher, store = FakePostedGuidStore(alreadyPosted = setOf("old1")), techLimit = 2).run()
 
         assertEquals(listOf("t2", "t3"), publisher.posted!!.map { it.keyword })
+    }
+
+    // --- 興味技術の優先とローテーション ---
+
+    @Test
+    fun puts_interested_tech_ahead_of_higher_ranked_tech() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30), TechMention("Kotlin", 2)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Kotlin" to listOf(item("k1"))),
+            )
+        val publisher = FakePublisher(Result.success(Unit))
+
+        useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Kotlin"))).run()
+
+        assertEquals(listOf("Kotlin", "Python"), publisher.posted!!.map { it.keyword })
+    }
+
+    @Test
+    fun includes_interested_tech_absent_from_ranking_with_zero_mention_when_it_has_fresh_articles() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Elixir" to listOf(item("e1"))),
+            )
+        val publisher = FakePublisher(Result.success(Unit))
+
+        useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Elixir"))).run()
+
+        val posted = publisher.posted!!
+        assertEquals(listOf("Elixir", "Python"), posted.map { it.keyword })
+        assertEquals(0, posted[0].mentionCount)
+    }
+
+    @Test
+    fun skips_interested_tech_absent_from_ranking_when_it_has_no_fresh_articles() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1"))),
+            )
+        val publisher = FakePublisher(Result.success(Unit))
+
+        useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Elixir"))).run()
+
+        assertEquals(listOf("Python"), publisher.posted!!.map { it.keyword })
+    }
+
+    @Test
+    fun defers_recently_featured_tech_behind_never_featured_ones() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30), TechMention("Ruby", 1)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Ruby" to listOf(item("r1"))),
+            )
+        val publisher = FakePublisher(Result.success(Unit))
+        val featuredStore = FakeFeaturedTechStore(mapOf("Python" to now.minus(Duration.ofDays(1))))
+
+        useCase(archive, publisher = publisher, featuredStore = featuredStore, techLimit = 1).run()
+
+        assertEquals(listOf("Ruby"), publisher.posted!!.map { it.keyword })
+    }
+
+    @Test
+    fun marks_featured_techs_after_successful_post() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5), TechMention("Go", 3)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a")), "Go" to listOf(item("b"))),
+            )
+        val featuredStore = FakeFeaturedTechStore()
+
+        useCase(archive, featuredStore = featuredStore).run()
+
+        assertEquals(listOf("Kotlin", "Go"), featuredStore.marked)
+    }
+
+    @Test
+    fun does_not_mark_featured_when_webhook_fails() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 1)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val featuredStore = FakeFeaturedTechStore()
+
+        useCase(archive, publisher = FakePublisher(Result.failure(RuntimeException("discord down"))), featuredStore = featuredStore).run()
+
+        assertNull(featuredStore.marked)
+    }
+
+    @Test
+    fun flags_digests_of_interested_techs() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5), TechMention("Python", 3)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a")), "Python" to listOf(item("b"))),
+            )
+        val publisher = FakePublisher(Result.success(Unit))
+
+        useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Kotlin"))).run()
+
+        val posted = publisher.posted!!
+        assertEquals(listOf(true, false), posted.map { it.interested })
     }
 }

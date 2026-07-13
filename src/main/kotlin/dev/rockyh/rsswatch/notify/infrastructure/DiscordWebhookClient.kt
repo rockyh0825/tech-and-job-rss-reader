@@ -147,9 +147,15 @@ class DiscordWebhookClient(
                     ?.let { listOf(EmbedField(name = SUMMARY_FIELD_NAME, value = it.clampTo(MAX_FIELD_VALUE_LENGTH))) },
         )
 
-    /** 技術グループの見出し文言(例: 「🧩 Kotlin ・ 求人 5 件で言及」)。 */
-    private fun authorLabel(digest: TechDigest): String =
-        "🧩 ${digest.keyword} ・ 求人 ${digest.mentionCount} 件で言及"
+    /**
+     * 技術グループの見出し文言(例: 「🧩 Kotlin ・ 求人 5 件で言及」)。
+     * 興味技術は ⭐、求人に出ていない技術(mentionCount=0)は「求人 0 件で言及」の代わりに「新着記事」。
+     */
+    private fun authorLabel(digest: TechDigest): String {
+        val icon = if (digest.interested) "⭐" else "🧩"
+        val suffix = if (digest.mentionCount > 0) "求人 ${digest.mentionCount} 件で言及" else "新着記事"
+        return "$icon ${digest.keyword} ・ $suffix"
+    }
 
     /** 末尾に添えるサイト一覧への導線 embed。title をリンクにして [siteUrl] へ飛ばす。 */
     private fun ctaEmbed(): Embed =
