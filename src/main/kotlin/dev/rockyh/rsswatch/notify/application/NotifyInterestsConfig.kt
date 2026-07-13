@@ -1,6 +1,7 @@
-package dev.rockyh.rsswatch.notify
+package dev.rockyh.rsswatch.notify.application
 
 import dev.rockyh.rsswatch.capabilities.KeywordCatalogPort
+import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.NotifyInterests
 import dev.rockyh.rsswatch.shared.contract.TechCategory
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -23,9 +24,10 @@ class NotifyInterestsConfig {
         properties: NotifyInterestsProperties,
         keywordCatalog: KeywordCatalogPort,
     ): NotifyInterests {
+        val allKeywords = keywordCatalog.allKeywords()
         val fromCategories =
             properties.categories.flatMap { keywordCatalog.keywordsIn(TechCategory.from(it)) }
-        val fromKeywords = properties.keywords.map { resolveKeyword(it, keywordCatalog.allKeywords()) }
+        val fromKeywords = properties.keywords.map { resolveKeyword(it, allKeywords) }
         return NotifyInterests((fromCategories + fromKeywords).toSet())
     }
 

@@ -344,6 +344,28 @@ class BuildDigestUseCaseTest {
     }
 
     @Test
+    fun still_marks_posted_and_does_not_throw_when_mark_featured_fails() {
+        // markPosted と markFeatured は別トランザクション。ローテーション記録の一時失敗は
+        // 配信自体の成功を壊さない(次回成功時に自己回復する)
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 1)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val store = FakePostedGuidStore()
+        val throwingFeaturedStore =
+            object : FeaturedTechStore {
+                override fun lastFeaturedAt(): Map<String, Instant> = emptyMap()
+
+                override fun markFeatured(keywords: List<String>) = throw RuntimeException("db down")
+            }
+
+        useCase(archive, store = store, featuredStore = throwingFeaturedStore).run()
+
+        assertEquals(listOf("a"), store.marked)
+    }
+
+    @Test
     fun flags_digests_of_interested_techs() {
         val archive =
             FakeArchive(

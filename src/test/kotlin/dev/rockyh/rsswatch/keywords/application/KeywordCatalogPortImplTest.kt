@@ -23,6 +23,10 @@ class KeywordCatalogPortImplTest {
     fun all_keywords_returns_every_normalized_name() {
         val all = catalog.allKeywords()
 
-        assertEquals(Keywords.entries.map { it.normalizedName }.toSet(), all)
+        // 実装と同一式での比較(トートロジー)を避け、件数一致 + 各カテゴリの代表で検証する
+        assertEquals(Keywords.entries.size, all.size)
+        assertTrue("Kotlin" in all, "Kotlin should be in $all")
+        assertTrue("AWS" in all, "AWS should be in $all")
+        assertTrue("機械学習" in all, "機械学習 should be in $all")
     }
 }

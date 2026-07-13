@@ -16,6 +16,13 @@ class TechCategoryTest {
     }
 
     @Test
+    fun from_resolves_config_value_case_insensitively() {
+        // keywords 側(NotifyInterestsConfig)と同じく大文字小文字を無視して解決する
+        assertEquals(TechCategory.CLOUD_INFRA, TechCategory.from("Cloud-Infra"))
+        assertEquals(TechCategory.LANGUAGE, TechCategory.from("LANGUAGE"))
+    }
+
+    @Test
     fun from_throws_with_valid_values_listed_for_unknown_value() {
         val exception = assertThrows<IllegalArgumentException> { TechCategory.from("sre") }
 

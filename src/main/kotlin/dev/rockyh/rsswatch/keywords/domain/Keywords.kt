@@ -20,6 +20,9 @@ data class KeywordEntry(
 /**
  * 「正規化名 + エイリアス」の技術キーワード辞書(約 60 分類)。
  * キーワードの追加は entry を 1 行足すだけでよい。
+ *
+ * 正規化名を rename するときは注意:rss-watch.notify.interests の keywords に旧名を設定している
+ * 環境(自宅サーバー)では、未知の名前として起動エラーになる(fail-fast)。rename 時は設定側も揃えること。
  */
 object Keywords {
 

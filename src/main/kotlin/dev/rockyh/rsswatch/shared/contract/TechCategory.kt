@@ -16,8 +16,9 @@ enum class TechCategory(val value: String) {
     ;
 
     companion object {
+        /** [value] を大文字小文字を無視して解決する(interests の keywords 側と同じ扱い)。 */
         fun from(value: String): TechCategory =
-            entries.firstOrNull { it.value == value }
+            entries.firstOrNull { it.value.equals(value, ignoreCase = true) }
                 ?: throw IllegalArgumentException(
                     "invalid tech category: \"$value\" (must be one of ${entries.map { it.value }})",
                 )

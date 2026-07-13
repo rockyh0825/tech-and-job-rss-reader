@@ -1,4 +1,4 @@
-package dev.rockyh.rsswatch.notify
+package dev.rockyh.rsswatch.notify.application
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

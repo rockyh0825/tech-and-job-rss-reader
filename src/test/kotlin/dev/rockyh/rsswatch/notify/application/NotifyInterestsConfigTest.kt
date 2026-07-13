@@ -1,4 +1,4 @@
-package dev.rockyh.rsswatch.notify
+package dev.rockyh.rsswatch.notify.application
 
 import dev.rockyh.rsswatch.capabilities.KeywordCatalogPort
 import dev.rockyh.rsswatch.notify.domain.NotifyInterests

@@ -79,7 +79,9 @@ class BuildDigestUseCase(
         val result = webhookClient.post(digests)
         if (result.isSuccess) {
             postedGuidRepository.markPosted(shown.toList())
-            featuredTechStore.markFeatured(digests.map { it.keyword })
+            // ローテーション記録の一時失敗は配信成功を壊さない(未記録=次回も候補に残るだけで自己回復する)
+            runCatching { featuredTechStore.markFeatured(digests.map { it.keyword }) }
+                .onFailure { log.warn("failed to mark featured techs; rotation will catch up next time", it) }
             log.info("posted daily digest: {} techs, {} articles", digests.size, shown.size)
         } else {
             log.warn("failed to post daily digest; will retry next schedule", result.exceptionOrNull())
