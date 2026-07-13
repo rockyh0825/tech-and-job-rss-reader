@@ -68,7 +68,7 @@ PostgreSQL のスキーマは初回起動時に Flyway が自動で作成する(
 
 # 2. 配置(例: /opt/rss-watch)
 sudo mkdir -p /opt/rss-watch
-sudo cp build/libs/tech-and-job-rss-reader-0.0.1-SNAPSHOT.jar /opt/rss-watch/rss-watch.jar
+sudo cp build/libs/rss-watch.jar /opt/rss-watch/rss-watch.jar
 sudo cp feeds.toml /opt/rss-watch/
 
 # 3. Kafka + PostgreSQL を起動(compose の restart: unless-stopped で再起動後も自動復帰)
@@ -99,6 +99,9 @@ After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
+# root で実行しない(自動デプロイで jar を書き込むユーザーと同じにする。
+# root 実行だと jar を書き換えられること = root 権限奪取になってしまう)
+User=rocky
 WorkingDirectory=/opt/rss-watch
 ExecStart=/usr/bin/java -jar /opt/rss-watch/rss-watch.jar
 Environment=RSS_WATCH_DB_URL=jdbc:postgresql://localhost:5432/rsswatch
@@ -118,6 +121,57 @@ sudo systemctl enable --now rss-watch
 ```
 
 Kafka が一時停止していてもアプリは落ちない(producer/consumer がバックグラウンドで再接続し、fetcher は次周期で再巡回する)。
+
+## 自動デプロイ(GitHub Actions self-hosted runner)
+
+main へ push(PR マージ)されると、GitHub ホストの runner でビルド・テストした jar を、自宅サーバー常駐の self-hosted runner が受け取って `/opt/rss-watch/` に配置し、`rss-watch.service` を再起動する(`.github/workflows/ci.yml` の `deploy` ジョブ)。runner は GitHub へ**アウトバウンド**で long-poll するだけなので、ポート開放は不要。
+
+### サーバー側の初回セットアップ
+
+**既存の unit が clone 内の jar(`<clone>/build/libs/*.jar`)を直接指している場合は、先に `/opt/rss-watch` 配置へ移行する。** この変更以降 `./gradlew bootJar` の出力名は `build/libs/rss-watch.jar` の固定名になるため、`...-SNAPSHOT.jar` を指す旧 ExecStart は次回ビルドから起動しなくなる点にも注意。
+
+```bash
+# 0. (clone 運用からの移行)配置先を作り、unit を /opt/rss-watch 向けに更新する
+#    - WorkingDirectory=/opt/rss-watch(feeds.toml をここから読む)
+#    - ExecStart=/usr/bin/java -jar /opt/rss-watch/rss-watch.jar
+#    - User=rocky / Environment・EnvironmentFile は既存のまま維持
+sudo mkdir -p /opt/rss-watch
+cp <clone>/build/libs/*.jar /opt/rss-watch/rss-watch.jar   # 現在稼働中の jar をそのまま初期配置
+cp <clone>/feeds.toml /opt/rss-watch/
+sudo systemctl daemon-reload && sudo systemctl restart rss-watch
+
+# 1. runner を配置ディレクトリに書き込めるユーザー(rocky)でインストール
+#    GitHub → リポジトリの Settings → Actions → Runners → New self-hosted runner の
+#    表示手順どおりに config.sh まで実行する(--url と --token はそこに表示される)
+mkdir ~/actions-runner && cd ~/actions-runner
+# (curl でダウンロード → tar 展開 → ./config.sh --url ... --token ...)
+
+# 2. systemd サービスとして常駐させる
+sudo ./svc.sh install rocky
+sudo ./svc.sh start
+
+# 3. 配置先を runner ユーザーが書き込めるようにする
+sudo chown -R rocky:rocky /opt/rss-watch
+
+# 4. サービス再起動だけパスワードなし sudo を許可する
+echo 'rocky ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart rss-watch' | sudo tee /etc/sudoers.d/rss-watch-deploy
+sudo chmod 440 /etc/sudoers.d/rss-watch-deploy
+```
+
+### セキュリティ設定(public リポジトリでは必須)
+
+このリポジトリは public のため、フォークからの PR が workflow を書き換えて self-hosted runner 上でコードを実行するのを防ぐ必要がある。リポジトリの **Settings → Actions → General → Fork pull request workflows from outside collaborators** で **「Require approval for all outside collaborators」** を選択すること(外部からの PR は承認するまで workflow が一切走らなくなる)。`deploy` ジョブ自体も `push` + `main` のときだけ動く条件になっており、PR では self-hosted runner を使わない。
+
+> feeds.toml もデプロイのたびにリポジトリの内容で上書きされる。フィードの追加・変更はサーバー上で直接編集せず、リポジトリ側を変更して main にマージすること。
+
+### ロールバック
+
+デプロイ時に直前の jar が `/opt/rss-watch/rss-watch.jar.prev` として残る。新しい jar で起動に失敗した場合は手動で戻す:
+
+```bash
+cp -p /opt/rss-watch/rss-watch.jar.prev /opt/rss-watch/rss-watch.jar
+sudo systemctl restart rss-watch
+```
 
 ## 外部公開(Cloudflare Tunnel + Access)
 

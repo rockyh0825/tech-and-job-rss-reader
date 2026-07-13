@@ -56,3 +56,8 @@ kotlin {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// デプロイ先(/opt/rss-watch/rss-watch.jar)と CI がバージョン番号に依存しないよう、boot jar は固定名で出力する
+tasks.bootJar {
+    archiveFileName = "rss-watch.jar"
+}
