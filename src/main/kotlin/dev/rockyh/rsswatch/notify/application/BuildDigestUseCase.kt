@@ -65,18 +65,29 @@ class BuildDigestUseCase(
             return
         }
 
-        val result = webhookClient.post(digests)
-        if (result.isSuccess) {
-            postedGuidRepository.markPosted(shown.toList())
-            log.info("posted daily digest: {} techs, {} articles", digests.size, shown.size)
+        // 記事ごとに 1 通ずつ投稿されるため、途中で失敗すると「一部だけ投稿済み」になり得る。
+        // 実際に投稿できた記事だけを通知済みにすることで、投稿済みの記事は翌日に重複せず、
+        // 未投稿の記事は次回の巡回で改めて候補に上がる。
+        val outcome = webhookClient.post(digests)
+        if (outcome.postedGuids.isNotEmpty()) {
+            postedGuidRepository.markPosted(outcome.postedGuids)
+        }
+        if (outcome.failure == null) {
+            log.info("posted daily digest: {} techs, {} articles", digests.size, outcome.postedGuids.size)
         } else {
-            log.warn("failed to post daily digest; will retry next schedule", result.exceptionOrNull())
+            log.warn(
+                "failed to post daily digest; posted {} of {} articles, the rest will retry next schedule",
+                outcome.postedGuids.size,
+                shown.size,
+                outcome.failure,
+            )
         }
     }
 
     /** 記事 1 件を表示内容に変換する。要約失敗時は summary=null(見出しごと省くフォールバック)。 */
     private fun toArticle(item: RssItem): DigestArticle =
         DigestArticle(
+            guid = item.guid,
             title = item.title,
             url = item.url,
             summary = summarizer.summarize(item.title, item.summary).getOrNull(),

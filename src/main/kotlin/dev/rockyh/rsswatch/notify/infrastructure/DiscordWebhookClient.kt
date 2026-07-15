@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
+import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import dev.rockyh.rsswatch.notify.domain.TechDigest
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -15,13 +16,19 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
 
 /**
- * 「求人で言及された技術 × その技術の記事」を embed 形式で 1 通にまとめて Discord Webhook へ POST する(infrastructure)。
+ * 「求人で言及された技術 × その技術の記事」を Discord Webhook へ POST する(infrastructure)。
  *
- * 1 記事 = 1 embed。embed の author に技術名(求人言及数)、title に記事タイトル+URL、field「要約」に AI 要約を載せる。
- * 末尾にサイト一覧への導線として CTA embed([siteUrl])を必ず添える。
+ * **記事 1 件 = 1 通**(embed 1 つ)。embed の author に技術名(求人言及数)、title に記事タイトル+URL、
+ * field「要約」に AI 要約を載せる。記事を全部投稿できたら、最後にサイト一覧への導線([siteUrl])を
+ * 単独の 1 通として送る。
  *
- * 429(レート制限)は `Retry-After` を尊重して [maxRetries] 回まで限定リトライし、上限到達で [Result.failure]。
- * それ以外のエラーはリトライせず失敗を返す。Discord の上限は 10 embed/通・合計 6000 文字。
+ * 1 通にまとめず記事ごとに分けているため、Discord 側の「10 embed/通・合計 6000 文字/通」の上限に
+ * 記事数が縛られない(単一 embed の title 256・field value 1024 の上限は [clampTo] で守る)。
+ * 代わりに投稿は途中で失敗し得るので、どこまで投稿できたかを [PostOutcome] で呼び出し側へ返す。
+ *
+ * 429(レート制限)は `Retry-After` を尊重して [maxRetries] 回まで限定リトライする。リトライ回数は
+ * **1 通ごと**に数え直すため、ある記事での 429 が後続の記事のリトライ余力を削らない。
+ * それ以外のエラーはリトライしない。
  */
 @Component
 @ConditionalOnNotifyEnabled
@@ -31,34 +38,51 @@ class DiscordWebhookClient(
     @Value("\${rss-watch.notify.site-url:https://rss-watch.rocky-ha.com/}") private val siteUrl: String,
     @Value("\${rss-watch.notify.discord.max-retries:2}") private val maxRetries: Int,
     private val sleeper: (Long) -> Unit = { Thread.sleep(it) },
-    private val maxTotalEmbedChars: Int = DEFAULT_MAX_TOTAL_EMBED_CHARS,
 ) : DigestPublisher {
 
     private val restClient: RestClient = restClientBuilder.build()
 
-    override fun post(digests: List<TechDigest>): Result<Unit> {
+    override fun post(digests: List<TechDigest>): PostOutcome {
         if (webhookUrl.isBlank()) {
             log.warn("Discord Webhook URL が空のため投稿をスキップします。RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL を設定してください。")
-            return Result.failure(IllegalStateException("Discord Webhook URL が設定されていません(空文字)"))
+            return PostOutcome(emptyList(), IllegalStateException("Discord Webhook URL が設定されていません(空文字)"))
         }
-        val cta = ctaEmbed()
-        // 末尾 CTA embed のぶん(1 件・文字数)を必ず残すため、記事 embed は MAX_EMBEDS-1 件・
-        // 合計上限から CTA 文字数を差し引いた範囲に収める。
-        val articleEmbeds =
-            fitWithinTotalLimit(
-                embeds = digests.toArticleEmbeds().take(MAX_EMBEDS - 1),
-                reservedChars = cta.characterCount(),
-            )
-        val payload = WebhookPayload(embeds = articleEmbeds + cta)
+
+        val postedGuids = mutableListOf<String>()
+        for ((digest, article) in digests.toArticlePosts()) {
+            val failure = sendWithRetry(toEmbed(digest, article)).exceptionOrNull()
+            if (failure != null) {
+                // 叩き続けても同じ結果になりやすいので以降は送らない。未投稿ぶんは次回の巡回で再度候補に上がる。
+                log.warn("記事の投稿に失敗したため以降の投稿を中断します: {}", article.url, failure)
+                return PostOutcome(postedGuids, failure)
+            }
+            postedGuids += article.guid
+        }
+
+        // 記事が 1 件も無ければ導線だけ送っても意味がない。
+        if (postedGuids.isEmpty()) return PostOutcome(emptyList())
+
+        // 記事を全部投稿できたときだけ、最後にサイトへの導線を送る。
+        sendWithRetry(ctaEmbed()).onFailure { error ->
+            // 記事自体は届いているため通知済みとして扱う(ここで失敗を返すと翌日これらを重複投稿してしまう)。
+            log.warn("記事は全件投稿できましたが、サイト導線の投稿に失敗しました", error)
+        }
+        return PostOutcome(postedGuids)
+    }
+
+    /**
+     * embed 1 つを 1 通として送る。429 のときだけ `Retry-After` に従って [maxRetries] 回まで再試行する。
+     * 再試行回数はこの呼び出し内で数えるため、1 通ごとに満額の余力が与えられる。
+     */
+    private fun sendWithRetry(embed: Embed): Result<Unit> {
+        val payload = WebhookPayload(embeds = listOf(embed))
         var attempt = 0
         while (true) {
             val outcome = runCatching { send(payload) }
-            outcome.onSuccess { return Result.success(Unit) }
+            if (outcome.isSuccess) return Result.success(Unit)
             val error = outcome.exceptionOrNull()!!
             val retryAfterMs = retryAfterMsOrNull(error)
-            if (retryAfterMs == null || attempt >= maxRetries) {
-                return Result.failure(error)
-            }
+            if (retryAfterMs == null || attempt >= maxRetries) return Result.failure(error)
             sleeper(retryAfterMs)
             attempt++
         }
@@ -93,42 +117,12 @@ class DiscordWebhookClient(
     private fun bodyRetryAfterSeconds(error: HttpClientErrorException): Double? =
         runCatching { error.getResponseBodyAs(RateLimitBody::class.java)?.retryAfter }.getOrNull()
 
-    /** 技術グループを平坦化し、記事 1 件ごとに 1 embed へ変換する(投稿順は技術ランキング順・記事の新しい順)。 */
-    private fun List<TechDigest>.toArticleEmbeds(): List<Embed> =
-        flatMap { digest -> digest.articles.map { article -> toEmbed(digest, article) } }
-
     /**
-     * embed を先頭から累積し、合計文字数([reservedChars] を既に消費済みとして加算)が [maxTotalEmbedChars] を
-     * 超えない範囲だけ残す。[reservedChars] は末尾に必ず付ける CTA embed のぶんを先に確保するためのもの。
-     *
-     * 単一 embed は [toEmbed] でクランプ済みのため上限を大きく超えず、通常このループの先頭で break することはない。
-     * ただし将来クランプ定数を引き上げた場合に静かに空ペイロード=400 を送らないよう、入力が非空なのに 1 件も
-     * 収まらなかったときは先頭 1 件だけは必ず残すフォールバックを置く(CTA は呼び出し側で必ず後置される)。
+     * 技術グループを平坦化し、投稿 1 通ぶんの単位(所属技術と記事の組)に並べ直す。
+     * 順序は技術ランキング順・記事の新しい順で、そのまま投稿順になる。
      */
-    private fun fitWithinTotalLimit(embeds: List<Embed>, reservedChars: Int): List<Embed> {
-        val fitted = mutableListOf<Embed>()
-        var total = reservedChars
-        for (embed in embeds) {
-            val chars = embed.characterCount()
-            if (total + chars > maxTotalEmbedChars) break
-            fitted += embed
-            total += chars
-        }
-        if (fitted.isEmpty() && embeds.isNotEmpty()) return listOf(embeds.first())
-        return fitted
-    }
-
-    /**
-     * Discord が合計 6000 文字上限で数える対象(author name + title + description + 各 field name/value)。
-     * 文字数は UTF-16 code unit(`.length`)で数える。Discord の上限は本来 Unicode コードポイント基準だが、
-     * code unit 計数は常にコードポイント数以上になるため保守的(安全側)であり、400 を招かない
-     * (絵文字主体のテキストでは必要以上に切る可能性はある)。これは意図的な選択。
-     */
-    private fun Embed.characterCount(): Int =
-        (author?.name?.length ?: 0) +
-            title.length +
-            (description?.length ?: 0) +
-            (fields?.sumOf { it.name.length + it.value.length } ?: 0)
+    private fun List<TechDigest>.toArticlePosts(): List<Pair<TechDigest, DigestArticle>> =
+        flatMap { digest -> digest.articles.map { article -> digest to article } }
 
     /**
      * 記事 1 件を embed に変換する。author に技術グループの見出し(技術名 + 求人言及数)、field は見出しを
@@ -151,7 +145,7 @@ class DiscordWebhookClient(
     private fun authorLabel(digest: TechDigest): String =
         "🧩 ${digest.keyword} ・ 求人 ${digest.mentionCount} 件で言及"
 
-    /** 末尾に添えるサイト一覧への導線 embed。title をリンクにして [siteUrl] へ飛ばす。 */
+    /** 最後に単独で送る、サイト一覧への導線 embed。title をリンクにして [siteUrl] へ飛ばす。 */
     private fun ctaEmbed(): Embed =
         Embed(
             author = null,
@@ -166,8 +160,9 @@ class DiscordWebhookClient(
      * サロゲートペア(絵文字等)の途中で切って壊れた文字を残さないよう、境界直前が
      * high surrogate なら 1 code unit 手前で切る。
      *
-     * 上限 [max] は UTF-16 code unit(`.length`)で判定する。[characterCount] と同じく
-     * コードポイント基準より保守的(安全側)な意図的選択。
+     * 上限 [max] は UTF-16 code unit(`.length`)で判定する。Discord の上限は本来 Unicode コードポイント
+     * 基準だが、code unit 計数は常にコードポイント数以上になるため保守的(安全側)であり、400 を招かない
+     * (絵文字主体のテキストでは必要以上に切る可能性はある)。これは意図的な選択。
      */
     private fun String.clampTo(max: Int): String {
         if (length <= max) return this
@@ -201,12 +196,6 @@ class DiscordWebhookClient(
     companion object {
         private val log = LoggerFactory.getLogger(DiscordWebhookClient::class.java)
 
-        /** Discord が 1 通の Webhook で受け付ける embed の最大数。 */
-        private const val MAX_EMBEDS = 10
-
-        /** Discord が 1 通の全 embed 合計で受け付ける最大文字数(超過で 400)。 */
-        private const val DEFAULT_MAX_TOTAL_EMBED_CHARS = 6000
-
         /** Discord embed の author name 最大文字数。 */
         private const val MAX_AUTHOR_NAME_LENGTH = 256
 
@@ -219,7 +208,7 @@ class DiscordWebhookClient(
         /** 要約 field の見出し(常にこの固定文言。モデル生成の見出しは使わない)。 */
         private const val SUMMARY_FIELD_NAME = "要約"
 
-        /** 末尾 CTA embed のタイトル(サイトへの導線)。 */
+        /** 最後に単独で送る導線のタイトル(サイトへのリンク)。 */
         private const val CTA_TITLE = "🔗 求人で注目の技術と記事をサイトで見る"
 
         /** Retry-After ヘッダもボディも取れなかった 429 の既定待機(即リトライで叩き続けないため)。 */

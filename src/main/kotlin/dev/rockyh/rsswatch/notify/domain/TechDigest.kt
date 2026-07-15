@@ -12,8 +12,12 @@ data class TechDigest(
 
 /**
  * 通知に載せる記事 1 件。[summary] は AI 要約。要約に失敗した場合は null(見出しごと省いてフォールバック)。
+ *
+ * [guid] は元の RSS アイテムの識別子。記事ごとに 1 通ずつ投稿するため、どこまで投稿できたかを
+ * 呼び出し側へ返す([PostOutcome.postedGuids])のに使う。
  */
 data class DigestArticle(
+    val guid: String,
     val title: String,
     val url: String,
     val summary: String?,
