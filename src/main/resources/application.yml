@@ -56,10 +56,23 @@ rss-watch:
     cron: "0 0 8 * * *"
     # 求人で言及された技術の集計窓(日)。求人は日々変わらないため取得窓は広めにとる
     window-days: 7
-    # ダイジェストに載せる技術の上位件数(言及求人数の多い順)
+    # ダイジェストに載せる技術の上位件数(興味技術 → 未紹介・久しく紹介していない技術 → 言及求人数の多い順)。
+    # ローテーションに期限はない:紹介済みの技術は未紹介の技術より常に後回しになるため、
+    # 求人数の多い人気技術も全技術を一巡するまでは再登場しない(同じ技術ばかり連日出るのを避ける意図)
     tech-limit: 3
     # 各技術につき載せる関連記事の最大件数
     articles-per-tech: 3
+    # 興味のある技術。ランキングより優先して先頭に載せる(枠は tech-limit と共通)。
+    # categories: language / frontend / backend / mobile / database-middleware / cloud-infra / ml-ai
+    # keywords:   キーワード辞書(Keywords.kt)の正規化名(大文字小文字は無視)。未知の名前は起動エラー。
+    # 興味の件数が tech-limit 以上だと興味以外の技術はほぼ表示されなくなる点に注意。
+    # 例:
+    #   interests:
+    #     categories: [cloud-infra]
+    #     keywords: [Kotlin, Go]
+    interests:
+      categories: []
+      keywords: []
     # 通知末尾に添えるサイト一覧への導線 URL
     site-url: "https://rss-watch.rocky-ha.com/"
     claude:

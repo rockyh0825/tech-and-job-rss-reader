@@ -153,6 +153,43 @@ class DiscordWebhookClientTest {
     }
 
     @Test
+    fun prefixes_star_to_author_label_for_interested_tech() {
+        val digest =
+            listOf(
+                TechDigest("AWS", 12, listOf(article("g1", "記事", "https://example.com/1", null)), interested = true),
+            )
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("⭐ AWS ・ 求人 12 件で言及"))
+            .andRespond(withSuccess())
+        expectSuccessfulPosts(1)
+
+        val outcome = client().post(digest)
+
+        assertNull(outcome.failure)
+        server.verify()
+    }
+
+    @Test
+    fun shows_fresh_articles_label_instead_of_zero_mentions() {
+        // 求人に出ていない興味技術(mentionCount=0)は「求人 0 件で言及」ではなく新着記事の見出しにする
+        val digest =
+            listOf(
+                TechDigest("Elixir", 0, listOf(article("g1", "記事", "https://example.com/1", null)), interested = true),
+            )
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("⭐ Elixir ・ 新着記事"))
+            .andRespond(withSuccess())
+        expectSuccessfulPosts(1)
+
+        val outcome = client().post(digest)
+
+        assertNull(outcome.failure)
+        server.verify()
+    }
+
+    @Test
     fun omits_summary_field_when_summary_is_null() {
         expectSuccessfulPosts(1)
         server
