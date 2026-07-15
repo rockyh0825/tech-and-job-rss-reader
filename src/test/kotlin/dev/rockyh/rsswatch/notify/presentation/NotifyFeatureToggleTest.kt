@@ -3,6 +3,7 @@ package dev.rockyh.rsswatch.notify.presentation
 import dev.rockyh.rsswatch.notify.application.BuildDigestUseCase
 import dev.rockyh.rsswatch.notify.infrastructure.ClaudeSummarizer
 import dev.rockyh.rsswatch.notify.infrastructure.DiscordWebhookClient
+import dev.rockyh.rsswatch.notify.infrastructure.OgpThumbnailResolver
 import dev.rockyh.rsswatch.notify.infrastructure.PostedGuidRepository
 import dev.rockyh.rsswatch.testing.PostgresTestConfiguration
 import kotlin.test.assertFalse
@@ -37,6 +38,7 @@ class NotifyEnabledTest {
         assertTrue(context.getBeanNamesForType(BuildDigestUseCase::class.java).isNotEmpty())
         assertTrue(context.getBeanNamesForType(ClaudeSummarizer::class.java).isNotEmpty())
         assertTrue(context.getBeanNamesForType(DiscordWebhookClient::class.java).isNotEmpty())
+        assertTrue(context.getBeanNamesForType(OgpThumbnailResolver::class.java).isNotEmpty())
         assertTrue(context.getBeanNamesForType(PostedGuidRepository::class.java).isNotEmpty())
     }
 }
@@ -55,6 +57,7 @@ class NotifyDisabledTest {
         assertFalse(context.getBeanNamesForType(BuildDigestUseCase::class.java).isNotEmpty())
         assertFalse(context.getBeanNamesForType(ClaudeSummarizer::class.java).isNotEmpty())
         assertFalse(context.getBeanNamesForType(DiscordWebhookClient::class.java).isNotEmpty())
+        assertFalse(context.getBeanNamesForType(OgpThumbnailResolver::class.java).isNotEmpty())
         assertFalse(context.getBeanNamesForType(PostedGuidRepository::class.java).isNotEmpty())
     }
 }

@@ -1,7 +1,6 @@
 package dev.rockyh.rsswatch.shared.config
 
 import java.time.Duration
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -57,13 +56,10 @@ class ApplicationYamlSchedulingAndHttpTest {
         )
     }
 
-    @Test
-    fun binding_a_misspelled_property_falls_back_to_the_default() {
-        // 上の 2 テストが「名前が正しいこと」を検証できている根拠。綴りを間違えると既定値に戻る
-        val properties = binder.bind("spring.task.scheduling-typo", TaskSchedulingProperties::class.java)
-
-        assertEquals(1, properties.orElseGet { TaskSchedulingProperties() }.pool.size)
-    }
+    // 「プロパティ名を綴り間違えると既定値に戻る」ことそのものを確かめるテストは置かない。
+    // 存在しない prefix を Binder に渡しても、検証されるのは Spring Boot 自身の既定値であって
+    // このリポジトリのコードは一行も通らない(yml を何に変えても永久に緑)。
+    // 綴り誤りの検出は、上の 3 テストが実際の prefix で束縛できていることで担保する。
 
     /** クラスパス上の application.yml だけを載せた Environment を組み立てる。 */
     private fun environmentWithApplicationYaml(): StandardEnvironment {
