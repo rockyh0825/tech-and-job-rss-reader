@@ -2,6 +2,7 @@ package dev.rockyh.rsswatch.notify.infrastructure
 
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
 import dev.rockyh.rsswatch.notify.domain.TechDigest
+import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -231,16 +232,96 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun stops_posting_and_skips_the_site_link_when_an_article_fails() {
-        // 1 通目は成功、2 通目が 400 → 3 通目(リンク)は送らずに打ち切る
-        expectSuccessfulPosts(1)
+    fun skips_only_the_bad_request_article_and_keeps_posting_the_rest() {
+        // 400 はそのペイロード固有の問題。記事 1 が 400 でも記事 2 の妥当性とは無関係なので、
+        // 記事 1 だけ捨てて記事 2 を投稿し、最後に導線も送る
         server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].title").value("要約なしの記事"))
+            .andRespond(withSuccess())
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
+            .andRespond(withSuccess())
+
+        val outcome = client().post(digests)
+
+        assertNull(outcome.failure)
+        // スキップした g1 は通知済みにしない(恒久的に隠すより、翌日また試して安く失敗する方が回復可能)
+        assertEquals(listOf("g2"), outcome.postedGuids)
+        assertTrue(sleeps.isEmpty())
+        server.verify()
+    }
+
+    @Test
+    fun does_not_send_the_site_link_when_every_article_was_skipped() {
+        // 1 件も投稿できていないなら導線だけ送っても意味がない
+        server.expect(ExpectedCount.times(2), requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
+
+        val outcome = client().post(digests)
+
+        assertNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        server.verify()
+    }
+
+    @Test
+    fun stops_posting_and_skips_the_site_link_when_the_webhook_url_is_gone() {
+        // 404 は Webhook 自体が削除済み。以降を送っても必ず失敗するので打ち切る
+        expectSuccessfulPosts(1)
+        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
 
         val outcome = client().post(digests)
 
         assertNotNull(outcome.failure)
         // 投稿できた 1 件だけを通知済みとして返す(未投稿の g2 は次回に回す)
         assertEquals(listOf("g1"), outcome.postedGuids)
+        assertTrue(sleeps.isEmpty())
+        server.verify()
+    }
+
+    @Test
+    fun retries_after_5xx_then_succeeds() {
+        // 5xx は Discord 側の一時障害。待って再試行すれば通ることがある
+        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+        // リトライぶん + リンク
+        expectSuccessfulPosts(2)
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf("g1"), outcome.postedGuids)
+        assertEquals(listOf(1000L), sleeps)
+        server.verify()
+    }
+
+    @Test
+    fun returns_failure_after_exhausting_retries_on_persistent_5xx() {
+        server
+            .expect(ExpectedCount.times(3), requestTo(webhookUrl))
+            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE))
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        // 初回 + 2 リトライ = 3 回試行、リトライ前に 2 回スリープ
+        assertEquals(2, sleeps.size)
+        server.verify()
+    }
+
+    @Test
+    fun retries_after_a_connection_failure_then_succeeds() {
+        // ソケット瞬断(RestClient は IOException を ResourceAccessException に包む)も一時障害として再試行する
+        server.expect(requestTo(webhookUrl)).andRespond { throw IOException("connection reset") }
+        expectSuccessfulPosts(2)
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf("g1"), outcome.postedGuids)
+        assertEquals(listOf(1000L), sleeps)
         server.verify()
     }
 
@@ -290,10 +371,11 @@ class DiscordWebhookClientTest {
     }
 
     @Test
-    fun returns_failure_on_non_retryable_error() {
+    fun returns_failure_without_retrying_when_the_webhook_is_unauthorized() {
+        // 401 は Webhook URL 自体が無効。リトライしても必ず失敗するので即打ち切る
         server
             .expect(ExpectedCount.once(), requestTo(webhookUrl))
-            .andRespond(withStatus(HttpStatus.BAD_REQUEST))
+            .andRespond(withStatus(HttpStatus.UNAUTHORIZED))
 
         val outcome = client().post(oneArticle)
 
@@ -416,6 +498,56 @@ class DiscordWebhookClientTest {
 
         assertNull(outcome.failure)
         assertEquals(listOf(3000L), sleeps)
+        server.verify()
+    }
+
+    @Test
+    fun waits_a_minimum_interval_when_retry_after_is_zero() {
+        // Retry-After: 0 をそのまま信じると sleeper(0) の即時リトライになり、レート制限を叩き続けてしまう
+        val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "0") }
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
+        expectSuccessfulPosts(2)
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf(200L), sleeps)
+        server.verify()
+    }
+
+    @Test
+    fun waits_a_minimum_interval_when_the_body_retry_after_is_zero() {
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(
+                withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("""{"message":"rate limited","retry_after":0,"global":false}""")
+                    .contentType(MediaType.APPLICATION_JSON),
+            )
+        expectSuccessfulPosts(2)
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf(200L), sleeps)
+        server.verify()
+    }
+
+    @Test
+    fun respects_a_sub_second_retry_after_that_is_above_the_minimum() {
+        // Discord は 0.5 秒等の小数秒を返す。下限を超えていればサーバの指示をそのまま尊重する
+        val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "0.5") }
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
+        expectSuccessfulPosts(2)
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf(500L), sleeps)
         server.verify()
     }
 
