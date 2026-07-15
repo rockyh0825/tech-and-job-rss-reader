@@ -6,6 +6,9 @@ import java.net.InetSocketAddress
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 import org.junit.jupiter.api.Test
 
 class OgpThumbnailResolverTest {
@@ -86,8 +89,8 @@ class OgpThumbnailResolverTest {
 
     @Test
     fun returns_null_when_the_image_url_is_a_data_uri() {
-        // Discord は http(s) 以外の画像 URL を 400 で弾く。400 になるとその記事の投稿が失敗し、
-        // 記事ごと 1 通の投稿はそこで打ち切られてしまうため、送る前に落とす
+        // Discord は http(s) 以外の画像 URL を 400 で弾く。400 になるとその記事の投稿ごと
+        // スキップされてしまう(サムネイルのせいで記事が落ちる)ため、送る前に落とす
         val html = page("""<meta property="og:image" content="data:image/png;base64,iVBORw0KGgo=">""")
 
         assertNull(resolver(html).resolve(articleUrl))
@@ -101,8 +104,48 @@ class OgpThumbnailResolverTest {
     }
 
     @Test
-    fun returns_null_when_the_page_is_not_html_at_all() {
-        assertNull(resolver("%PDF-1.4 binary junk").resolve(articleUrl))
+    fun returns_null_when_parsing_the_page_throws() {
+        // 契約は「取得や解析に失敗した場合は null」。解析側が投げてもダイジェスト投稿全体を巻き込まない
+        assertNull(parseFailingResolver(IllegalStateException("boom")).resolve(articleUrl))
+    }
+
+    @Test
+    fun keeps_an_image_url_that_contains_a_space() {
+        // URI() はスペースで例外を投げる。正当な CDN URL のサムネイルを捨てないこと
+        val html = page("""<meta property="og:image" content="https://cdn.example.com/my image.png">""")
+
+        assertEquals("https://cdn.example.com/my image.png", resolver(html).resolve(articleUrl))
+    }
+
+    @Test
+    fun keeps_an_image_url_that_contains_a_pipe() {
+        // 同上。Firebase Storage 等が生成する URL にはパイプが含まれ得る
+        val html = page("""<meta property="og:image" content="https://example.com/o/b|c.png">""")
+
+        assertEquals("https://example.com/o/b|c.png", resolver(html).resolve(articleUrl))
+    }
+
+    @Test
+    fun falls_back_to_the_second_candidate_of_the_same_selector_when_the_first_is_blank() {
+        // 同じ og:image がページ内に複数あり 1 つ目が空 → 2 つ目を見ずに諦めない
+        val html =
+            page(
+                """<meta property="og:image" content="   ">""",
+                """<meta property="og:image" content="https://cdn.example.com/second.png">""",
+            )
+
+        assertEquals("https://cdn.example.com/second.png", resolver(html).resolve(articleUrl))
+    }
+
+    @Test
+    fun falls_back_to_the_second_candidate_of_the_same_selector_when_the_first_is_not_http() {
+        val html =
+            page(
+                """<meta property="og:image" content="data:image/png;base64,iVBORw0KGgo=">""",
+                """<meta property="og:image" content="https://cdn.example.com/second.png">""",
+            )
+
+        assertEquals("https://cdn.example.com/second.png", resolver(html).resolve(articleUrl))
     }
 
     @Test
@@ -115,14 +158,59 @@ class OgpThumbnailResolverTest {
         }
     }
 
-    /** `/article` で [html] を返すローカル HTTP サーバを立て、`http://127.0.0.1:<port>` を [block] に渡す。 */
-    private fun withLocalHttpServer(html: String, block: (String) -> Unit) {
+    @Test
+    fun returns_null_when_the_page_is_not_html_at_all() {
+        // 記事 URL が PDF 等を返すと Jsoup は UnsupportedMimeTypeException を投げる。
+        // Jsoup.parse では再現できない経路なので、実 HTTP サーバに PDF の Content-Type を返させる
+        withLocalHttpServer("%PDF-1.4 binary junk", contentType = "application/pdf") { baseUrl ->
+            assertNull(OgpThumbnailResolver().resolve("$baseUrl/article"))
+        }
+    }
+
+    @Test
+    fun returns_null_when_the_default_fetcher_hits_the_configured_timeout() {
+        // timeout-ms が既定 fetcher に実際に効いていること(取り違えても他のテストは緑のままなので明示的に見る)。
+        // 応答を遅延させるサーバに、遅延より短い timeout を設定して取得を諦めさせる
+        val html = page("""<meta property="og:image" content="/thumb.png">""")
+        withLocalHttpServer(html, responseDelayMs = 1_000) { baseUrl ->
+            val resolver = OgpThumbnailResolver(timeoutMs = 100)
+
+            assertNull(resolver.resolve("$baseUrl/article"))
+        }
+    }
+
+    /**
+     * 解析側が投げるページ。取得は成功するが解析で落ちるケースを再現する。
+     * 実装が select / selectFirst のどちらで走査しても投げるよう両方を塞ぐ。
+     */
+    private fun parseFailingResolver(error: Throwable): OgpThumbnailResolver =
+        OgpThumbnailResolver(
+            fetchDocument = {
+                object : Document(articleUrl) {
+                    override fun select(cssQuery: String): Elements = throw error
+
+                    override fun selectFirst(cssQuery: String): Element = throw error
+                }
+            },
+        )
+
+    /**
+     * `/article` で [body] を返すローカル HTTP サーバを立て、`http://127.0.0.1:<port>` を [block] に渡す。
+     * [responseDelayMs] を与えるとレスポンス送出前にその時間だけ待つ(タイムアウトの検証用)。
+     */
+    private fun withLocalHttpServer(
+        body: String,
+        contentType: String = "text/html; charset=utf-8",
+        responseDelayMs: Long = 0,
+        block: (String) -> Unit,
+    ) {
         val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/article") { exchange ->
-            val body = html.toByteArray()
-            exchange.responseHeaders.add("Content-Type", "text/html; charset=utf-8")
-            exchange.sendResponseHeaders(200, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
+            if (responseDelayMs > 0) Thread.sleep(responseDelayMs)
+            val bytes = body.toByteArray()
+            exchange.responseHeaders.add("Content-Type", contentType)
+            exchange.sendResponseHeaders(200, bytes.size.toLong())
+            exchange.responseBody.use { it.write(bytes) }
         }
         server.start()
         try {
