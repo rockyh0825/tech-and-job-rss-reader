@@ -53,3 +53,8 @@ rss-watch:
       max-tokens: 256
     discord:
       max-retries: 2
+    ogp:
+      # 記事ページから og:image を取りに行くときの上限。応答しない記事ページで
+      # ダイジェスト投稿全体が止まらないよう、短めのタイムアウトと本文サイズ上限を置く
+      timeout-ms: 5000
+      max-body-bytes: 1048576

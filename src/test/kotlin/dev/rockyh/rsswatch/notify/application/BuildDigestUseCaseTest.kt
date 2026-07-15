@@ -7,6 +7,7 @@ import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import dev.rockyh.rsswatch.notify.domain.TechDigest
+import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
@@ -37,6 +38,16 @@ class BuildDigestUseCaseTest {
 
     private class FakeSummarizer(private val result: Result<String>) : Summarizer {
         override fun summarize(title: String, summary: String): Result<String> = result
+    }
+
+    /** 記事 URL ごとのサムネイル。指定の無い URL は「解決できなかった」= null を返す。 */
+    private class FakeThumbnailResolver(private val byUrl: Map<String, String> = emptyMap()) : ThumbnailResolver {
+        val resolvedUrls = mutableListOf<String>()
+
+        override fun resolve(articleUrl: String): String? {
+            resolvedUrls += articleUrl
+            return byUrl[articleUrl]
+        }
     }
 
     /**
@@ -73,6 +84,7 @@ class BuildDigestUseCaseTest {
         summarizer: Summarizer = FakeSummarizer(Result.success("要約")),
         publisher: DigestPublisher = FakePublisher(),
         store: PostedGuidStore = FakePostedGuidStore(),
+        thumbnailResolver: ThumbnailResolver = FakeThumbnailResolver(),
         techLimit: Int = 3,
         articlesPerTech: Int = 3,
         windowDays: Int = 7,
@@ -82,6 +94,7 @@ class BuildDigestUseCaseTest {
             summarizer = summarizer,
             webhookClient = publisher,
             postedGuidRepository = store,
+            thumbnailResolver = thumbnailResolver,
             techLimit = techLimit,
             articlesPerTech = articlesPerTech,
             windowDays = windowDays,
@@ -121,6 +134,37 @@ class BuildDigestUseCaseTest {
         assertEquals(listOf("c"), posted[1].articleGuids())
         assertEquals(listOf("要約", "要約"), posted[0].articles.map { it.summary })
         assertEquals(setOf("a", "b", "c"), store.marked!!.toSet())
+    }
+
+    @Test
+    fun attaches_the_resolved_thumbnail_to_each_article() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 1)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val publisher = FakePublisher()
+        val resolver = FakeThumbnailResolver(mapOf("https://example.com/a" to "https://cdn.example.com/a.png"))
+
+        useCase(archive, publisher = publisher, thumbnailResolver = resolver).run()
+
+        assertEquals("https://cdn.example.com/a.png", publisher.posted!!.single().articles.single().thumbnailUrl)
+        // サムネイルは記事ページ(記事の URL)から解決する
+        assertEquals(listOf("https://example.com/a"), resolver.resolvedUrls)
+    }
+
+    @Test
+    fun falls_back_to_no_thumbnail_when_it_cannot_be_resolved() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 1)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val publisher = FakePublisher()
+
+        useCase(archive, publisher = publisher, thumbnailResolver = FakeThumbnailResolver()).run()
+
+        assertNull(publisher.posted!!.single().articles.single().thumbnailUrl)
     }
 
     @Test

@@ -7,6 +7,7 @@ import dev.rockyh.rsswatch.notify.domain.DigestPublisher
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import dev.rockyh.rsswatch.notify.domain.TechDigest
+import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
@@ -22,7 +23,8 @@ import org.springframework.stereotype.Service
  * - 求人で言及の多い技術を上位 [techLimit] 件、各技術につき新しい記事を [articlesPerTech] 件まで載せる
  * - 一度通知した記事は二度と載せない(通知済み guid 全件を除外。永続的な重複排除)
  * - 同じ記事が複数の技術に紐づく場合もダイジェスト内では 1 度だけ載せる(セクション横断で重複排除)
- * - 候補 0 件は投稿せずスキップ / 要約失敗は要約なしでフォールバック / Webhook 失敗時は markPosted しない
+ * - 候補 0 件は投稿せずスキップ / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
+ * - 投稿は記事ごとに 1 通ずつ行われるため、実際に投稿できた記事だけを markPosted する
  */
 @Service
 @ConditionalOnNotifyEnabled
@@ -31,6 +33,7 @@ class BuildDigestUseCase(
     private val summarizer: Summarizer,
     private val webhookClient: DigestPublisher,
     private val postedGuidRepository: PostedGuidStore,
+    private val thumbnailResolver: ThumbnailResolver,
     @Value("\${rss-watch.notify.tech-limit:3}") private val techLimit: Int,
     @Value("\${rss-watch.notify.articles-per-tech:3}") private val articlesPerTech: Int,
     @Value("\${rss-watch.notify.window-days:7}") private val windowDays: Int,
@@ -84,12 +87,16 @@ class BuildDigestUseCase(
         }
     }
 
-    /** 記事 1 件を表示内容に変換する。要約失敗時は summary=null(見出しごと省くフォールバック)。 */
+    /**
+     * 記事 1 件を表示内容に変換する。要約失敗時は summary=null(見出しごと省くフォールバック)、
+     * サムネイルを解決できなければ thumbnailUrl=null(画像なしのフォールバック)。
+     */
     private fun toArticle(item: RssItem): DigestArticle =
         DigestArticle(
             guid = item.guid,
             title = item.title,
             url = item.url,
             summary = summarizer.summarize(item.title, item.summary).getOrNull(),
+            thumbnailUrl = thumbnailResolver.resolve(item.url),
         )
 }

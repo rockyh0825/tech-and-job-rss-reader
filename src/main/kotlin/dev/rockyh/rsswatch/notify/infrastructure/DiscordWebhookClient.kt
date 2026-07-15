@@ -126,7 +126,8 @@ class DiscordWebhookClient(
 
     /**
      * 記事 1 件を embed に変換する。author に技術グループの見出し(技術名 + 求人言及数)、field は見出しを
-     * 「要約」に固定して AI 要約本文を載せる(要約なしは field ごと省く)。
+     * 「要約」に固定して AI 要約本文を載せる(要約なしは field ごと省く)。記事の OGP 画像は
+     * thumbnail(右上の小さい画像)に載せる(解決できていなければ省く)。
      */
     private fun toEmbed(digest: TechDigest, article: DigestArticle): Embed =
         Embed(
@@ -134,6 +135,7 @@ class DiscordWebhookClient(
             title = article.title.clampTo(MAX_TITLE_LENGTH),
             url = article.url,
             description = null,
+            thumbnail = article.thumbnailUrl?.let { EmbedThumbnail(url = it) },
             // 要約が空白のみの場合も field ごと省く。Discord は field value 空(0 文字)を 400 で弾くため。
             fields =
                 article.summary
@@ -152,6 +154,7 @@ class DiscordWebhookClient(
             title = CTA_TITLE,
             url = siteUrl,
             description = null,
+            thumbnail = null,
             fields = null,
         )
 
@@ -180,10 +183,14 @@ class DiscordWebhookClient(
         val title: String,
         val url: String,
         val description: String?,
+        val thumbnail: EmbedThumbnail?,
         val fields: List<EmbedField>?,
     )
 
     private data class EmbedAuthor(val name: String)
+
+    /** embed 右上に小さく出る画像(Discord の `thumbnail`)。 */
+    private data class EmbedThumbnail(val url: String)
 
     private data class EmbedField(val name: String, val value: String)
 

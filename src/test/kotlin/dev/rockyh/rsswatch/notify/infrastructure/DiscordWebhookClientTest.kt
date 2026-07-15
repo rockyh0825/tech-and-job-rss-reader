@@ -42,8 +42,13 @@ class DiscordWebhookClientTest {
             sleeper = { sleeps.add(it) },
         )
 
-    private fun article(guid: String, title: String, url: String, summary: String?): DigestArticle =
-        DigestArticle(guid = guid, title = title, url = url, summary = summary)
+    private fun article(
+        guid: String,
+        title: String,
+        url: String,
+        summary: String?,
+        thumbnailUrl: String? = null,
+    ): DigestArticle = DigestArticle(guid = guid, title = title, url = url, summary = summary, thumbnailUrl = thumbnailUrl)
 
     /** 記事 2 件を含む技術グループ 1 件 → 投稿は「記事 2 通 + リンク 1 通」= 計 3 通になる。 */
     private val digests =
@@ -172,6 +177,43 @@ class DiscordWebhookClientTest {
         expectSuccessfulPosts(1)
 
         val outcome = client().post(digest)
+
+        assertNull(outcome.failure)
+        server.verify()
+    }
+
+    @Test
+    fun renders_the_article_thumbnail_as_an_embed_thumbnail() {
+        val digest =
+            listOf(
+                TechDigest(
+                    "Kotlin",
+                    1,
+                    listOf(article("g1", "記事", "https://example.com/1", null, "https://cdn.example.com/thumb.png")),
+                ),
+            )
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].thumbnail.url").value("https://cdn.example.com/thumb.png"))
+            .andRespond(withSuccess())
+        expectSuccessfulPosts(1)
+
+        val outcome = client().post(digest)
+
+        assertNull(outcome.failure)
+        server.verify()
+    }
+
+    @Test
+    fun omits_the_thumbnail_when_the_article_has_none() {
+        // サムネイルを解決できなかった記事も、画像なしでそのまま投稿する
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(jsonPath("$.embeds[0].thumbnail").doesNotExist())
+            .andRespond(withSuccess())
+        expectSuccessfulPosts(2)
+
+        val outcome = client().post(digests)
 
         assertNull(outcome.failure)
         server.verify()
