@@ -11,6 +11,7 @@ import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import dev.rockyh.rsswatch.notify.domain.TechCandidate
 import dev.rockyh.rsswatch.notify.domain.TechDigest
+import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Instant
@@ -28,8 +29,9 @@ import org.springframework.stereotype.Service
  *   同着は求人言及数の多い順。上位 [techLimit] 件、各技術につき新しい記事を [articlesPerTech] 件まで載せる
  * - 一度通知した記事は二度と載せない(通知済み guid 全件を除外。永続的な重複排除)
  * - 同じ記事が複数の技術に紐づく場合もダイジェスト内では 1 度だけ載せる(セクション横断で重複排除)
- * - 候補 0 件は投稿せずスキップ / 要約失敗は要約なしでフォールバック / Webhook 失敗時は
- *   markPosted・markFeatured しない
+ * - 候補 0 件は投稿せずスキップ / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
+ * - 投稿は記事ごとに 1 通ずつ行われるため、実際に投稿できた記事だけを markPosted し、その記事を
+ *   含む技術だけを markFeatured する(届かなかった技術はローテーションに乗せず候補に残す)
  */
 @Service
 @ConditionalOnNotifyEnabled
@@ -38,6 +40,7 @@ class BuildDigestUseCase(
     private val summarizer: Summarizer,
     private val webhookClient: DigestPublisher,
     private val postedGuidRepository: PostedGuidStore,
+    private val thumbnailResolver: ThumbnailResolver,
     private val interests: NotifyInterests,
     private val featuredTechStore: FeaturedTechStore,
     @Value("\${rss-watch.notify.tech-limit:3}") private val techLimit: Int,
@@ -76,16 +79,33 @@ class BuildDigestUseCase(
             return
         }
 
-        val result = webhookClient.post(digests)
-        if (result.isSuccess) {
-            postedGuidRepository.markPosted(shown.toList())
+        // 記事ごとに 1 通ずつ投稿されるため、途中で失敗すると「一部だけ投稿済み」になり得る。
+        // 実際に投稿できた記事だけを通知済みにすることで、投稿済みの記事は翌日に重複せず、
+        // 未投稿の記事は次回の巡回で改めて候補に上がる。
+        val outcome = webhookClient.post(digests)
+        if (outcome.postedGuids.isNotEmpty()) {
+            postedGuidRepository.markPosted(outcome.postedGuids)
+            // 記事が 1 件も届かなかった技術は「紹介した」とは言えないので、ローテーションに乗せず候補に残す。
             // ローテーション記録の一時失敗は配信成功を壊さない(未記録=次回も候補に残るだけで自己回復する)
-            runCatching { featuredTechStore.markFeatured(digests.map { it.keyword }) }
+            runCatching { featuredTechStore.markFeatured(featuredKeywords(digests, outcome.postedGuids)) }
                 .onFailure { log.warn("failed to mark featured techs; rotation will catch up next time", it) }
-            log.info("posted daily digest: {} techs, {} articles", digests.size, shown.size)
-        } else {
-            log.warn("failed to post daily digest; will retry next schedule", result.exceptionOrNull())
         }
+        if (outcome.failure == null) {
+            log.info("posted daily digest: {} techs, {} articles", digests.size, outcome.postedGuids.size)
+        } else {
+            log.warn(
+                "failed to post daily digest; posted {} of {} articles, the rest will retry next schedule",
+                outcome.postedGuids.size,
+                shown.size,
+                outcome.failure,
+            )
+        }
+    }
+
+    /** 記事を 1 件でも投稿できた技術だけを返す(ローテーションに乗せる対象)。 */
+    private fun featuredKeywords(digests: List<TechDigest>, postedGuids: List<String>): List<String> {
+        val posted = postedGuids.toSet()
+        return digests.filter { digest -> digest.articles.any { it.guid in posted } }.map { it.keyword }
     }
 
     /** 求人言及ランキング全件 + ランキング外の興味技術(言及 0 件)を候補にする。 */
@@ -104,11 +124,16 @@ class BuildDigestUseCase(
         return rankedCandidates + unrankedInterests
     }
 
-    /** 記事 1 件を表示内容に変換する。要約失敗時は summary=null(見出しごと省くフォールバック)。 */
+    /**
+     * 記事 1 件を表示内容に変換する。要約失敗時は summary=null(見出しごと省くフォールバック)、
+     * サムネイルを解決できなければ thumbnailUrl=null(画像なしのフォールバック)。
+     */
     private fun toArticle(item: RssItem): DigestArticle =
         DigestArticle(
+            guid = item.guid,
             title = item.title,
             url = item.url,
             summary = summarizer.summarize(item.title, item.summary).getOrNull(),
+            thumbnailUrl = thumbnailResolver.resolve(item.url),
         )
 }

@@ -5,9 +5,11 @@ import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
 import dev.rockyh.rsswatch.notify.domain.FeaturedTechStore
 import dev.rockyh.rsswatch.notify.domain.NotifyInterests
+import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import dev.rockyh.rsswatch.notify.domain.TechDigest
+import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Duration
@@ -15,6 +17,9 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
+
+/** 技術グループ一式に含まれる記事 guid を投稿順に並べる。 */
+private fun List<TechDigest>.allGuids(): List<String> = flatMap { digest -> digest.articles.map { it.guid } }
 
 class BuildDigestUseCaseTest {
 
@@ -38,12 +43,28 @@ class BuildDigestUseCaseTest {
         override fun summarize(title: String, summary: String): Result<String> = result
     }
 
-    private class FakePublisher(private val result: Result<Unit>) : DigestPublisher {
+    /** 記事 URL ごとのサムネイル。指定の無い URL は「解決できなかった」= null を返す。 */
+    private class FakeThumbnailResolver(private val byUrl: Map<String, String> = emptyMap()) : ThumbnailResolver {
+        val resolvedUrls = mutableListOf<String>()
+
+        override fun resolve(articleUrl: String): String? {
+            resolvedUrls += articleUrl
+            return byUrl[articleUrl]
+        }
+    }
+
+    /**
+     * 既定は「渡された記事を全部投稿できた」。記事ごとに 1 通ずつ投稿する実装では途中で失敗し得るので、
+     * [outcomeFor] を差し替えて「一部だけ投稿できた」「1 件も投稿できなかった」も表現する。
+     */
+    private class FakePublisher(
+        private val outcomeFor: (List<TechDigest>) -> PostOutcome = { PostOutcome(it.allGuids()) },
+    ) : DigestPublisher {
         var posted: List<TechDigest>? = null
 
-        override fun post(digests: List<TechDigest>): Result<Unit> {
+        override fun post(digests: List<TechDigest>): PostOutcome {
             posted = digests
-            return result
+            return outcomeFor(digests)
         }
     }
 
@@ -74,8 +95,9 @@ class BuildDigestUseCaseTest {
     private fun useCase(
         archive: ArchiveQueryPort,
         summarizer: Summarizer = FakeSummarizer(Result.success("要約")),
-        publisher: DigestPublisher = FakePublisher(Result.success(Unit)),
+        publisher: DigestPublisher = FakePublisher(),
         store: PostedGuidStore = FakePostedGuidStore(),
+        thumbnailResolver: ThumbnailResolver = FakeThumbnailResolver(),
         interests: NotifyInterests = NotifyInterests(emptySet()),
         featuredStore: FeaturedTechStore = FakeFeaturedTechStore(),
         techLimit: Int = 3,
@@ -87,6 +109,7 @@ class BuildDigestUseCaseTest {
             summarizer = summarizer,
             webhookClient = publisher,
             postedGuidRepository = store,
+            thumbnailResolver = thumbnailResolver,
             interests = interests,
             featuredTechStore = featuredStore,
             techLimit = techLimit,
@@ -107,8 +130,7 @@ class BuildDigestUseCaseTest {
             keywords = listOf("Kotlin"),
         )
 
-    /** DigestArticle の URL 末尾から元の guid を復元する(投稿された記事の同定用)。 */
-    private fun TechDigest.articleGuids(): List<String> = articles.map { it.url.substringAfterLast('/') }
+    private fun TechDigest.articleGuids(): List<String> = articles.map { it.guid }
 
     @Test
     fun builds_sections_per_top_tech_with_related_articles_and_marks_all_shown() {
@@ -117,7 +139,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Kotlin", 5), TechMention("Go", 3)),
                 articlesByKeyword = mapOf("Kotlin" to listOf(item("a"), item("b")), "Go" to listOf(item("c"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
         val store = FakePostedGuidStore()
 
         useCase(archive, publisher = publisher, store = store).run()
@@ -132,13 +154,44 @@ class BuildDigestUseCaseTest {
     }
 
     @Test
+    fun attaches_the_resolved_thumbnail_to_each_article() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 1)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val publisher = FakePublisher()
+        val resolver = FakeThumbnailResolver(mapOf("https://example.com/a" to "https://cdn.example.com/a.png"))
+
+        useCase(archive, publisher = publisher, thumbnailResolver = resolver).run()
+
+        assertEquals("https://cdn.example.com/a.png", publisher.posted!!.single().articles.single().thumbnailUrl)
+        // サムネイルは記事ページ(記事の URL)から解決する
+        assertEquals(listOf("https://example.com/a"), resolver.resolvedUrls)
+    }
+
+    @Test
+    fun falls_back_to_no_thumbnail_when_it_cannot_be_resolved() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 1)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val publisher = FakePublisher()
+
+        useCase(archive, publisher = publisher, thumbnailResolver = FakeThumbnailResolver()).run()
+
+        assertNull(publisher.posted!!.single().articles.single().thumbnailUrl)
+    }
+
+    @Test
     fun falls_back_to_no_summary_when_summarization_fails() {
         val archive =
             FakeArchive(
                 ranking = listOf(TechMention("Kotlin", 1)),
                 articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, summarizer = FakeSummarizer(Result.failure(RuntimeException("api down"))), publisher = publisher).run()
 
@@ -152,7 +205,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Kotlin", 5)),
                 articlesByKeyword = emptyMap(), // Kotlin に紐づく tech 記事が無い
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
         val store = FakePostedGuidStore()
 
         useCase(archive, publisher = publisher, store = store).run()
@@ -162,17 +215,51 @@ class BuildDigestUseCaseTest {
     }
 
     @Test
-    fun does_not_mark_posted_when_webhook_fails() {
+    fun does_not_mark_posted_when_nothing_could_be_posted() {
         val archive =
             FakeArchive(
                 ranking = listOf(TechMention("Kotlin", 1)),
                 articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
             )
         val store = FakePostedGuidStore()
+        val publisher = FakePublisher { PostOutcome(emptyList(), RuntimeException("discord down")) }
 
-        useCase(archive, publisher = FakePublisher(Result.failure(RuntimeException("discord down"))), store = store).run()
+        useCase(archive, publisher = publisher, store = store).run()
 
         assertNull(store.marked)
+    }
+
+    @Test
+    fun marks_only_the_articles_that_were_actually_posted_when_posting_stops_midway() {
+        // 記事ごとに 1 通ずつ投稿するので、途中で失敗すると一部だけ Discord に出ている状態になる。
+        // 出た記事だけを通知済みにする(全件記録すると未投稿の b/c を永久に取りこぼす)
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"), item("b"), item("c"))),
+            )
+        val store = FakePostedGuidStore()
+        val publisher = FakePublisher { PostOutcome(listOf("a"), RuntimeException("discord down")) }
+
+        useCase(archive, publisher = publisher, store = store).run()
+
+        assertEquals(listOf("a"), store.marked)
+    }
+
+    @Test
+    fun marks_posted_articles_even_when_the_publisher_reports_a_failure_afterwards() {
+        // 記事は全部投稿できたがリンクだけ落ちた、というケースでも記事は通知済みにする(翌日の重複を防ぐ)
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"), item("b"))),
+            )
+        val store = FakePostedGuidStore()
+        val publisher = FakePublisher { PostOutcome(it.allGuids(), RuntimeException("cta down")) }
+
+        useCase(archive, publisher = publisher, store = store).run()
+
+        assertEquals(listOf("a", "b"), store.marked)
     }
 
     @Test
@@ -182,7 +269,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Kotlin", 5)),
                 articlesByKeyword = mapOf("Kotlin" to listOf(item("posted"), item("fresh"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
         val store = FakePostedGuidStore(alreadyPosted = setOf("posted"))
 
         useCase(archive, publisher = publisher, store = store).run()
@@ -204,7 +291,7 @@ class BuildDigestUseCaseTest {
                         "t3" to listOf(item("c1")),
                     ),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, publisher = publisher, techLimit = 2, articlesPerTech = 2).run()
 
@@ -224,7 +311,7 @@ class BuildDigestUseCaseTest {
                         "Kafka" to listOf(item("shared"), item("kaOnly")),
                     ),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
         val store = FakePostedGuidStore()
 
         useCase(archive, publisher = publisher, store = store).run()
@@ -247,7 +334,7 @@ class BuildDigestUseCaseTest {
                         "t3" to listOf(item("new3")),
                     ),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, publisher = publisher, store = FakePostedGuidStore(alreadyPosted = setOf("old1")), techLimit = 2).run()
 
@@ -263,7 +350,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Python", 30), TechMention("Kotlin", 2)),
                 articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Kotlin" to listOf(item("k1"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Kotlin"))).run()
 
@@ -277,7 +364,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Python", 30)),
                 articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Elixir" to listOf(item("e1"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Elixir"))).run()
 
@@ -293,7 +380,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Python", 30)),
                 articlesByKeyword = mapOf("Python" to listOf(item("p1"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Elixir"))).run()
 
@@ -307,7 +394,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Python", 30), TechMention("Ruby", 1)),
                 articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Ruby" to listOf(item("r1"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
         val featuredStore = FakeFeaturedTechStore(mapOf("Python" to now.minus(Duration.ofDays(1))))
 
         useCase(archive, publisher = publisher, featuredStore = featuredStore, techLimit = 1).run()
@@ -330,17 +417,36 @@ class BuildDigestUseCaseTest {
     }
 
     @Test
-    fun does_not_mark_featured_when_webhook_fails() {
+    fun does_not_mark_featured_when_nothing_could_be_posted() {
         val archive =
             FakeArchive(
                 ranking = listOf(TechMention("Kotlin", 1)),
                 articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
             )
         val featuredStore = FakeFeaturedTechStore()
+        val publisher = FakePublisher { PostOutcome(emptyList(), RuntimeException("discord down")) }
 
-        useCase(archive, publisher = FakePublisher(Result.failure(RuntimeException("discord down"))), featuredStore = featuredStore).run()
+        useCase(archive, publisher = publisher, featuredStore = featuredStore).run()
 
         assertNull(featuredStore.marked)
+    }
+
+    @Test
+    fun marks_featured_only_the_techs_whose_articles_actually_reached_discord() {
+        // 記事ごとに 1 通ずつ投稿するので、途中で打ち切られると届かなかった技術が出る。
+        // 届かなかった技術は「紹介した」とは言えないのでローテーションに乗せず、次回も候補に残す
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5), TechMention("Go", 3)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a")), "Go" to listOf(item("b"))),
+            )
+        val featuredStore = FakeFeaturedTechStore()
+        // Kotlin の記事だけ投稿できて、Go の記事の手前で打ち切られた
+        val publisher = FakePublisher { PostOutcome(listOf("a"), RuntimeException("discord down")) }
+
+        useCase(archive, publisher = publisher, featuredStore = featuredStore).run()
+
+        assertEquals(listOf("Kotlin"), featuredStore.marked)
     }
 
     @Test
@@ -372,7 +478,7 @@ class BuildDigestUseCaseTest {
                 ranking = listOf(TechMention("Kotlin", 5), TechMention("Python", 3)),
                 articlesByKeyword = mapOf("Kotlin" to listOf(item("a")), "Python" to listOf(item("b"))),
             )
-        val publisher = FakePublisher(Result.success(Unit))
+        val publisher = FakePublisher()
 
         useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Kotlin"))).run()
 

@@ -1,6 +1,22 @@
 spring:
   application:
     name: tech-and-job-rss-reader
+  task:
+    scheduling:
+      # 既定は 1 本。FetchScheduler(15分毎の巡回)と DigestScheduler が 1 本を共有すると、
+      # ダイジェスト投稿(Claude 要約・OGP 取得・Discord へ記事数ぶんの POST)が長引く間
+      # RSS 巡回ごと止まってしまう。両者を独立させるため 2 本にする
+      pool:
+        size: 2
+  http:
+    client:
+      # 自動構成の RestClient.Builder(ClaudeSummarizer / DiscordWebhookClient が使う)は
+      # 既定でタイムアウトを持たない = 相手が黙るとスケジューラのスレッドを無期限に占有する。
+      # 有限値を入れて必ず解放させる
+      connect-timeout: 10s
+      # Claude の要約 1 件(max-tokens: 256)の生成が収まる長さ。Discord への POST には過剰だが、
+      # 掴んだまま止まるより短く諦める方がよい
+      read-timeout: 30s
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -66,3 +82,11 @@ rss-watch:
       max-tokens: 256
     discord:
       max-retries: 2
+    ogp:
+      # 記事ページから og:image を取りに行くときの上限。応答しない記事ページで
+      # ダイジェスト投稿全体が止まらないよう、短めのタイムアウトと本文サイズ上限を置く。
+      # timeout-ms は「1 リクエストあたり」で、1 記事あたりではない点に注意:
+      # jsoup はリダイレクトのホップごとにタイムアウトを取り直すため、
+      # 1 記事の解決は最悪 timeout-ms × 20(jsoup のリダイレクト上限)まで伸び得る
+      timeout-ms: 5000
+      max-body-bytes: 1048576

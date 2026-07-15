@@ -28,6 +28,8 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-toml")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.rometools:rome:2.1.0")
+    // 記事ページの og:image を取り出す HTML パース(notify のサムネイル解決)
+    implementation("org.jsoup:jsoup:1.18.3")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("dev.hsbrysk.kuery-client:kuery-client-spring-data-jdbc:0.11.0")
     implementation("org.flywaydb:flyway-core")
