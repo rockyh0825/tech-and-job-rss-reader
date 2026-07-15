@@ -8,7 +8,6 @@ import dev.rockyh.rsswatch.notify.domain.DigestArticle
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import dev.rockyh.rsswatch.notify.domain.TechDigest
-import java.io.IOException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
@@ -37,14 +36,14 @@ import org.springframework.web.client.RestClient
  *
  * | 種別 | 扱い |
  * | --- | --- |
- * | 429 | `Retry-After` を尊重して [maxRetries] 回までリトライ。使い切ったら打ち切り |
+ * | 429 | `Retry-After` を尊重して [maxRetries] 回までリトライ。使い切ったら打ち切り。指示が [MAX_RETRY_WAIT_MS] 超なら待たずに打ち切り |
  * | 5xx / 接続失敗 | [TRANSIENT_RETRY_MS] 待って [maxRetries] 回までリトライ。使い切ったら打ち切り |
  * | 400 | その記事だけスキップして次へ進む(ペイロード固有の問題) |
  * | その他の 4xx | 打ち切り(Webhook URL 自体が無効・削除済み) |
  *
  * サイト導線を送る条件は「打ち切らずに最後まで記事を投稿し終えた、かつ 1 件以上投稿できた」。
- * 400 でスキップした記事があっても導線は送る。スキップされた記事は今後も成功しないため、これを理由に
- * 導線を永久に送らないのは「リンクは最後に来る」という元の要件の意図に反するため。
+ * 400 でスキップした記事があっても導線は送る。スキップされた記事は翌日また同じ 400 を踏む見込みだが、
+ * それを理由に導線まで止めるのは「リンクは最後に来る」という元の要件の意図に反するため。
  */
 @Component
 @ConditionalOnNotifyEnabled
@@ -70,8 +69,9 @@ class DiscordWebhookClient(
                 is SendResult.Sent -> postedGuids += article.guid
                 is SendResult.Skipped ->
                     // この記事のペイロード固有の問題。他の記事は無関係なので投稿を続ける。
-                    // 通知済みにはしない(恒久的に隠すより、翌日また試して安く失敗する方が回復可能。
-                    // 窓 = window-days から落ちれば自然に消える)。
+                    // 通知済みにはしない(翌日も同じ 400 を踏む見込みだが、1 通ぶんのリトライは安いので
+                    // 毎日試す方を採る。恒久的に隠すと直っても二度と出ない。窓 = window-days から
+                    // 落ちれば自然に消える)。
                     log.warn("記事の投稿を拒否されたためこの記事のみスキップします: {}", article.url, result.error)
                 is SendResult.Aborted -> {
                     // 叩き続けても同じ結果になるので以降は送らない。未投稿ぶんは次回の巡回で再度候補に上がる。
@@ -85,8 +85,8 @@ class DiscordWebhookClient(
         if (postedGuids.isEmpty()) return PostOutcome(emptyList())
 
         // 打ち切らずに最後まで走り切り、かつ 1 件以上投稿できたので導線を送る。
-        // スキップした記事があっても送る: スキップぶんは今後も成功しないため、それを理由に導線を
-        // 永久に送らないのは「リンクは最後に来る」という元の要件の意図に反する。
+        // スキップした記事があっても送る: スキップぶんは翌日また試すが、それが通るまで導線を
+        // 止め続けるのは「リンクは最後に来る」という元の要件の意図に反する。
         when (val result = sendWithRetry(ctaEmbed())) {
             is SendResult.Sent -> Unit
             // 記事自体は届いているため通知済みとして扱う(ここで失敗を返すと翌日これらを重複投稿してしまう)。
@@ -109,6 +109,8 @@ class DiscordWebhookClient(
             val retryWaitMs = retryWaitMsOrNull(error)
             // リトライしても無駄なエラー(4xx)は、その場で「スキップ」か「打ち切り」かを決める。
             if (retryWaitMs == null) return terminalResult(error)
+            // 指示された待機が長すぎる。眠らずに打ち切って翌日へ回す(理由は [MAX_RETRY_WAIT_MS])。
+            if (retryWaitMs > MAX_RETRY_WAIT_MS) return SendResult.Aborted(error)
             // リトライ余力を使い切った 429 / 5xx / 接続失敗。以降の通も同じ状況に置かれるので打ち切る。
             if (attempt >= maxRetries) return SendResult.Aborted(error)
             sleeper(retryWaitMs)
@@ -121,11 +123,14 @@ class DiscordWebhookClient(
      *
      * 429 はレート制限、5xx は Discord 側の一時障害、[ResourceAccessException] は接続失敗
      * (RestClient が [java.io.IOException] を包んだもの)で、いずれも時間を置けば通り得る。
+     *
+     * [java.io.IOException] 自体は分岐に持たない。RestClient は送信・受信で起きた IOException を必ず
+     * [ResourceAccessException](RuntimeException 系)に包んで投げるため、ここまで素の IOException は届かない。
      */
     private fun retryWaitMsOrNull(error: Throwable): Long? =
         when (error) {
             is HttpClientErrorException.TooManyRequests -> retryAfterMs(error)
-            is HttpServerErrorException, is ResourceAccessException, is IOException -> TRANSIENT_RETRY_MS
+            is HttpServerErrorException, is ResourceAccessException -> TRANSIENT_RETRY_MS
             else -> null
         }
 
@@ -299,6 +304,19 @@ class DiscordWebhookClient(
 
         /** `Retry-After: 0` 等をそのまま信じて即時リトライにならないための下限。 */
         private const val MIN_RETRY_MS = 200L
+
+        /**
+         * サーバの指示に従って待つ上限。これを超える指示は待たずに打ち切る。
+         *
+         * Discord の通常のレート制限(per-route)は秒オーダーで解ける。それを大きく超える指示が来るのは
+         * グローバル制限や Cloudflare 1015 の BAN で、いずれもこの実行中には解けない規模
+         * (`Retry-After: 3600` なら [maxRetries] 次第で最悪 2 時間)。ダイジェストは日次なので、
+         * スケジューラのスレッドを何時間も占有するより翌日の巡回へ回す方が安い。
+         *
+         * 上限でクランプして「60 秒だけ待って再送」はしない。Discord の指示より早く叩き直すことになり、
+         * レート制限をさらに踏む。待てないなら諦める、が筋。
+         */
+        private const val MAX_RETRY_WAIT_MS = 60_000L
 
         /** 5xx・接続失敗の待機(サーバからの指示が無いので固定値)。 */
         private const val TRANSIENT_RETRY_MS = 1000L

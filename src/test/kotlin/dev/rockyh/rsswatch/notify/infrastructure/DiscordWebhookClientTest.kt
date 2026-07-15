@@ -552,6 +552,59 @@ class DiscordWebhookClientTest {
     }
 
     @Test
+    fun aborts_without_waiting_when_the_retry_after_header_exceeds_the_maximum_wait() {
+        // Discord のグローバル制限や Cloudflare 1015 は数千秒を返し得る。指示どおり眠るとスケジューラの
+        // スレッドを 1 時間占有してしまう。待たずに打ち切り、翌日の巡回へ回す
+        val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "3600") }
+        server
+            .expect(ExpectedCount.once(), requestTo(webhookUrl))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        assertTrue(sleeps.isEmpty())
+        server.verify()
+    }
+
+    @Test
+    fun aborts_without_waiting_when_the_body_retry_after_exceeds_the_maximum_wait() {
+        // ヘッダ経由と同じ扱い。グローバル制限はボディの retry_after で返ってくることがある
+        server
+            .expect(ExpectedCount.once(), requestTo(webhookUrl))
+            .andRespond(
+                withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("""{"message":"You are being rate limited.","retry_after":1200,"global":true}""")
+                    .contentType(MediaType.APPLICATION_JSON),
+            )
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        assertTrue(sleeps.isEmpty())
+        server.verify()
+    }
+
+    @Test
+    fun still_waits_when_the_retry_after_is_exactly_at_the_maximum_wait() {
+        // 上限ちょうどは「待つ」側。上限を超えたときだけ打ち切る
+        val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "60") }
+        server
+            .expect(requestTo(webhookUrl))
+            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
+        expectSuccessfulPosts(2)
+
+        val outcome = client(maxRetries = 2).post(oneArticle)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf("g1"), outcome.postedGuids)
+        assertEquals(listOf(60_000L), sleeps)
+        server.verify()
+    }
+
+    @Test
     fun retry_budget_is_counted_per_message_so_a_429_on_one_article_does_not_starve_the_next() {
         // 記事 1 が 429→成功、記事 2 も 429→成功。リトライ回数は 1 通ごとに数え直される
         server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
