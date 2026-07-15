@@ -110,19 +110,46 @@ class OgpThumbnailResolverTest {
     }
 
     @Test
-    fun keeps_an_image_url_that_contains_a_space() {
-        // URI() はスペースで例外を投げる。正当な CDN URL のサムネイルを捨てないこと
+    fun encodes_an_image_url_that_contains_a_space() {
+        // 生スペースを含む URL は Discord が 400 で弾き、400 はその記事の投稿ごとスキップさせる。
+        // かといって捨てると正当な CDN のサムネイルを失うので、エンコードして送れる形にする
         val html = page("""<meta property="og:image" content="https://cdn.example.com/my image.png">""")
 
-        assertEquals("https://cdn.example.com/my image.png", resolver(html).resolve(articleUrl))
+        assertEquals("https://cdn.example.com/my%20image.png", resolver(html).resolve(articleUrl))
     }
 
     @Test
-    fun keeps_an_image_url_that_contains_a_pipe() {
+    fun encodes_an_image_url_that_contains_a_pipe() {
         // 同上。Firebase Storage 等が生成する URL にはパイプが含まれ得る
         val html = page("""<meta property="og:image" content="https://example.com/o/b|c.png">""")
 
-        assertEquals("https://example.com/o/b|c.png", resolver(html).resolve(articleUrl))
+        assertEquals("https://example.com/o/b%7Cc.png", resolver(html).resolve(articleUrl))
+    }
+
+    @Test
+    fun does_not_double_encode_an_image_url_that_is_already_percent_encoded() {
+        // 無条件にエンコードすると既存の % が %25 になって URL が壊れる(a%20b.png → a%2520b.png)。
+        // そのままで妥当な URL には触らないこと
+        val html = page("""<meta property="og:image" content="https://cdn.example.com/a%20b.png">""")
+
+        assertEquals("https://cdn.example.com/a%20b.png", resolver(html).resolve(articleUrl))
+    }
+
+    @Test
+    fun keeps_an_image_url_with_a_japanese_path_unchanged() {
+        // 非 ASCII のパスはそのままで妥当な URI として解釈できる。触らずに通す
+        val html = page("""<meta property="og:image" content="https://example.com/記事.png">""")
+
+        assertEquals("https://example.com/記事.png", resolver(html).resolve(articleUrl))
+    }
+
+    @Test
+    fun returns_null_when_the_image_url_cannot_be_made_valid_even_by_encoding() {
+        // 壊れたパーセントエスケープ(%zz)はエンコードしても妥当にできない。
+        // ここはサムネイルだけ諦める(記事自体は投稿させる)
+        val html = page("""<meta property="og:image" content="https://example.com/a%zz.png">""")
+
+        assertNull(resolver(html).resolve(articleUrl))
     }
 
     @Test

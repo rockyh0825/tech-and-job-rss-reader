@@ -2,11 +2,13 @@ package dev.rockyh.rsswatch.notify.infrastructure
 
 import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
+import java.net.URI
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import org.springframework.web.util.UriComponentsBuilder
 
 /**
  * 記事ページの HTML から OGP のサムネイル画像 URL を取り出す(infrastructure)。
@@ -17,6 +19,10 @@ import org.springframework.stereotype.Component
  * 取得先は任意の外部サイトなので、応答しないページでダイジェスト全体が止まらないよう
  * タイムアウトと本文サイズ上限を設ける([FeedParser] 実装の RomeFeedParser と同じ方針)。
  * 取得・解析の失敗は握りつぶして null を返し、サムネイルなしで投稿を続けさせる。
+ *
+ * 返す URL は Discord がそのまま受け取れる形に整える([toSendableUrlOrNull])。ここで妥協して
+ * 400 を招く URL を通すと、Discord は embed を丸ごと拒否する = **サムネイル 1 枚のために記事の投稿が
+ * 落ちる**ため、「送れる形に直す / 直せなければサムネイルだけ諦める」のどちらかに倒す。
  *
  * [timeoutMs] は **1 リクエストあたり**の上限であり、1 記事あたりではない。jsoup はリダイレクトの
  * ホップごとにタイムアウトを取り直すため、1 記事の解決は最悪 [timeoutMs] × 20(jsoup のリダイレクト
@@ -66,7 +72,7 @@ class OgpThumbnailResolver(
             if (meta.attr("content").isBlank()) {
                 null
             } else {
-                meta.absUrl("content").takeIf { it.isHttpUrl() }
+                meta.absUrl("content").takeIf { it.hasHttpScheme() }?.toSendableUrlOrNull()
             }
         }
 
@@ -74,12 +80,37 @@ class OgpThumbnailResolver(
      * http(s) の URL だけを通す。Discord は他スキーム(`data:` 等)の画像 URL を 400 で弾き、
      * 400 になるとその記事だけ投稿がスキップされてしまうため、送る前に落とす。
      *
-     * スキーム接頭辞で判定する。`URI()` による判定はスペースやパイプを含む URL
-     * (`https://cdn.example.com/my image.png` 等)で URISyntaxException を投げ、Discord なら
-     * 受け付ける正当な CDN の画像まで捨ててしまうため使わない。
+     * スキームの判定に `URI()` は使わない。スペースやパイプを含む URL
+     * (`https://cdn.example.com/my image.png` 等)で URISyntaxException を投げるため、
+     * 「非 http(s) だから落とす」と「URL の書式が緩いだけ」を区別できなくなる。前者はここで落とし、
+     * 後者は [toSendableUrlOrNull] でエンコードして救う。
      */
-    private fun String.isHttpUrl(): Boolean =
+    private fun String.hasHttpScheme(): Boolean =
         startsWith("http://", ignoreCase = true) || startsWith("https://", ignoreCase = true)
+
+    /**
+     * Discord がそのまま受け取れる URL に整えて返す。整えられなければ null。
+     *
+     * 生のスペースやパイプを含む URL は Discord が 400 で弾くが、400 はその記事の投稿ごと
+     * スキップさせてしまう(しかも決定的なので window-days の間ずっと届かない)。サムネイル 1 枚のために
+     * 記事を失わないよう、**落とさずエンコードして**送れる形にする。
+     *
+     * ただしエンコードは無条件にはかけない。`UriComponentsBuilder.encode()` は既存のパーセントエスケープの
+     * `%` ごと再エンコードするため、既に正しくエンコード済みの URL を二重エンコードで壊す
+     * (`a%20b.png` → `a%2520b.png`)。そのままで妥当な URI ならそこには触らない。
+     *
+     * 部分的にだけエンコードされた URL(生スペースと `%20` が混在)は本質的に曖昧で、
+     * ここでは救えない(既存の `%20` が `%2520` になる)。実在の OGP としては稀なので許容する。
+     */
+    private fun String.toSendableUrlOrNull(): String? {
+        if (isValidUri()) return this
+        return runCatching { UriComponentsBuilder.fromUriString(this).build().encode().toUriString() }
+            .getOrNull()
+            // エンコードしても妥当にならないものは送らない(サムネイルだけ諦め、記事は投稿する)。
+            ?.takeIf { it.isValidUri() }
+    }
+
+    private fun String.isValidUri(): Boolean = runCatching { URI(this) }.isSuccess
 
     companion object {
         private val log = LoggerFactory.getLogger(OgpThumbnailResolver::class.java)
