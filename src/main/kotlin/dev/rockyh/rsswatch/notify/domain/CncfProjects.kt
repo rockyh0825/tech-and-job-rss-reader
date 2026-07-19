@@ -1,14 +1,6 @@
 package dev.rockyh.rsswatch.notify.domain
 
-/**
- * CNCF プロジェクトの成熟度(https://www.cncf.io/projects/ の Maturity Levels)。
- * 宣言順 = ダイジェストでの優先順(成熟度が低いほど「早期に掴む」価値が高いので先頭)。
- */
-enum class CncfMaturity(val label: String, val emoji: String) {
-    SANDBOX("Sandbox", "🌱"),
-    INCUBATING("Incubating", "🧪"),
-    GRADUATED("Graduated", "🎓"),
-}
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 
 /**
  * CNCF プロジェクト辞書の 1 エントリ。

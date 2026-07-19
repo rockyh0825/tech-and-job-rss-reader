@@ -1,5 +1,7 @@
 package dev.rockyh.rsswatch.notify.domain
 
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
+import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.shared.contract.RssItem
 
 /**

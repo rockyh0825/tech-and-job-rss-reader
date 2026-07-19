@@ -3,7 +3,7 @@ package dev.rockyh.rsswatch.notify.infrastructure
 import dev.rockyh.rsswatch.notify.ConditionalOnCncfNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
 import dev.rockyh.rsswatch.notify.domain.CncfDigestPublisher
-import dev.rockyh.rsswatch.notify.domain.CncfMention
+import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value

@@ -4,7 +4,7 @@ import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
 import dev.rockyh.rsswatch.notify.domain.CncfDigestPublisher
-import dev.rockyh.rsswatch.notify.domain.CncfMaturity
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer

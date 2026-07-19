@@ -1,10 +1,6 @@
 package dev.rockyh.rsswatch.notify.domain
 
-/** テキスト中で言及された CNCF プロジェクト 1 件。 */
-data class CncfMention(
-    val projectName: String,
-    val maturity: CncfMaturity,
-)
+import dev.rockyh.rsswatch.shared.contract.CncfMention
 
 /**
  * テキストから CNCF プロジェクトの言及を検出する。
