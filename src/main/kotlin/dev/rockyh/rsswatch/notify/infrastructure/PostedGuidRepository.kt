@@ -2,7 +2,7 @@ package dev.rockyh.rsswatch.notify.infrastructure
 
 import dev.hsbrysk.kuery.core.KueryBlockingClient
 import dev.hsbrysk.kuery.core.list
-import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
+import dev.rockyh.rsswatch.notify.ConditionalOnAnyNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import java.time.Clock
 import java.time.Instant
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional
  * - [markPosted] は `INSERT ... ON CONFLICT (guid) DO NOTHING` で同 guid の再投入を無害化する
  */
 @Repository
-@ConditionalOnNotifyEnabled
+@ConditionalOnAnyNotifyEnabled
 class PostedGuidRepository(
     private val kueryClient: KueryBlockingClient,
     private val clock: Clock = Clock.systemUTC(),

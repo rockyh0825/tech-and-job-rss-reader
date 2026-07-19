@@ -72,6 +72,26 @@ class FeedConfigLoaderTest {
     }
 
     @Test
+    fun parses_cncf_category_feeds() {
+        val path =
+            tomlFile(
+                """
+                [[feeds]]
+                name = "CNCF Blog"
+                url = "https://www.cncf.io/feed/"
+                category = "cncf"
+                """.trimIndent(),
+            )
+
+        val feeds = loader.load(path)
+
+        assertEquals(
+            listOf(FeedDefinition("CNCF Blog", "https://www.cncf.io/feed/", ItemCategory.CNCF)),
+            feeds,
+        )
+    }
+
+    @Test
     fun returns_empty_list_when_no_feeds_are_defined() {
         val path = tomlFile("# コメントだけのファイル")
 
@@ -134,8 +154,9 @@ class FeedConfigLoaderTest {
     fun parses_the_bundled_feeds_toml() {
         val feeds = loader.load(Path.of("feeds.toml"))
 
-        assertEquals(9, feeds.size)
+        assertEquals(11, feeds.size)
         assertEquals(5, feeds.count { it.category == ItemCategory.TECH })
         assertEquals(4, feeds.count { it.category == ItemCategory.JOBS })
+        assertEquals(2, feeds.count { it.category == ItemCategory.CNCF })
     }
 }

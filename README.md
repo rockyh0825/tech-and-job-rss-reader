@@ -328,6 +328,27 @@ java -jar rss-watch.jar
 
 > Webhook URL・API キーは機密情報。リポジトリにコミットせず、環境変数(systemd なら `Environment=` か `EnvironmentFile=`)で渡すこと。
 
+### CNCF ダイジェスト(専用チャンネル)
+
+CNCF 関連フィード(`feeds.toml` の `category = "cncf"`。CNCF Blog と Kubernetes Blog)の新着記事を、毎朝**別の Discord チャンネル**へ配信する([issue #46](https://github.com/rockyh0825/tech-and-job-rss-reader/issues/46))。既存ダイジェストとは**独立にオン/オフ**でき、片方だけの運用もできる。
+
+各記事の author 見出しには、記事中で言及された CNCF プロジェクトの**成熟度バッジ**が付く(🌱 Sandbox / 🧪 Incubating / 🎓 Graduated。言及なしは ☸️ CNCF)。**成熟度の低いプロジェクトに言及する記事ほど先に**並ぶ(graduated 前のプロジェクトを早期に掴む、という issue の動機の反映)。要約・サムネイル・重複防止・失敗時の扱いは既存ダイジェストと同じ。
+
+```bash
+# CNCF 用 Webhook URL を渡すと有効化される(既存側とは別のチャンネルの Webhook を作って渡す)
+export RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/xxxx/zzzz"
+```
+
+| 変数 / 設定キー | 意味 | デフォルト |
+|---|---|---|
+| `RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL` | CNCF 用 Discord Webhook URL。**設定時のみ CNCF 配信が有効**(未設定=無効) | (未設定) |
+| `rss-watch.notify.cncf.cron` | 配信時刻(Spring cron 式)。既存ダイジェストと 10 分ずらしてある | `0 10 8 * * *`(毎朝 8:10) |
+| `rss-watch.notify.cncf.window-days` | 候補記事の取得窓(日) | `7` |
+| `rss-watch.notify.cncf.max-articles` | 1 回の配信に載せる記事の上限(初回のバックログ氾濫防止) | `8` |
+| `rss-watch.notify.cncf.cta-url` | 通知末尾に添える導線 URL | `https://www.cncf.io/projects/` |
+
+> プロジェクト成熟度の辞書は `notify/domain/CncfProjects.kt` の手書き管理(graduated はほぼ全件、incubating / sandbox は厳選)。CNCF 側で昇格・アーカイブがあったら行を移す。CNCF カテゴリの記事はこの専用チャンネルのみに流れ、既存ダイジェストやレポート画面(`/api/report`)には出ない。
+
 ## 動作確認(ローカル)
 
 MVP のパイプライン(fetcher → Kafka → sink / live consumer → API / UI)が一通り動いていることをローカルで確認する手順。「ローカル開発」の 2 コマンド(`docker compose up` + `./gradlew bootRun`)を実行済みであることが前提。
