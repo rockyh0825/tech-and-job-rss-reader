@@ -27,17 +27,23 @@ function isOverlayUrl(url) {
 }
 
 // メインウィンドウの同タブ遷移(will-navigate)を許可するか判定する。
-// 許可対象: START_URL と同一ホスト / Cloudflare Access(*.cloudflareaccess.com)/
-// Google IdP(accounts.google.com)/ extraHosts で明示追加されたホスト。
+// 許可対象: START_URL と同一 origin(scheme/host/port 完全一致)/
+// Cloudflare Access(https の *.cloudflareaccess.com)/
+// Google IdP(https の accounts.google.com)/ extraHosts で明示追加されたホスト(https 必須)。
 function isAllowedMainNavigation(url, startUrl, extraHosts = []) {
   if (!isOverlayUrl(url)) return false;
-  const hostname = new URL(url).hostname.toLowerCase();
+  const parsed = new URL(url);
 
   try {
-    if (hostname === new URL(startUrl).hostname.toLowerCase()) return true;
+    if (parsed.origin === new URL(startUrl).origin) return true;
   } catch {
     // startUrl が不正でも他の許可ホスト判定は続行する
   }
+
+  // START_URL 以外の許可ホストはログイン用途のため https のみ許可
+  // (http ダウングレードによるすり抜けを塞ぐ)
+  if (parsed.protocol !== "https:") return false;
+  const hostname = parsed.hostname.toLowerCase();
 
   if (hostname.endsWith(".cloudflareaccess.com")) return true;
   if (hostname === "accounts.google.com") return true;

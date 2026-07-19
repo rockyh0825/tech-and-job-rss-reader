@@ -56,10 +56,21 @@ function openOverlay(url) {
     }
     return { action: "deny" };
   });
-  article.webContents.on("did-navigate", (_event, next) => {
+  // 外部プロトコル(vscode:// 等)への遷移で OS ハンドラが起動しないよう、
+  // オーバーレイ内も http(s) 以外への遷移はブロックする(defense in depth)
+  article.webContents.on("will-navigate", (event, next) => {
+    if (!isOverlayUrl(next)) event.preventDefault();
+  });
+  // SPA(Next.js 等)のクライアントサイド遷移では did-navigate が発火しないため、
+  // did-navigate-in-page でも URL 表示を追従させる
+  const syncOverlayUrl = (next) => {
     if (!overlay || overlay.article !== article) return;
     overlay.url = next;
     overlay.toolbar.webContents.send("overlay:url-changed", next);
+  };
+  article.webContents.on("did-navigate", (_event, next) => syncOverlayUrl(next));
+  article.webContents.on("did-navigate-in-page", (_event, next, isMainFrame) => {
+    if (isMainFrame) syncOverlayUrl(next);
   });
   article.webContents.on("before-input-event", (_event, input) => {
     if (input.type === "keyDown" && input.key === "Escape") closeOverlay();

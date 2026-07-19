@@ -113,3 +113,32 @@ test("rejects_main_navigation_with_malformed_url_or_start_url", () => {
 test("allows_main_navigation_when_extra_hosts_omitted", () => {
   assert.equal(isAllowedMainNavigation(START_URL, START_URL), true);
 });
+
+test("allows_main_navigation_when_origin_matches_http_local_start_url", () => {
+  const localStart = "http://localhost:8080";
+
+  assert.equal(isAllowedMainNavigation("http://localhost:8080/jobs", localStart, []), true);
+});
+
+test("rejects_main_navigation_when_scheme_differs_from_start_url", () => {
+  assert.equal(isAllowedMainNavigation("http://rss-watch.rocky-ha.com/", START_URL, []), false);
+});
+
+test("rejects_main_navigation_when_port_differs_from_start_url", () => {
+  assert.equal(
+    isAllowedMainNavigation("https://rss-watch.rocky-ha.com:8443/", START_URL, []),
+    false
+  );
+});
+
+test("rejects_http_downgrade_for_login_and_extra_hosts", () => {
+  assert.equal(isAllowedMainNavigation("http://accounts.google.com/", START_URL, []), false);
+  assert.equal(
+    isAllowedMainNavigation("http://myteam.cloudflareaccess.com/", START_URL, []),
+    false
+  );
+  assert.equal(
+    isAllowedMainNavigation("http://okta.example.com/", START_URL, ["okta.example.com"]),
+    false
+  );
+});
