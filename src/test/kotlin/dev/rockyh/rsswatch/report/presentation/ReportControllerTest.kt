@@ -35,6 +35,7 @@ class ReportControllerTest {
             when (category) {
                 ItemCategory.TECH -> listOf(rssItem("article-1"))
                 ItemCategory.JOBS -> listOf(rssItem("job-1", category = "jobs"))
+                ItemCategory.CNCF -> emptyList()
             }
     }
 
