@@ -26,9 +26,9 @@ data class CncfProject(
 )
 
 /**
- * CNCF プロジェクト辞書。graduated / incubating は全件、sandbox は注目プロジェクトの厳選。
- * 成熟度は 2026-01 時点の https://www.cncf.io/projects/ を基にした手書き管理で、
- * 昇格・アーカイブがあれば行を移す(追加は 1 行足すだけでよい)。
+ * CNCF プロジェクト辞書。graduated はほぼ全件、incubating / sandbox は注目プロジェクトの厳選。
+ * 成熟度は 2026-07 時点の https://www.cncf.io/projects/ を基にした手書き管理で、
+ * 昇格・アーカイブがあれば行を移す・消す(追加は 1 行足すだけでよい)。
  */
 object CncfProjects {
 
@@ -88,8 +88,8 @@ object CncfProjects {
             exactNameProject(CncfMaturity.GRADUATED, "Dapr"),
             project(CncfMaturity.GRADUATED, "KubeEdge"),
             project(CncfMaturity.GRADUATED, "in-toto"),
+            project(CncfMaturity.GRADUATED, "OpenTelemetry", "OTel"),
             // ---- Incubating ----
-            project(CncfMaturity.INCUBATING, "OpenTelemetry", "OTel"),
             exactNameProject(CncfMaturity.INCUBATING, "Backstage"),
             project(CncfMaturity.INCUBATING, "Crossplane"),
             project(CncfMaturity.INCUBATING, "Knative"),
@@ -119,8 +119,11 @@ object CncfProjects {
             project(CncfMaturity.INCUBATING, "OpenCost"),
             project(CncfMaturity.INCUBATING, "wasmCloud"),
             project(CncfMaturity.INCUBATING, "OpenYurt"),
-            project(CncfMaturity.INCUBATING, "Keptn"),
             project(CncfMaturity.INCUBATING, "CNI", "Container Network Interface"),
+            project(CncfMaturity.INCUBATING, "Keycloak"),
+            project(CncfMaturity.INCUBATING, "Kubescape"),
+            project(CncfMaturity.INCUBATING, "KServe"),
+            project(CncfMaturity.INCUBATING, "OpenFGA"),
             // ---- Sandbox(厳選)----
             project(CncfMaturity.SANDBOX, "WasmEdge"),
             project(CncfMaturity.SANDBOX, "k3s"),

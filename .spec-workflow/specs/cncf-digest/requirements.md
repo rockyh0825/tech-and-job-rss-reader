@@ -71,7 +71,7 @@ Issue の動機は 2 つ:(1) CNCF の動向を Watch することでクラウド
 ### 受容する制限
 
 - report UI / API(`/api/report`)は TECH / JOBS 固定のため CNCF 記事は表示されない(live SSE には表示される)。必要になったら別 issue で対応
-- CNCF プロジェクト辞書は手書き管理(graduated 全件 + incubating 全件 + sandbox は厳選)。新プロジェクトの追加は 1 行追加で行う
+- CNCF プロジェクト辞書は手書き管理(graduated ほぼ全件 + incubating・sandbox は厳選)。新プロジェクトの追加は 1 行追加で行う
 
 ### Security
 

@@ -11,7 +11,7 @@
 - [x] 2. CncfProjects 辞書 + CncfProjectMatcher(domain)を実装(テスト込み)
   - File: src/main/kotlin/dev/rockyh/rsswatch/notify/domain/CncfProjects.kt, CncfProjectMatcher.kt
   - Test: src/test/kotlin/dev/rockyh/rsswatch/notify/domain/CncfProjectsTest.kt(名前一意・全エントリ成熟度あり), CncfProjectMatcherTest.kt(境界マッチ・exact-case・非マッチ)
-  - KeywordExtractor の境界正規表現イディオムを複製(出典コメント付き)。graduated 全件 + incubating 全件 + sandbox 厳選
+  - KeywordExtractor の境界正規表現イディオムを複製(出典コメント付き)。graduated ほぼ全件 + incubating・sandbox 厳選
   - _Requirements: 3.1, 3.4_
 
 - [x] 3. CncfDigestSelectionPolicy + CncfDigest + CncfDigestPublisher(domain)を実装(テスト込み)

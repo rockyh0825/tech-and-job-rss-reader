@@ -35,7 +35,7 @@ class CncfProjectsTest {
         "Kubernetes, GRADUATED",
         "Prometheus, GRADUATED",
         "Argo, GRADUATED",
-        "OpenTelemetry, INCUBATING",
+        "OpenTelemetry, GRADUATED",
         "Backstage, INCUBATING",
         "WasmEdge, SANDBOX",
         "Headlamp, SANDBOX",

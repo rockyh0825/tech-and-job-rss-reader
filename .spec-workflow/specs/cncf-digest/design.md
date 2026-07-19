@@ -28,7 +28,7 @@ feeds.toml (category = "cncf")
 ### 2. CNCF プロジェクト辞書は notify/domain・マッチはダイジェスト構築時
 
 - 成熟度バッジは**通知専用の表示関心事**のため、fetch 時のキーワード抽出(`keywords` feature、`item_keywords` 永続化)には載せない。fetch 時抽出だと保存済み記事に遡って効かず、スキーマ変更も必要になる。notify 時マッチならどちらも不要
-- `notify/domain/CncfProjects.kt` に手書き Kotlin 辞書(`Keywords.kt` の前例踏襲)。`CncfMaturity` enum(GRADUATED 🎓 / INCUBATING 🧪 / SANDBOX 🌱)+ `CncfProject(name, maturity, aliases)`。初期規模: graduated 全件 + incubating 全件 + sandbox 厳選
+- `notify/domain/CncfProjects.kt` に手書き Kotlin 辞書(`Keywords.kt` の前例踏襲)。`CncfMaturity` enum(GRADUATED 🎓 / INCUBATING 🧪 / SANDBOX 🌱)+ `CncfProject(name, maturity, aliases)`。初期規模: graduated ほぼ全件 + incubating・sandbox 厳選
 - `CncfProjectMatcher` は `KeywordExtractor` の境界正規表現イディオム(`(?<![A-Za-z0-9])…(?![A-Za-z0-9+#])`、ignore-case / exact-case エイリアス)を**意図的に小複製**する。Konsist の feature 分離ルールで `keywords.domain` を import できないため(コメントで出典を明記)。Harbor / Helm / Envoy / Argo など一般名詞と衝突する名前は exact-case のみでマッチ(要件 3.4)
 
 ### 3. Discord transport の抽出(`DiscordPoster`)
