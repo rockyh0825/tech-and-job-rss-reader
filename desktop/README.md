@@ -40,3 +40,8 @@ SMOKE_URL=https://zenn.dev SMOKE_OUT=/tmp/smoke.png npm start
 - Cloudflare Access 配下のため、初回起動時はウィンドウ内で Access のログインが必要。
   セッション Cookie は Electron のプロファイルに保持される
 - オーバーレイ内のリンクはオーバーレイ内で遷移する(新規ウィンドウは開かない)
+- メインウィンドウの同タブ遷移は許可ホスト制:接続先(`RSS_WATCH_URL`)と同一ホスト /
+  `*.cloudflareaccess.com`(Access ログイン)/ `accounts.google.com`(Google IdP)のみ許可し、
+  それ以外の http(s) リンクはオーバーレイで開く。Access の IdP が Google 以外の場合は
+  `RSS_WATCH_ALLOWED_HOSTS` 環境変数(カンマ区切り)で IdP のホストを追加する
+  (例: `RSS_WATCH_ALLOWED_HOSTS=okta.example.com npm start`)

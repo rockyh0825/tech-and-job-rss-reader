@@ -46,11 +46,16 @@
     <button id="external">ブラウザで開く ↗</button>
   </div>
   <script>
+    const showUrl = (url) => {
+      document.getElementById("url").textContent = url ?? "";
+    };
     document.getElementById("close").addEventListener("click", () => rssWatchOverlay.close());
     document.getElementById("external").addEventListener("click", () => rssWatchOverlay.openExternal());
-    rssWatchOverlay.currentUrl().then((url) => {
-      document.getElementById("url").textContent = url ?? "";
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") rssWatchOverlay.close();
     });
+    rssWatchOverlay.currentUrl().then(showUrl);
+    rssWatchOverlay.onUrlChanged(showUrl);
   </script>
 </body>
 </html>

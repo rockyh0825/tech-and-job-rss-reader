@@ -1,9 +1,14 @@
 const { app, BrowserWindow, WebContentsView, shell, ipcMain } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
-const { computeOverlayBounds, isOverlayUrl } = require("./lib/overlay");
+const {
+  computeOverlayBounds,
+  isOverlayUrl,
+  isAllowedMainNavigation,
+} = require("./lib/overlay");
 
 const START_URL = process.env.RSS_WATCH_URL || "https://rss-watch.rocky-ha.com/";
+const EXTRA_ALLOWED_HOSTS = (process.env.RSS_WATCH_ALLOWED_HOSTS ?? "").split(",");
 const TOOLBAR_HEIGHT = 40;
 
 let win = null;
@@ -37,37 +42,69 @@ function openOverlay(url) {
   win.contentView.addChildView(article);
   win.contentView.addChildView(toolbar);
   layoutOverlay();
-  toolbar.webContents.loadFile(path.join(__dirname, "toolbar.html"));
-  article.webContents.loadURL(url);
+  toolbar.webContents
+    .loadFile(path.join(__dirname, "toolbar.html"))
+    .catch((err) => console.error("overlay: toolbar の読み込みに失敗", err));
+  article.webContents
+    .loadURL(url)
+    .catch((err) => console.error(`overlay: 記事の読み込みに失敗 (${url})`, err));
   article.webContents.setWindowOpenHandler(({ url: next }) => {
-    if (isOverlayUrl(next)) article.webContents.loadURL(next);
+    if (isOverlayUrl(next)) {
+      article.webContents
+        .loadURL(next)
+        .catch((err) => console.error(`overlay: 記事の読み込みに失敗 (${next})`, err));
+    }
     return { action: "deny" };
   });
   article.webContents.on("did-navigate", (_event, next) => {
-    if (overlay) overlay.url = next;
+    if (!overlay || overlay.article !== article) return;
+    overlay.url = next;
+    overlay.toolbar.webContents.send("overlay:url-changed", next);
   });
   article.webContents.on("before-input-event", (_event, input) => {
     if (input.type === "keyDown" && input.key === "Escape") closeOverlay();
   });
 }
 
-ipcMain.handle("overlay:url", () => overlay?.url ?? null);
-ipcMain.on("overlay:close", () => closeOverlay());
-ipcMain.on("overlay:open-external", () => {
-  if (!overlay) return;
-  shell.openExternal(overlay.url);
+// IPC はオーバーレイのツールバー(preload 付き webContents)からのみ受け付ける
+function isToolbarSender(event) {
+  return overlay !== null && event.sender === overlay.toolbar.webContents;
+}
+
+ipcMain.handle("overlay:url", (event) => (isToolbarSender(event) ? overlay.url : null));
+ipcMain.on("overlay:close", (event) => {
+  if (isToolbarSender(event)) closeOverlay();
+});
+ipcMain.on("overlay:open-external", (event) => {
+  if (!isToolbarSender(event)) return;
+  if (isOverlayUrl(overlay.url)) shell.openExternal(overlay.url);
   closeOverlay();
 });
 
 function createWindow() {
+  const smokeUrl = process.env.SMOKE_URL;
+  if (smokeUrl && !isOverlayUrl(smokeUrl)) {
+    console.error(`smoke: SMOKE_URL が不正です: ${smokeUrl}`);
+    app.exit(1);
+    return;
+  }
   win = new BrowserWindow({ width: 1280, height: 860, title: "rss-watch" });
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (isOverlayUrl(url)) openOverlay(url);
     return { action: "deny" };
   });
+  // メインウィンドウの同タブ遷移は許可ホスト(START_URL / Access ログイン / IdP /
+  // RSS_WATCH_ALLOWED_HOSTS)のみ。それ以外の記事リンク等はオーバーレイで開く。
+  win.webContents.on("will-navigate", (event, url) => {
+    if (isAllowedMainNavigation(url, START_URL, EXTRA_ALLOWED_HOSTS)) return;
+    event.preventDefault();
+    if (isOverlayUrl(url)) openOverlay(url);
+  });
   win.on("resize", layoutOverlay);
-  win.loadURL(START_URL);
-  if (process.env.SMOKE_URL) {
+  win
+    .loadURL(START_URL)
+    .catch((err) => console.error(`main: 接続先の読み込みに失敗 (${START_URL})`, err));
+  if (smokeUrl) {
     win.webContents.once("did-finish-load", runSmoke);
   }
 }
