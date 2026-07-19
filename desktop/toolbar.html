@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #1f2430;
+      color: #e6e6e6;
+      font-family: -apple-system, "Hiragino Sans", sans-serif;
+      font-size: 13px;
+      user-select: none;
+    }
+    .bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 100%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #343b4d;
+      color: inherit;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    button:hover { background: #46506a; }
+    .url {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #9aa4bd;
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <button id="close" title="Esc でも閉じられます">✕ 閉じる</button>
+    <span class="url" id="url"></span>
+    <button id="external">ブラウザで開く ↗</button>
+  </div>
+  <script>
+    document.getElementById("close").addEventListener("click", () => rssWatchOverlay.close());
+    document.getElementById("external").addEventListener("click", () => rssWatchOverlay.openExternal());
+    rssWatchOverlay.currentUrl().then((url) => {
+      document.getElementById("url").textContent = url ?? "";
+    });
+  </script>
+</body>
+</html>

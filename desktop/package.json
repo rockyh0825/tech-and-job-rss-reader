@@ -1,0 +1,14 @@
+{
+  "name": "rss-watch-desktop",
+  "version": "0.1.0",
+  "description": "rss-watch のデスクトップシェル。記事リンクをオーバーレイの WebContentsView で開く。",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0"
+  }
+}
