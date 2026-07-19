@@ -19,7 +19,7 @@ data class CncfCandidate(
  *
  * 1. tier 昇順・null(言及なし)最後尾(sandbox → incubating → graduated → 言及なし。
  *    graduated 前のプロジェクトを早期に掴む、という issue #46 の動機の反映)
- * 2. publishedAt 降順(新着が先)
+ * 2. publishedAt 降順(新着が先。null は最古扱いで tier 内の最後尾)
  * 3. guid 昇順(完全決定性の担保)
  *
  * 並べ替え後に [select] の limit 件で打ち切る(初回有効化時のバックログ氾濫防止)。

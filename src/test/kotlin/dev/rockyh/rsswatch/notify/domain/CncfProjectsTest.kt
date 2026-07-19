@@ -30,6 +30,18 @@ class CncfProjectsTest {
         assertEquals(emptyList(), withoutAliases, "every project must be matchable")
     }
 
+    @Test
+    fun common_english_words_do_not_match_the_real_dictionary_in_lowercase() {
+        // 一般英単語と衝突する名前(litmus test / spire / tuf / copa 等)は exact-case 照合にして
+        // 小文字の慣用句で成熟度バッジが誤発火しないことを実辞書で保証する
+        val matcher = CncfProjectMatcher()
+
+        val mentions =
+            matcher.match("a litmus test for the spire of a tuf copa: harbor, helm and envoy at kepler point")
+
+        assertEquals(emptyList(), mentions)
+    }
+
     @ParameterizedTest(name = "{0} は {1}")
     @CsvSource(
         "Kubernetes, GRADUATED",
