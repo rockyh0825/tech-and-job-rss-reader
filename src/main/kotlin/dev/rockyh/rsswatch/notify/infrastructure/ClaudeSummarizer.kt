@@ -2,7 +2,7 @@ package dev.rockyh.rsswatch.notify.infrastructure
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
+import dev.rockyh.rsswatch.notify.ConditionalOnAnyNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -20,7 +20,7 @@ import org.springframework.web.client.body
  * 呼び出し側(BuildDigestUseCase)が要約なしフォールバックできるようにする(要件 2.2)。
  */
 @Component
-@ConditionalOnNotifyEnabled
+@ConditionalOnAnyNotifyEnabled
 class ClaudeSummarizer(
     restClientBuilder: RestClient.Builder,
     @Value("\${rss-watch.notify.claude.base-url:https://api.anthropic.com}") baseUrl: String,

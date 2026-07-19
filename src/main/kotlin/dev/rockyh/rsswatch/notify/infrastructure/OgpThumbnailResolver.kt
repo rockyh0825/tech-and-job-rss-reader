@@ -1,6 +1,6 @@
 package dev.rockyh.rsswatch.notify.infrastructure
 
-import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
+import dev.rockyh.rsswatch.notify.ConditionalOnAnyNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import java.net.URI
 import org.jsoup.Jsoup
@@ -29,7 +29,7 @@ import org.springframework.web.util.UriComponentsBuilder
  * 上限)まで伸び得る。
  */
 @Component
-@ConditionalOnNotifyEnabled
+@ConditionalOnAnyNotifyEnabled
 class OgpThumbnailResolver(
     @Value("\${rss-watch.notify.ogp.timeout-ms:5000}") private val timeoutMs: Int = 5_000,
     @Value("\${rss-watch.notify.ogp.max-body-bytes:1048576}") private val maxBodyBytes: Int = 1_048_576,

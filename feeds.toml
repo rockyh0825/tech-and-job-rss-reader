@@ -1,5 +1,5 @@
 # 収集するフィードの設定
-# category は "tech"(技術記事)か "jobs"(求人)のどちらか。
+# category は "tech"(技術記事)/ "jobs"(求人)/ "cncf"(CNCF 関連。専用ダイジェストで配信)のいずれか。
 # 行を追加するだけでフィードを増やせます。
 
 [[feeds]]
@@ -48,3 +48,15 @@ category = "jobs"
 name = "Remote OK"
 url = "https://remoteok.com/remote-dev-jobs.rss"
 category = "jobs"
+
+# ---- CNCF 系(issue #46。専用の Discord チャンネルへ配信)----
+
+[[feeds]]
+name = "CNCF Blog"
+url = "https://www.cncf.io/feed/"
+category = "cncf"
+
+[[feeds]]
+name = "Kubernetes Blog"
+url = "https://kubernetes.io/feed.xml"
+category = "cncf"

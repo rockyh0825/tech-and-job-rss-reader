@@ -3,11 +3,11 @@ spring:
     name: tech-and-job-rss-reader
   task:
     scheduling:
-      # 既定は 1 本。FetchScheduler(15分毎の巡回)と DigestScheduler が 1 本を共有すると、
-      # ダイジェスト投稿(Claude 要約・OGP 取得・Discord へ記事数ぶんの POST)が長引く間
-      # RSS 巡回ごと止まってしまう。両者を独立させるため 2 本にする
+      # 既定は 1 本。FetchScheduler(15分毎の巡回)・DigestScheduler・CncfDigestScheduler が
+      # 共有すると、ダイジェスト投稿(Claude 要約・OGP 取得・Discord へ記事数ぶんの POST)が
+      # 長引く間ほかのジョブごと止まってしまう。3 者を独立させるため 3 本にする
       pool:
-        size: 2
+        size: 3
   http:
     client:
       # 自動構成の RestClient.Builder(ClaudeSummarizer / DiscordWebhookClient が使う)は
@@ -82,6 +82,19 @@ rss-watch:
       max-tokens: 256
     discord:
       max-retries: 2
+    # CNCF ダイジェスト(issue #46)。CNCF フィード(feeds.toml の category = "cncf")の新着記事に
+    # プロジェクト成熟度バッジを付けて専用チャンネルへ配信する。
+    # Webhook URL は環境変数 RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL で渡し、ここには宣言しない
+    # (未設定=未定義のとき @ConditionalOnProperty で CNCF 配信一式を無効化するため。既存側と同じ規則)。
+    cncf:
+      # 配信時刻。既存ダイジェスト(8:00)とずらしてスレッドの取り合いを避ける
+      cron: "0 10 8 * * *"
+      # 候補記事の取得窓(日)。投稿済み guid の永続除外があるため実質「未投稿の新着」になる
+      window-days: 7
+      # 1 回の配信に載せる記事の上限(初回有効化時に窓ぶんのバックログが一斉投稿されるのを防ぐ)
+      max-articles: 8
+      # 通知末尾に添える導線 URL(CNCF プロジェクト成熟度の一覧)
+      cta-url: "https://www.cncf.io/projects/"
     ogp:
       # 記事ページから og:image を取りに行くときの上限。応答しない記事ページで
       # ダイジェスト投稿全体が止まらないよう、短めのタイムアウトと本文サイズ上限を置く。
