@@ -4,7 +4,7 @@
 
 - [ ] 1. Actuator + Micrometer 導入と AccessJwtFilter の actuator 除外(TDD)
   - File: build.gradle.kts(spring-boot-starter-actuator / micrometer-registry-prometheus 追加)、src/main/resources/application.yml(management 設定)、src/main/kotlin/dev/rockyh/rsswatch/shared/config/AccessJwtFilter.kt(shouldNotFilter 追加)
-  - Test: `/actuator/prometheus` が 200 で `http_server_requests_seconds`(+ percentiles-histogram の `_bucket`)を含む、自動計装の存在確認として出力に `jvm_memory_used_bytes`・`hikaricp_connections` 系メーターを含む(要件 1.4。Kafka consumer 系は consumer 生成タイミングに依存するためテスト対象外とし、Task 3 の実地確認で担保する。design の Testing Strategy 参照)、`/actuator/health` が 200、`/actuator/env`・`/actuator/beans` が 404(expose 最小限)、`rss-watch.access.aud` 設定時にヘッダなしでも `/actuator/prometheus`・`/actuator/health` は 401 にならず `/api/report` は 401 のまま、shouldNotFilter のパス一致/不一致
+  - Test: `/actuator/prometheus` が 200 で `http_server_requests_seconds`(+ percentiles-histogram の `_bucket`)を含む、自動計装の存在確認として出力に `jvm_memory_used_bytes`・`hikaricp_connections` 系メーターを含む(要件 1.4。Kafka のリスナータイマー `spring_kafka_listener_seconds` はブローカー到達不能設定下でのコンテナ起動状況に依存し得るためテスト対象外とし、Task 3 の実地確認で担保する。design の Testing Strategy 参照)、`/actuator/health` が 200、`/actuator/env`・`/actuator/beans` が 404(expose 最小限)、`rss-watch.access.aud` 設定時にヘッダなしでも `/actuator/prometheus`・`/actuator/health` は 401 にならず `/api/report` は 401 のまま、shouldNotFilter のパス一致/不一致
   - 完了条件: 上記テストがすべて green で、既存テスト(AccessJwtFilter/Config 含む)もデグレなし。expose は `health,prometheus` のみ
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 3.1, 3.2, 3.3_
 
@@ -16,8 +16,8 @@
 
 - [ ] 3. Grafana サービス + provisioning(datasource・ダッシュボード JSON)を追加
   - File: docker/docker-compose.yml(grafana サービス + grafana-data volume)、docker/grafana/provisioning/datasources/prometheus.yml、docker/grafana/provisioning/dashboards/dashboards.yml、docker/grafana/provisioning/dashboards/rss-watch.json、docker/.env.example(GRAFANA_ADMIN_PASSWORD / GRAFANA_ROOT_URL 追記)
-  - `127.0.0.1:3001:3000`(homepage が :3000 使用中のため)・`GF_AUTH_ANONYMOUS_ENABLED=true`(Viewer)・`GF_SERVER_ROOT_URL` と admin パスワードは docker/.env 注入。ダッシュボードはエンドポイント別レイテンシ(p50/p95/p99)・リクエストレート・エラー率・JVM ヒープ・HikariCP・Kafka consumer(records-consumed レート)のパネル(design のクエリ骨子参照)
-  - 完了条件: `docker compose up -d` 直後に `http://localhost:3001` へ匿名(Viewer)でアクセスでき、手動セットアップなしで全パネルにデータが描画される(`/api/report` を数回叩いて確認)。Kafka consumer パネルにデータが描画されること(Task 1 でテスト対象外とした要件 1.4 の Kafka consumer メトリクスの実地確認)。レイテンシパネルのクエリ(または `uri` 変数の既定値)が `/api/stream` を除外していること
+  - `127.0.0.1:3001:3000`(homepage が :3000 使用中のため)・`GF_AUTH_ANONYMOUS_ENABLED=true`(Viewer)・`GF_SERVER_ROOT_URL` と admin パスワードは docker/.env 注入。ダッシュボードはエンドポイント別レイテンシ(p50/p95/p99)・リクエストレート・エラー率・JVM ヒープ・HikariCP・Kafka リスナー(`spring.kafka.listener` タイマーによる処理レート・処理時間)のパネル(design のクエリ骨子参照)
+  - 完了条件: `docker compose up -d` 直後に `http://localhost:3001` へ匿名(Viewer)でアクセスでき、手動セットアップなしで全パネルにデータが描画される(`/api/report` を数回叩いて確認)。Kafka リスナーパネルにデータが描画されること(Task 1 でテスト対象外とした要件 1.4 のリスナータイマー `spring_kafka_listener_seconds` の実地確認)。レイテンシパネルのクエリ(または `uri` 変数の既定値)が `/api/stream` を除外していること
   - _Requirements: 1.4, 5.1, 5.2, 5.3, 5.4, 5.5_
 
 - [ ] 4. docs・steering 更新(運用手順 + Cloudflare 公開手順のユーザー作業)

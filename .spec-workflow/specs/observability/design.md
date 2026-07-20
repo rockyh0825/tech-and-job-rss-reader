@@ -25,7 +25,8 @@ Grafana (127.0.0.1:3001) ── query ──> Prometheus (127.0.0.1:9090)
 
 ## Code Reuse Analysis
 
-- **spring-boot-starter-actuator + micrometer-registry-prometheus**: `http.server.requests`(エンドポイント別のカウント + タイマー)、JVM(ヒープ・GC・スレッド)、HikariCP(`hikaricp_connections_*`)、Kafka consumer(`kafka_consumer_*`)が**自動計装**で載る。エンドポイント計測のための自前コードは不要
+- **spring-boot-starter-actuator + micrometer-registry-prometheus**: `http.server.requests`(エンドポイント別のカウント + タイマー)、JVM(ヒープ・GC・スレッド)、HikariCP(`hikaricp_connections_*`)が**自動計装**で載る。エンドポイント計測のための自前コードは不要
+- **spring-kafka のリスナータイマー(`spring.kafka.listener`)**: Kafka はリスナーコンテナが自動登録するタイマーで観測する。consumer クライアントメトリクス(`kafka_consumer_*`)は本コードベースでは載らないため使わない(下記「Kafka メトリクスの方式」参照)
 - **shared/config/AccessJwtConfig / AccessJwtFilter**: 既存の任意ハードニング機構をそのまま使い、フィルタに除外パスだけ足す(下記)
 - **docker-compose.yml の既存イディオム**: ループバック限定 bind(kafka-ui)・named volume(kafka-data / postgres-data)・`docker/.env` からの秘密注入(cloudflared)を踏襲
 
@@ -72,6 +73,18 @@ management:
 - 注記: exact match のため、将来 liveness/readiness プローブのサブパス(`/actuator/health/liveness` 等)を使う場合はそれらは除外されない(`/actuator/health/**` を意図的にカバーしない設計判断。現状サブパスは使っておらず実害なし。導入時に除外リストへ明示的に追加する)
 - セキュリティ評価: この除外で無認証になるのは「メトリクスと死活」のみで、環境変数や設定は expose していない(要件 2)。到達経路は (a) localhost / LAN の `:8080` 直アクセス、(b) Cloudflare トンネル経由 — (b) はエッジの Access 認証が先に立つため保護は維持される。(a) はハードニング前の信頼レベル(自宅 LAN 内は許容)に、この 2 パスだけ戻ることを意味し、個人運用として許容する
 - 代替案(不採用): Prometheus に Access のサービストークンを持たせてヘッダ付き scrape する案は、トークン管理と Cloudflare 側設定が増える割に、守る対象がメトリクスのみでは見合わない
+
+### Kafka メトリクスの方式(設計判断)
+
+**前提(コード確認)**: `shared/config/KafkaConfig.kt` は `DefaultKafkaConsumerFactory` をコンテナファクトリ内でインライン new している。Boot の `KafkaMetricsAutoConfiguration` が提供する `DefaultKafkaConsumerFactoryCustomizer`(`MicrometerConsumerListener` の付与)は、**Boot 自動構成の `kafkaConsumerFactory` Bean の生成時にのみ**適用される(`KafkaAutoConfiguration#kafkaConsumerFactory` が ObjectProvider 経由で customize を呼ぶことを javap で確認)。本コードベースの自前 factory には適用されないため、consumer クライアントメトリクス(`kafka_consumer_fetch_manager_records_consumed_total` 等の `kafka_consumer_*`)は**登録されない**。
+
+**採用: spring-kafka のリスナータイマー `spring.kafka.listener`(Prometheus 名 `spring_kafka_listener_seconds_*`)。** consumer factory の作り方に依存せず、リスナーコンテナ自身が登録するタイマーで観測する。成立条件は spring-kafka 3.3.10(本プロジェクトの解決バージョン)のクラスを javap で確認済み:
+
+- `ContainerProperties` の `micrometerEnabled` は既定 true
+- `KafkaMessageListenerContainer$ListenerConsumer#obtainMicrometerHolder()` は「micrometer-core がクラスパスにある(`KafkaUtils.MICROMETER_PRESENT` = `io.micrometer.core.instrument.MeterRegistry` の存在チェック)+ `micrometerEnabled` + observation 無効(既定)」のとき `MicrometerHolder` を生成し、タイマー名 `spring.kafka.listener`(タグ: `name` = リスナーコンテナの Bean 名、`result` = success/failure、`exception`)を登録する
+- `MicrometerHolder` は ApplicationContext から `getBeanProvider(MeterRegistry).getIfUnique()` で MeterRegistry を解決する。ApplicationContext は `AbstractKafkaListenerContainerFactory`(ApplicationContextAware)が `initializeContainer` で各コンテナへ引き渡すため、**consumer factory を自前 new していても、コンテナファクトリが `@Bean` であれば成立する**(KafkaConfig の 2 ファクトリはどちらも `@Bean`)
+
+したがって NFR「アプリ側変更は依存追加 + `application.yml` + AccessJwtFilter 除外のみ」を維持したまま Kafka の観測ができる。なお sink はバッチリスナーのため 1 回のタイマー記録 = 1 バッチ処理であり、パネルの「処理レート」はレコード数ではなく**リスナー呼び出し数**のレートになる。consumer ラグや records-consumed 等のクライアントメトリクスが必要になった場合は、consumer factory の Bean 化 + `MicrometerConsumerListener` 付与を別 spec で検討する(本 spec のスコープ外)。
 
 ## インフラ側の設計
 
@@ -156,13 +169,13 @@ docker/grafana/provisioning/
 |---|---|
 | エンドポイント別レイテンシ p50/p95/p99 | `histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket[5m])))`(0.5 / 0.99 も同様。`uri` 変数で `/api/report` に絞れるようにする) |
 | リクエストレート | `sum by (uri) (rate(http_server_requests_seconds_count[5m]))` |
-| エラー率 | `sum(rate(...{status=~"5.."}[5m])) / sum(rate(...[5m]))`(無トラフィック時間帯は 0/0 が NaN になりパネルが欠けるため、慣例どおり `or vector(0)` を添えて 0 として描画する) |
+| エラー率 | `sum(rate(...{status=~"5.."}[5m])) / sum(rate(...[5m]))`(PromQL の `or` は左辺が**空ベクトル**のときだけ右辺を採用する。5xx が一度も発生していない期間は分子の系列自体が存在せず空になりパネルが欠けるため、`or vector(0)` を添えて 0 として描画する。なお 0/0 = NaN は非空なので `or` では救えないが、分母は Prometheus 自身の scrape リクエストが常に載るため実質 0 にならない) |
 | JVM ヒープ | `jvm_memory_used_bytes{area="heap"}` / `jvm_memory_max_bytes{area="heap"}` |
 | HikariCP | `hikaricp_connections_active` / `hikaricp_connections_pending` / `hikaricp_connections_max` |
-| Kafka consumer | `rate(kafka_consumer_fetch_manager_records_consumed_total[5m])`(要件 1.4 の Kafka consumer メトリクスをダッシュボードから参照できることの担保。実地確認は Task 3 の完了条件) |
+| Kafka リスナー | `sum by (name) (rate(spring_kafka_listener_seconds_count[5m]))`(リスナー別の処理レート)と `sum by (name) (rate(spring_kafka_listener_seconds_sum[5m])) / sum by (name) (rate(spring_kafka_listener_seconds_count[5m]))`(平均処理時間。sink はバッチリスナーのため 1 呼び出し = 1 バッチ)。要件 1.4 の Kafka メトリクスをダッシュボードから参照できることの担保。実地確認は Task 3 の完了条件 |
 
 - 時間範囲を広げれば同一パネルで改善デプロイ前後の比較ができる(主目的のユースケース)。デプロイ時刻の注釈(annotation)は手動運用で足りるため provisioning には含めない
-- `_prometheus` の URI 自体もタグに載るが、ダッシュボードの `uri` 変数で除外できるためアプリ側でのフィルタはしない
+- `/actuator/prometheus` の URI 自体もタグに載るが、ダッシュボードの `uri` 変数で除外できるためアプリ側でのフィルタはしない
 - **`/api/stream`(SSE)の除外**: `/api/stream` は長寿命の SSE 接続で、`http.server.requests` には**接続が閉じた時点で接続寿命ぶんの duration** が記録される(数分〜数時間オーダー)。そのままではレイテンシパネルの p50/p95/p99 を大きく汚すため、レイテンシパネルのクエリ(または `uri` 変数の既定値)から `/api/stream` を除外する
 
 ## 外部公開(要件 6)
@@ -194,7 +207,7 @@ docker/grafana/provisioning/
 - **メトリクス公開**: `@SpringBootTest(webEnvironment = RANDOM_PORT)` + TestRestTemplate 等で
   - `GET /actuator/prometheus` が 200 で、任意のリクエスト実行後に `http_server_requests_seconds` を含むこと(要件 1.1/1.2)
   - percentiles-histogram 有効により `http_server_requests_seconds_bucket` が含まれること(要件 1.3)
-  - 自動計装メトリクスの存在確認: 出力に `jvm_memory_used_bytes` と `hikaricp_connections` 系のメーターが含まれること(要件 1.4)。Kafka consumer 系メーターは、リスナーコンテナ起動時の consumer 生成(MicrometerConsumerListener によるバインド)がコンテキスト起動と非同期のためテストではタイミング依存になり得る。テストでの断定は避け、Task 3 の実地確認(Kafka consumer パネルの描画)で確認する
+  - 自動計装メトリクスの存在確認: 出力に `jvm_memory_used_bytes` と `hikaricp_connections` 系のメーターが含まれること(要件 1.4)。Kafka のリスナータイマー(`spring_kafka_listener_seconds`)はリスナーコンテナ起動時に登録されるが、テストはブローカー到達不能設定(localhost:1)でコンテナを起動しておりメーターの有無がコンテナ起動状況に依存し得るため、テストでの断定は避け、Task 3 の実地確認(Kafka リスナーパネルの描画)で確認する
   - `GET /actuator/health` が 200(要件 1.5)。health は DataSource ヘルスチェックを含むため、この 200 は Postgres コンテナ(PostgresTestConfiguration)への接続が UP であることが前提
   - `GET /actuator/env`・`/actuator/beans` が 404(expose 最小限の仕様化。要件 2.2)
 - **AccessJwtFilter の除外**: `rss-watch.access.aud` / `team-domain` を設定したコンテキストで

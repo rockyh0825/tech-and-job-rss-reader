@@ -22,7 +22,7 @@
 1.1. `spring-boot-starter-actuator` + `micrometer-registry-prometheus` を導入し、`GET /actuator/prometheus` が 200 で Prometheus テキスト形式のメトリクスを返す
 1.2. `http.server.requests` メトリクスにより、`uri`(例 `/api/report`)・`method`・`status` タグ付きでエンドポイント別のリクエスト数と所要時間が取得できる
 1.3. `management.metrics.distribution.percentiles-histogram.http.server.requests: true` を設定し、Prometheus 側で `histogram_quantile()` による p95/p99 が計算できる(ヒストグラムバケットが公開される)
-1.4. JVM(ヒープ・GC・スレッド)・HikariCP(コネクションプール)・Kafka consumer のメトリクスは Actuator/Micrometer の自動計装でそのまま公開される(個別実装は不要。ダッシュボードから参照できること)
+1.4. JVM(ヒープ・GC・スレッド)・HikariCP(コネクションプール)のメトリクスは Actuator/Micrometer の自動計装でそのまま公開される。Kafka は spring-kafka のリスナーコンテナが自動登録するリスナータイマー `spring.kafka.listener`(Prometheus 名 `spring_kafka_listener_seconds_*`。リスナー別の処理レート・処理時間)で観測する(いずれも個別実装は不要。ダッシュボードから参照できること。方式の根拠は design の「Kafka メトリクスの方式」参照)
 1.5. `GET /actuator/health` が 200 を返す(死活監視用)
 
 ### Requirement 2: 公開範囲の最小化
@@ -64,7 +64,7 @@
 
 5.1. `docker/docker-compose.yml` に grafana サービスを追加する。ループバック限定 bind とし、自宅サーバーで homepage が `:3000` を使用中のため `127.0.0.1:3001:3000` にする
 5.2. datasource(Prometheus)とダッシュボードは provisioning(`docker/grafana/provisioning/`)でリポジトリ管理し、手動セットアップなしで起動直後から閲覧できる
-5.3. ダッシュボード JSON をコミットし、少なくとも次のパネルを持つ: エンドポイント別レイテンシ(p50/p95/p99)・エンドポイント別リクエストレート・エラー率(5xx 比率)・JVM ヒープ・HikariCP コネクションプール・Kafka consumer(records-consumed レート。要件 1.4 のメトリクスをダッシュボードから参照できることの担保)。レイテンシパネルのクエリ(または `uri` 変数の既定値)は長寿命 SSE 接続の `/api/stream` を除外する
+5.3. ダッシュボード JSON をコミットし、少なくとも次のパネルを持つ: エンドポイント別レイテンシ(p50/p95/p99)・エンドポイント別リクエストレート・エラー率(5xx 比率)・JVM ヒープ・HikariCP コネクションプール・Kafka リスナー(`spring.kafka.listener` タイマーによるリスナー別の処理レート・処理時間。要件 1.4 のメトリクスをダッシュボードから参照できることの担保)。レイテンシパネルのクエリ(または `uri` 変数の既定値)は長寿命 SSE 接続の `/api/stream` を除外する
 5.4. 匿名閲覧(`GF_AUTH_ANONYMOUS_ENABLED=true`、Viewer ロール)で開けること。admin パスワードは `docker/.env` から注入し、リポジトリにコミットしない
 5.5. Grafana のデータ(手元で加えたダッシュボード編集等)は named volume で永続化する
 
