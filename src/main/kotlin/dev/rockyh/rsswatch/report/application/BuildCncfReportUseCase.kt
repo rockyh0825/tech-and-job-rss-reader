@@ -55,7 +55,7 @@ class BuildCncfReportUseCase(
         val guidsInReport = articles.mapTo(mutableSetOf()) { it.item.guid }
         return CncfReport(
             articles = articles,
-            postedGuids = postedGuidQueryPort.postedGuids() intersect guidsInReport,
+            postedGuids = postedGuidQueryPort.postedIn(guidsInReport),
         )
     }
 }

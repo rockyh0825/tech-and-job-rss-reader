@@ -27,13 +27,13 @@ class PostedGuidQueryPortImplTest {
     }
 
     @Test
-    fun returns_all_posted_guids_ever_recorded() {
-        val store = FakePostedGuidStore(setOf("guid-1", "guid-2"))
+    fun returns_only_given_guids_recorded_as_posted() {
+        val store = FakePostedGuidStore(setOf("posted-1", "posted-2", "posted-elsewhere"))
         val port = PostedGuidQueryPortImpl(FakeStoreProvider(store))
 
-        val posted = port.postedGuids()
+        val posted = port.postedIn(setOf("posted-1", "posted-2", "fresh"))
 
-        assertEquals(setOf("guid-1", "guid-2"), posted)
+        assertEquals(setOf("posted-1", "posted-2"), posted)
         assertEquals(listOf(Instant.EPOCH), store.receivedSince)
     }
 
@@ -41,13 +41,13 @@ class PostedGuidQueryPortImplTest {
     fun returns_empty_set_when_nothing_was_recorded() {
         val port = PostedGuidQueryPortImpl(FakeStoreProvider(FakePostedGuidStore(emptySet())))
 
-        assertEquals(emptySet(), port.postedGuids())
+        assertEquals(emptySet(), port.postedIn(setOf("fresh")))
     }
 
     @Test
     fun returns_empty_set_when_notify_is_disabled_and_store_bean_is_absent() {
         val port = PostedGuidQueryPortImpl(FakeStoreProvider(null))
 
-        assertEquals(emptySet(), port.postedGuids())
+        assertEquals(emptySet(), port.postedIn(setOf("posted-1")))
     }
 }

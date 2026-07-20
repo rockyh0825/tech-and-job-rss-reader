@@ -42,7 +42,7 @@ class BuildCncfReportUseCaseTest {
     }
 
     private class FakePostedGuids(var posted: Set<String> = emptySet()) : PostedGuidQueryPort {
-        override fun postedGuids(): Set<String> = posted
+        override fun postedIn(guids: Set<String>): Set<String> = posted intersect guids
     }
 
     private val archive = FakeArchive()

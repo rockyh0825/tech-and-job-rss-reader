@@ -8,6 +8,6 @@ package dev.rockyh.rsswatch.capabilities
  */
 interface PostedGuidQueryPort {
 
-    /** これまでに配信済みとして記録された全 guid の集合を返す。 */
-    fun postedGuids(): Set<String>
+    /** [guids] のうち配信済みとして記録されているものの集合を返す。 */
+    fun postedIn(guids: Set<String>): Set<String>
 }

@@ -17,6 +17,6 @@ class PostedGuidQueryPortImpl(
     private val postedGuidStore: ObjectProvider<PostedGuidStore>,
 ) : PostedGuidQueryPort {
 
-    override fun postedGuids(): Set<String> =
-        postedGuidStore.ifAvailable?.postedGuids(Instant.EPOCH) ?: emptySet()
+    override fun postedIn(guids: Set<String>): Set<String> =
+        postedGuidStore.ifAvailable?.postedGuids(Instant.EPOCH)?.intersect(guids) ?: emptySet()
 }

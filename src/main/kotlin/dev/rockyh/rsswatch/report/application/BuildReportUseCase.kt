@@ -53,7 +53,7 @@ class BuildReportUseCase(
             crossSections = crossSections,
             techArticles = techArticles,
             jobPostings = jobPostings,
-            postedGuids = postedGuidQueryPort.postedGuids() intersect guidsInReport,
+            postedGuids = postedGuidQueryPort.postedIn(guidsInReport),
         )
     }
 }

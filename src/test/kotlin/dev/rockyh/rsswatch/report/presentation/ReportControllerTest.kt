@@ -41,7 +41,7 @@ class ReportControllerTest {
     }
 
     private class FakePostedGuids(private val posted: Set<String>) : PostedGuidQueryPort {
-        override fun postedGuids(): Set<String> = posted
+        override fun postedIn(guids: Set<String>): Set<String> = posted intersect guids
     }
 
     private val archive = RecordingArchive()
