@@ -116,6 +116,8 @@ object CncfProjects {
             project(CncfMaturity.INCUBATING, "Kubescape"),
             project(CncfMaturity.INCUBATING, "KServe"),
             project(CncfMaturity.INCUBATING, "OpenFGA"),
+            // 2026-07 の CNCF Blog「HAMi becomes a CNCF incubating project」で sandbox から昇格
+            project(CncfMaturity.INCUBATING, "HAMi"),
             // ---- Sandbox(厳選)----
             project(CncfMaturity.SANDBOX, "WasmEdge"),
             project(CncfMaturity.SANDBOX, "k3s"),
@@ -139,7 +141,6 @@ object CncfProjects {
             ),
             project(CncfMaturity.SANDBOX, "bpfman"),
             project(CncfMaturity.SANDBOX, "Spiderpool"),
-            project(CncfMaturity.SANDBOX, "HAMi"),
             project(CncfMaturity.SANDBOX, "Sermant"),
             project(CncfMaturity.SANDBOX, "OpenFunction"),
             project(CncfMaturity.SANDBOX, "Podman Desktop"),
