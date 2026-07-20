@@ -26,7 +26,7 @@ class CncfDiscordWebhookClient(
     restClientBuilder: RestClient.Builder,
     @Value("\${rss-watch.notify.cncf.discord-webhook-url:}") private val webhookUrl: String,
     @Value("\${rss-watch.notify.cncf.cta-url:https://www.cncf.io/projects/}") private val ctaUrl: String,
-    @Value("\${rss-watch.notify.site-url:https://rss-watch.rocky-ha.com/}") private val siteUrl: String,
+    @Value("\${rss-watch.notify.site-url:$DEFAULT_SITE_URL}") private val siteUrl: String,
     @Value("\${rss-watch.notify.discord.max-retries:2}") maxRetries: Int,
     sleeper: (Long) -> Unit = { Thread.sleep(it) },
 ) : CncfDigestPublisher {

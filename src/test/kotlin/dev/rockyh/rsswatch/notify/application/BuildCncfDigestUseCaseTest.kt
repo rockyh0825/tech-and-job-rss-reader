@@ -165,22 +165,13 @@ class BuildCncfDigestUseCaseTest {
     }
 
     @Test
-    fun skips_posting_when_there_are_no_candidates() {
+    fun posts_only_the_links_when_there_are_no_candidates() {
+        // 候補 0 件の日も無言にはせず、記事投稿はせずに導線(サイト + CNCF 一覧)だけを届ける
         archive.items = emptyList()
 
         useCase().run()
 
         assertTrue(publisher.received.isEmpty())
-        assertTrue(postedGuidStore.marked.isEmpty())
-    }
-
-    @Test
-    fun posts_only_the_links_when_there_are_no_candidates() {
-        // 候補 0 件の日も無言にはせず、導線(サイト + CNCF 一覧)だけを届ける
-        archive.items = emptyList()
-
-        useCase().run()
-
         assertEquals(1, publisher.ctaOnlyCount)
         assertTrue(postedGuidStore.marked.isEmpty())
     }

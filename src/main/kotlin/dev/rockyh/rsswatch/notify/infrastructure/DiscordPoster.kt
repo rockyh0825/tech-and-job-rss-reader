@@ -22,6 +22,7 @@ import org.springframework.web.client.RestClient
  * 1 通にまとめず記事ごとに分けているため、Discord 側の「10 embed/通・合計 6000 文字/通」の上限に
  * 記事数が縛られない(単一 embed の title 256・field value 1024 の上限は [clampTo] で守る)。
  * 代わりに投稿は途中で失敗し得るので、どこまで投稿できたかを [PostOutcome] で呼び出し側へ返す。
+ * 候補 0 件の日の導線のみ投稿([postCtaOnly])だけは例外的に、複数の導線 embed を 1 通にまとめる。
  *
  * ## エラーの扱い
  *
@@ -276,3 +277,20 @@ internal fun String.clampTo(max: Int): String {
     if (end > 0 && this[end - 1].isHighSurrogate()) end--
     return substring(0, end) + "…"
 }
+
+/** 既定のサイト一覧 URL(`rss-watch.notify.site-url` 未設定時)。通常・CNCF 両クライアントで共有する。 */
+internal const val DEFAULT_SITE_URL = "https://rss-watch.rocky-ha.com/"
+
+/**
+ * サイト一覧への導線 embed。通常ダイジェストの末尾と CNCF ダイジェストの候補 0 件時で共有する
+ * (「通常と同じ導線」という要件を文言ごと構造的に保つ)。
+ */
+internal fun siteCtaEmbed(siteUrl: String): DiscordPoster.Embed =
+    DiscordPoster.Embed(
+        author = null,
+        title = "🔗 求人で注目の技術と記事をサイトで見る",
+        url = siteUrl,
+        description = null,
+        thumbnail = null,
+        fields = null,
+    )

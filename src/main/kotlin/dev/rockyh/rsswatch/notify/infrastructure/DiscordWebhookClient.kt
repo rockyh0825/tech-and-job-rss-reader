@@ -22,7 +22,7 @@ import org.springframework.web.client.RestClient
 class DiscordWebhookClient(
     restClientBuilder: RestClient.Builder,
     @Value("\${rss-watch.notify.discord-webhook-url:}") private val webhookUrl: String,
-    @Value("\${rss-watch.notify.site-url:https://rss-watch.rocky-ha.com/}") private val siteUrl: String,
+    @Value("\${rss-watch.notify.site-url:$DEFAULT_SITE_URL}") private val siteUrl: String,
     @Value("\${rss-watch.notify.discord.max-retries:2}") maxRetries: Int,
     sleeper: (Long) -> Unit = { Thread.sleep(it) },
 ) : DigestPublisher {
@@ -103,17 +103,3 @@ class DiscordWebhookClient(
         private const val SUMMARY_FIELD_NAME = "要約"
     }
 }
-
-/**
- * サイト一覧への導線 embed。通常ダイジェストの末尾と CNCF ダイジェストの候補 0 件時で共有する
- * (「通常と同じ導線」という要件を文言ごと構造的に保つ)。
- */
-internal fun siteCtaEmbed(siteUrl: String): DiscordPoster.Embed =
-    DiscordPoster.Embed(
-        author = null,
-        title = "🔗 求人で注目の技術と記事をサイトで見る",
-        url = siteUrl,
-        description = null,
-        thumbnail = null,
-        fields = null,
-    )

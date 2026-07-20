@@ -207,22 +207,6 @@ class BuildDigestUseCaseTest {
     }
 
     @Test
-    fun does_not_post_when_no_tech_has_articles() {
-        val archive =
-            FakeArchive(
-                ranking = listOf(TechMention("Kotlin", 5)),
-                articlesByKeyword = emptyMap(), // Kotlin に紐づく tech 記事が無い
-            )
-        val publisher = FakePublisher()
-        val store = FakePostedGuidStore()
-
-        useCase(archive, publisher = publisher, store = store).run()
-
-        assertNull(publisher.posted)
-        assertNull(store.marked)
-    }
-
-    @Test
     fun posts_only_the_site_link_when_no_tech_has_articles() {
         // 候補 0 件の日も無言にはせず、サイト導線だけを届ける(記事投稿と各種記録は行わない)
         val archive =
