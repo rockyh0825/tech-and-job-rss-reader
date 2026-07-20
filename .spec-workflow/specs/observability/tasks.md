@@ -20,7 +20,7 @@
   - 完了条件: `docker compose up -d` 直後に `http://localhost:3001` へ匿名(Viewer)でアクセスでき、手動セットアップなしで全パネルにデータが描画される(`/api/report` を数回叩いて確認)。Kafka リスナーパネルにデータが描画されること(Task 1 でテスト対象外とした要件 1.4 のリスナータイマー `spring_kafka_listener_seconds` の実地確認)。レイテンシパネルのクエリ(または `uri` 変数の既定値)が `/api/stream` を除外していること
   - _Requirements: 1.4, 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 4. docs・steering 更新(運用手順 + Cloudflare 公開手順のユーザー作業)
+- [x] 4. docs・steering 更新(運用手順 + Cloudflare 公開手順のユーザー作業)
   - File: docs/public-access.md(Public Hostname `grafana.<ドメイン>` → `http://localhost:3001` の追加 + Access アプリ設定の手順追記)、docs/home-server.md または README.md(Prometheus/Grafana の起動・ポート・docker/.env 設定の要点追記)、.spec-workflow/steering/tech.md(Key Dependencies に Prometheus / Grafana を追記)、.spec-workflow/steering/structure.md(`docker/` の説明「Kafka + kafka-ui の Docker Compose」を Prometheus / Grafana 追加後の実態に合わせる)
   - docs には Grafana admin パスワードの焼き付き(`GF_SECURITY_ADMIN_PASSWORD` は grafana-data volume の初回初期化時のみ有効)を明記する: **初回 `up -d` の前に docker/.env を用意**すること、初回以降の変更は `grafana cli admin reset-admin-password`(新形式。旧形式の `grafana-cli` は deprecated ラッパー)で行うこと(design の Grafana 節参照)
   - Cloudflare ダッシュボード操作(トンネルへの Public Hostname 追加・Access アプリ作成)はリポジトリ成果物のないユーザー作業であることを明記する。study-notes 側の決定ログ追記はリポジトリ外のため別リポジトリで対応する

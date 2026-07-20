@@ -13,13 +13,15 @@
 
 ### Key Dependencies/Libraries
 
-- **Spring Boot**: アプリケーション基盤(spring-boot-starter-web, spring-kafka)
+- **Spring Boot**: アプリケーション基盤(spring-boot-starter-web, spring-kafka, spring-boot-starter-actuator + micrometer-registry-prometheus)
 - **Rome**: RSS/Atom パース。フィード形式の差異を吸収する JVM の定番パーサー
 - **Apache Kafka**: メッセージング(KRaft モード、シングルブローカー)
 - **kafka-ui**: ブラウザで topic の中身を確認する運用ツール
 - **PostgreSQL 17**(JDBC・compose 管理): 蓄積・集計。MVP の SQLite から spec `postgres-migration` で移行済み
 - **kuery-client**(`dev.hsbrysk:kuery-client-spring-data-jdbc` + Gradle プラグイン `dev.hsbrysk.kuery-client`): SQL を Kotlin の文字列補間で書く DB クライアント。補間はコンパイラプラグインによりバインドパラメータに変換されるため injection 安全。spring-data-jdbc ベースで `@Transactional` と互換
 - **Flyway**(flyway-core): スキーマ管理。`db/migration/` の `V{番号}__{説明}.sql` を起動時に自動適用(Spring Boot 統合)
+- **Prometheus**(compose 管理): メトリクスの収集・保持。アプリの `/actuator/prometheus` を 15 秒間隔で scrape し 90 日保持する pull 型(Prometheus が止まってもアプリは無影響)
+- **Grafana**(compose 管理): メトリクスの可視化。datasource・ダッシュボードは provisioning(`docker/grafana/provisioning/`)でリポジトリ管理し、手動セットアップなしで閲覧できる
 
 ### Application Architecture
 
