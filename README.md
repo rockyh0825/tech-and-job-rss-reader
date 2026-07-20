@@ -35,6 +35,7 @@ docker compose -f docker/docker-compose.yml up -d
 
 - ブラウザ UI: <http://localhost:8080>
 - 集計 API: `GET http://localhost:8080/api/report?days=7`
+- CNCF レポート API(CNCF 記事 × プロジェクト成熟度): `GET http://localhost:8080/api/cncf?days=7`
 - kafka-ui(topic の中身の確認): <http://localhost:8081>
 
 PostgreSQL のスキーマは初回起動時に Flyway が自動で作成する(DB 自体は compose の postgres サービスが用意する)。
