@@ -2,7 +2,7 @@
 
 アプリ側変更(Task 1)は TDD(Red → Green → Refactor)で進める(CLAUDE.md 準拠。テストが先・実装が後)。Task 2〜3 は宣言的なインフラ定義のため自動テストは持たず、完了条件を手動確認で定義する。
 
-- [ ] 1. Actuator + Micrometer 導入と AccessJwtFilter の actuator 除外(TDD)
+- [x] 1. Actuator + Micrometer 導入と AccessJwtFilter の actuator 除外(TDD)
   - File: build.gradle.kts(spring-boot-starter-actuator / micrometer-registry-prometheus 追加)、src/main/resources/application.yml(management 設定)、src/main/kotlin/dev/rockyh/rsswatch/shared/config/AccessJwtFilter.kt(shouldNotFilter 追加)
   - Test: `/actuator/prometheus` が 200 で `http_server_requests_seconds`(+ percentiles-histogram の `_bucket`)を含む、自動計装の存在確認として出力に `jvm_memory_used_bytes`・`hikaricp_connections` 系メーターを含む(要件 1.4。Kafka のリスナータイマー `spring_kafka_listener_seconds` はブローカー到達不能設定下でのコンテナ起動状況に依存し得るためテスト対象外とし、Task 3 の実地確認で担保する。design の Testing Strategy 参照)、`/actuator/health` が 200、`/actuator/env`・`/actuator/beans` が 404(expose 最小限)、`rss-watch.access.aud` 設定時にヘッダなしでも `/actuator/prometheus`・`/actuator/health` は 401 にならず `/api/report` は 401 のまま、shouldNotFilter のパス一致/不一致
   - 完了条件: 上記テストがすべて green で、既存テスト(AccessJwtFilter/Config 含む)もデグレなし。expose は `health,prometheus` のみ

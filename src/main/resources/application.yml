@@ -31,6 +31,20 @@ spring:
 server:
   port: 8080
 
+management:
+  endpoints:
+    web:
+      exposure:
+        # 最小限のみ明示(env/beans 等は晒さない)。Spring Boot 3 の既定は health のみだが、
+        # 「これ以外は出さない」を設定として固定する
+        include: health,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        # Prometheus 側で histogram_quantile() により p95/p99 を計算するためのバケット公開。
+        # アプリ側で分位数を焼き込む percentiles 設定は使わない(集約・時間範囲の変更に強いため)
+        http.server.requests: true
+
 rss-watch:
   topic: rss.items
   feeds-path: feeds.toml

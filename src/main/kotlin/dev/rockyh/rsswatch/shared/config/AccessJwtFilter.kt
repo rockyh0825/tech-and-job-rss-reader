@@ -20,6 +20,9 @@ class AccessJwtFilter(
     private val jwtProcessor: JWTProcessor<SecurityContext>,
 ) : OncePerRequestFilter() {
 
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean =
+        request.requestURI in EXCLUDED_PATHS
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -42,5 +45,16 @@ class AccessJwtFilter(
 
     companion object {
         const val HEADER = "Cf-Access-Jwt-Assertion"
+
+        /**
+         * フィルタ対象外のパス(exact match)。localhost の Prometheus コンテナは Access を
+         * 経由できずヘッダを持たないため、メトリクスと死活の 2 パスだけは無認証で通す。
+         * actuator 配下全体のワイルドカード除外にしないのは、将来 expose を広げた場合に無認証を波及させないため
+         * (除外リストと expose リストを同じ「最小限」で揃える)。exact match のため
+         * `/actuator/health/liveness` 等のサブパスは除外されない(導入時に明示的に追加する)。
+         * また `requestURI` への完全一致のため、将来 `server.servlet.context-path` を設定すると
+         * URI にプレフィックスが付いて除外が外れる(fail-closed で 401 になる)点に注意。
+         */
+        private val EXCLUDED_PATHS = setOf("/actuator/health", "/actuator/prometheus")
     }
 }

@@ -33,6 +33,22 @@ class AccessJwtFilterTest {
         fun ping(): String = "pong"
     }
 
+    /** actuator 除外(shouldNotFilter)のパス一致/不一致を検証するためのスタブ。 */
+    @RestController
+    class StubActuatorController {
+        @GetMapping("/actuator/prometheus")
+        fun prometheus(): String = "metrics"
+
+        @GetMapping("/actuator/health")
+        fun health(): String = "UP"
+
+        @GetMapping("/actuator/env")
+        fun env(): String = "env"
+
+        @GetMapping("/actuator/health/liveness")
+        fun liveness(): String = "UP"
+    }
+
     private val issuer = "https://myteam.cloudflareaccess.com"
     private val audience = "aud-tag-123"
 
@@ -45,7 +61,7 @@ class AccessJwtFilterTest {
         val jwkSource = ImmutableJWKSet<SecurityContext>(JWKSet(jwkKey.toPublicJWK()))
         val processor = AccessJwtProcessors.create(jwkSource, issuer, audience)
         return MockMvcBuilders
-            .standaloneSetup(PingController())
+            .standaloneSetup(PingController(), StubActuatorController())
             .addFilters<StandaloneMockMvcBuilder>(AccessJwtFilter(processor))
             .build()
     }
@@ -121,6 +137,40 @@ class AccessJwtFilterTest {
     fun returns_401_when_audience_does_not_match() {
         mockMvc
             .perform(get("/ping").header(AccessJwtFilter.HEADER, signedToken(audience = "someone-elses-aud")))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun skips_verification_for_actuator_prometheus_path() {
+        // Arrange & Act: Prometheus の scrape は Access を経由しないためヘッダを持たない
+        // Assert: shouldNotFilter によりフィルタがスキップされ、コントローラまで到達する
+        mockMvc
+            .perform(get("/actuator/prometheus"))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun skips_verification_for_actuator_health_path() {
+        // Arrange & Act: 死活監視(ヘッダなし)
+        // Assert: shouldNotFilter によりフィルタがスキップされ、コントローラまで到達する
+        mockMvc
+            .perform(get("/actuator/health"))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun returns_401_for_non_excluded_actuator_path_without_jwt() {
+        // Arrange & Act: 除外リスト外の actuator パスは従来どおり検証対象
+        mockMvc
+            .perform(get("/actuator/env"))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun returns_401_for_actuator_health_subpath_without_jwt() {
+        // Arrange & Act: 除外は exact match。liveness 等のサブパスは対象外(設計判断)
+        mockMvc
+            .perform(get("/actuator/health/liveness"))
             .andExpect(status().isUnauthorized)
     }
 
