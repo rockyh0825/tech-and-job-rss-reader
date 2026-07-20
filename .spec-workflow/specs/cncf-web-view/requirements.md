@@ -17,16 +17,16 @@ CNCF 特化ダイジェスト(issue #46 / PR #48)で Discord に配信してい�
 1.3. 並び順はダイジェストと同じ優先順: tier 昇順(sandbox → incubating → graduated → 言及なし)→ publishedAt 降順 → guid 昇順。**件数上限は設けない**(push と違い閲覧はスクロールできるため。窓が上限の役割を果たす)
 1.4. Discord Webhook(既存 / CNCF)の設定有無に関わらず API は常に有効(通知機能とは独立)
 
-### Requirement 2: Web UI の CNCF セクション
+### Requirement 2: Web UI の CNCF タブ
 
-**User Story:** 既存の Web UI で、求人クロスリンクと同じ画面から CNCF 動向を眺めたい。
+**User Story:** 既存の Web UI で、タブを切り替えて CNCF 動向を眺めたい(セクション追加だと 1 ページが読みづらくなる、というユーザー要望による)。
 
 #### Acceptance Criteria
 
-2.1. `static/index.html` に「CNCF 動向」セクションを追加し、`/api/cncf` の結果を表示する
+2.1. `static/index.html` にタブ(通常 / CNCF)を追加し、CNCF タブで `/api/cncf` の結果を表示する(通常タブは既存レイアウトのまま)
 2.2. 各記事に成熟度バッジ(🌱 Sandbox / 🧪 Incubating / 🎓 Graduated、言及なしは ☸️ CNCF)と言及プロジェクト名を表示する(記事の tier = 最も低い成熟度。Discord の author 行と同じ見せ方)
-2.3. 既存の日数トグル(7/14/30 日)に連動する
-2.4. 取得失敗・0 件でも既存セクションの表示を壊さない(独立したエラー/空表示)
+2.3. 既存の日数トグル(7/14/30 日)に連動する(表示中のタブの分を取得。タブ切り替え時にも取り直す)
+2.4. CNCF タブの取得失敗・0 件でも通常タブの表示を壊さない(タブ内に閉じたエラー/空表示)
 
 ### Requirement 3: CNCF 照合ロジックの共有(アーキテクチャ)
 

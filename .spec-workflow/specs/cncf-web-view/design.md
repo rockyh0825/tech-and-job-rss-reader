@@ -41,9 +41,9 @@ PR #48 では辞書・マッチャ・語彙を notify/domain に置いた(当時
 
 ## Web UI(Requirement 2)
 
-- 左カラム(クロスセクションの下)に「CNCF 動向(成熟度の低い順)」セクションを追加
-- 記事ごとに tier バッジ + 言及プロジェクト名(`🌱 Sandbox: Kepler ・ 🧪 Incubating: Knative` 形式、言及なしは `☸️ CNCF`)+ タイトルリンク + feedName/日付
-- `loadReport()` と同じタイミング・同じ `state.days` で `/api/cncf` を fetch。失敗時はセクション内にのみエラー表示(既存表示に影響しない)
+- ヘッダーにタブ(通常 / CNCF)を追加し、`<main>` を 2 つ(既存レイアウトの `#view-main` / 1 カラムの `#view-cncf`)用意して表示を切り替える(セクション追加だと 1 ページが読みづらくなる、というユーザー要望による)
+- CNCF タブは記事ごとに tier バッジ + 言及プロジェクト名(`🌱 Sandbox: Kepler ・ 🧪 Incubating: Knative` 形式、言及なしは `☸️ CNCF`)+ タイトルリンク + feedName/日付
+- 取得は表示中のタブの分だけ(`loadActiveView()`)。日数トグルとタブ切り替えの両方で取り直すため表示と `state.days` は食い違わない。失敗時は CNCF タブ内にのみエラー表示(通常タブに影響しない)
 
 ## テスト方針
 

@@ -80,4 +80,4 @@ export RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL="https://discord.com/api/webhoo
 | `rss-watch.notify.cncf.max-articles` | 1 回の配信に載せる記事の上限(初回のバックログ氾濫防止) | `8` |
 | `rss-watch.notify.cncf.cta-url` | 通知末尾に添える導線 URL | `https://www.cncf.io/projects/` |
 
-> プロジェクト成熟度の辞書は `notify/domain/CncfProjects.kt` の手書き管理(graduated はほぼ全件、incubating / sandbox は厳選)。CNCF 側で昇格・アーカイブがあったら行を移す。CNCF カテゴリの記事はこの専用チャンネルのみに流れ、既存ダイジェストやレポート画面(`/api/report`)には出ない。
+> プロジェクト成熟度の辞書は `keywords/domain/CncfProjects.kt` の手書き管理(graduated はほぼ全件、incubating / sandbox は厳選)。CNCF 側で昇格・アーカイブがあったら行を移す。CNCF カテゴリの記事は既存ダイジェストや `/api/report` には混ざらず、この専用チャンネルと Web UI の CNCF タブ(`GET /api/cncf`。Webhook 未設定でも常に有効)に流れる。

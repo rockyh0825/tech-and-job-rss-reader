@@ -47,6 +47,20 @@
     border-color: var(--accent);
     color: #fff;
   }
+  header .tabs { display: flex; gap: 6px; }
+  header .tabs button {
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  header .tabs button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
   main {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -56,6 +70,8 @@
     margin: 0 auto;
   }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  main[hidden] { display: none; }
+  main.single { grid-template-columns: 1fr; max-width: 900px; }
   section h2 { font-size: 15px; margin: 0 0 10px; color: var(--muted); }
   .card {
     background: var(--card);
@@ -96,6 +112,10 @@
 <body>
 <header>
   <h1>RSS Watch</h1>
+  <nav class="tabs">
+    <button data-view="main" class="active">通常</button>
+    <button data-view="cncf">CNCF</button>
+  </nav>
   <div class="days">
     <span>直近</span>
     <button data-days="7">7日</button>
@@ -104,15 +124,11 @@
   </div>
 </header>
 
-<main>
+<main id="view-main">
   <div>
     <section>
       <h2>求人で言及されている技術 × 関連記事(言及求人数順)</h2>
       <div id="cross-sections"><p class="empty">読み込み中…</p></div>
-    </section>
-    <section>
-      <h2>CNCF 動向(成熟度の低いプロジェクトの記事が先)</h2>
-      <div class="card"><ul class="items" id="cncf-articles"><li class="empty">読み込み中…</li></ul></div>
     </section>
   </div>
   <div>
@@ -131,8 +147,15 @@
   </div>
 </main>
 
+<main id="view-cncf" class="single" hidden>
+  <section>
+    <h2>CNCF 動向(成熟度の低いプロジェクトの記事が先)</h2>
+    <div class="card"><ul class="items" id="cncf-articles"><li class="empty">読み込み中…</li></ul></div>
+  </section>
+</main>
+
 <script>
-  const state = { days: 7 };
+  const state = { days: 7, view: "main" };
 
   function itemLi(item) {
     const li = document.createElement("li");
@@ -229,7 +252,7 @@
     });
   }
 
-  // 取得失敗(非 200 だけでなく JSON でないボディも)はこのセクション内に閉じ、他セクションの表示には影響させない。
+  // 取得失敗(非 200 だけでなく JSON でないボディも)は CNCF タブ内に閉じ、通常タブの表示には影響させない。
   async function loadCncf() {
     let report;
     try {
@@ -249,9 +272,6 @@
   }
 
   async function loadReport() {
-    document.querySelectorAll(".days button").forEach((button) => {
-      button.classList.toggle("active", Number(button.dataset.days) === state.days);
-    });
     const response = await fetch(`/api/report?days=${state.days}`);
     if (!response.ok) {
       document.getElementById("cross-sections").textContent = `レポート取得に失敗しました (${response.status})`;
@@ -290,16 +310,43 @@
     });
   }
 
-  document.querySelectorAll(".days button").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.days = Number(button.dataset.days);
-      loadReport();
+  function updateDaysButtons() {
+    document.querySelectorAll(".days button").forEach((button) => {
+      button.classList.toggle("active", Number(button.dataset.days) === state.days);
+    });
+  }
+
+  // 表示中のタブの分だけ取得する(タブ切り替え時に必ず取り直すので日数変更と食い違わない)。
+  function loadActiveView() {
+    if (state.view === "cncf") {
       loadCncf();
+    } else {
+      loadReport();
+    }
+  }
+
+  document.querySelectorAll(".tabs button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.view = button.dataset.view;
+      document.querySelectorAll(".tabs button").forEach((tab) => {
+        tab.classList.toggle("active", tab === button);
+      });
+      document.getElementById("view-main").hidden = state.view !== "main";
+      document.getElementById("view-cncf").hidden = state.view !== "cncf";
+      loadActiveView();
     });
   });
 
-  loadReport();
-  loadCncf();
+  document.querySelectorAll(".days button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.days = Number(button.dataset.days);
+      updateDaysButtons();
+      loadActiveView();
+    });
+  });
+
+  updateDaysButtons();
+  loadActiveView();
   connectLive();
 </script>
 </body>
