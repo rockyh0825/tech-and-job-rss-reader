@@ -81,7 +81,7 @@ management:
 **採用: spring-kafka のリスナータイマー `spring.kafka.listener`(Prometheus 名 `spring_kafka_listener_seconds_*`)。** consumer factory の作り方に依存せず、リスナーコンテナ自身が登録するタイマーで観測する。成立条件は spring-kafka 3.3.10(本プロジェクトの解決バージョン)のクラスを javap で確認済み:
 
 - `ContainerProperties` の `micrometerEnabled` は既定 true
-- `KafkaMessageListenerContainer$ListenerConsumer#obtainMicrometerHolder()` は「micrometer-core がクラスパスにある(`KafkaUtils.MICROMETER_PRESENT` = `io.micrometer.core.instrument.MeterRegistry` の存在チェック)+ `micrometerEnabled` + observation 無効(既定)」のとき `MicrometerHolder` を生成し、タイマー名 `spring.kafka.listener`(タグ: `name` = リスナーコンテナの Bean 名、`result` = success/failure、`exception`)を登録する
+- `KafkaMessageListenerContainer$ListenerConsumer#obtainMicrometerHolder()` は「micrometer-core がクラスパスにある(`KafkaUtils.MICROMETER_PRESENT` = `io.micrometer.core.instrument.MeterRegistry` の存在チェック)+ `micrometerEnabled` + observation 無効(既定)」のとき `MicrometerHolder` を生成し、タイマー名 `spring.kafka.listener`(タグ: `name` = リスナーコンテナの Bean 名、`result` = success/failure、`exception`)を登録する。なお `name` の実値は Concurrent コンテナ配下の**子コンテナ名**であり、`@KafkaListener(id = "sink"/"live")` + concurrency から `sink-0`・`live-0` のようにサフィックスが付く(パネルは `sum by (name)` なので実害はないが、実地確認時に `sink` ちょうどの値を期待しないこと)
 - `MicrometerHolder` は ApplicationContext から `getBeanProvider(MeterRegistry).getIfUnique()` で MeterRegistry を解決する。ApplicationContext は `AbstractKafkaListenerContainerFactory`(ApplicationContextAware)が `initializeContainer` で各コンテナへ引き渡すため、**consumer factory を自前 new していても、コンテナファクトリが `@Bean` であれば成立する**(KafkaConfig の 2 ファクトリはどちらも `@Bean`)
 
 したがって NFR「アプリ側変更は依存追加 + `application.yml` + AccessJwtFilter 除外のみ」を維持したまま Kafka の観測ができる。なお sink はバッチリスナーのため 1 回のタイマー記録 = 1 バッチ処理であり、パネルの「処理レート」はレコード数ではなく**リスナー呼び出し数**のレートになる。consumer ラグや records-consumed 等のクライアントメトリクスが必要になった場合は、consumer factory の Bean 化 + `MicrometerConsumerListener` 付与を別 spec で検討する(本 spec のスコープ外)。
@@ -169,7 +169,7 @@ docker/grafana/provisioning/
 |---|---|
 | エンドポイント別レイテンシ p50/p95/p99 | `histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket[5m])))`(0.5 / 0.99 も同様。`uri` 変数で `/api/report` に絞れるようにする) |
 | リクエストレート | `sum by (uri) (rate(http_server_requests_seconds_count[5m]))` |
-| エラー率 | `sum(rate(...{status=~"5.."}[5m])) / sum(rate(...[5m]))`(PromQL の `or` は左辺が**空ベクトル**のときだけ右辺を採用する。5xx が一度も発生していない期間は分子の系列自体が存在せず空になりパネルが欠けるため、`or vector(0)` を添えて 0 として描画する。なお 0/0 = NaN は非空なので `or` では救えないが、分母は Prometheus 自身の scrape リクエストが常に載るため実質 0 にならない) |
+| エラー率 | `sum(rate(...{status=~"5.."}[5m])) / sum(rate(...[5m]))`(PromQL の `or` は左辺が**空ベクトル**のときだけ右辺を採用する。5xx が一度も発生していない期間は分子の系列自体が存在せず空になりパネルが欠けるため、`or vector(0)` を添えて 0 として描画する。なお 0/0 = NaN は非空なので `or` では救えないが、分母は Prometheus 自身の scrape リクエストが常に載るため実質 0 にならない。この「左辺が空なら右辺」という単純な説明は、本クエリが両辺とも `sum()` でラベルなし 1 系列だから厳密に成立するもので、`sum by (uri)` 等ラベル付きに流用する場合は `or` がラベル集合単位の union になる点に注意) |
 | JVM ヒープ | `jvm_memory_used_bytes{area="heap"}` / `jvm_memory_max_bytes{area="heap"}` |
 | HikariCP | `hikaricp_connections_active` / `hikaricp_connections_pending` / `hikaricp_connections_max` |
 | Kafka リスナー | `sum by (name) (rate(spring_kafka_listener_seconds_count[5m]))`(リスナー別の処理レート)と `sum by (name) (rate(spring_kafka_listener_seconds_sum[5m])) / sum by (name) (rate(spring_kafka_listener_seconds_count[5m]))`(平均処理時間。sink はバッチリスナーのため 1 呼び出し = 1 バッチ)。要件 1.4 の Kafka メトリクスをダッシュボードから参照できることの担保。実地確認は Task 3 の完了条件 |
