@@ -126,6 +126,32 @@ services:
       - prometheus-data:/prometheus
     restart: unless-stopped
 
+  # Prometheus のメトリクスを可視化するダッシュボード。
+  # datasource とダッシュボードは provisioning でリポジトリ管理し、手動セットアップなしで起動直後から閲覧できる。
+  grafana:
+    image: grafana/grafana:12.3.8
+    container_name: rss-watch-grafana
+    ports:
+      # 自宅サーバーは homepage が :3000 使用中のため 3001 に避ける(ループバック限定 bind は kafka-ui と同方針)
+      - "127.0.0.1:3001:3000"
+    environment:
+      # 公開時は https://grafana.<ドメイン> を docker/.env で注入する
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+      # 閲覧はログイン不要(Viewer)。到達経路がループバック + Access 保護トンネルに限定されているため、
+      # Access で人を絞り Grafana ログインを二重に求めない。編集(admin)だけパスワードで守る。
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # docker/.env から注入(コミットしない)。grafana-data volume の初回初期化時にのみ反映されるため、
+      # 初回 up -d の前に docker/.env を用意すること(以降の変更は grafana cli admin reset-admin-password)。
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      # 手元で加えたダッシュボード編集等を永続化する
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
   # Cloudflare Tunnel コネクタ。自宅サーバーから Cloudflare へアウトバウンドでトンネルを張り、
   # 公開ホスト名(例 rss.example.com)→ ホストの :8080 を結ぶ(ポート開放不要)。
   # 公開ルーティング(Public Hostname → http://localhost:8080)と認証(Access)は
@@ -153,3 +179,4 @@ volumes:
   kafka-data:
   postgres-data:
   prometheus-data:
+  grafana-data:

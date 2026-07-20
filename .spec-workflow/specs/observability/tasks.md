@@ -14,7 +14,7 @@
   - 完了条件: `docker compose config` が通り、`docker compose up -d` + アプリ起動後に `http://localhost:9090/targets` で rss-watch target が UP(macOS 開発機で確認。Linux 本番は Task 4 のデプロイ時に実地確認)
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 3. Grafana サービス + provisioning(datasource・ダッシュボード JSON)を追加
+- [x] 3. Grafana サービス + provisioning(datasource・ダッシュボード JSON)を追加
   - File: docker/docker-compose.yml(grafana サービス + grafana-data volume)、docker/grafana/provisioning/datasources/prometheus.yml、docker/grafana/provisioning/dashboards/dashboards.yml、docker/grafana/provisioning/dashboards/rss-watch.json、docker/.env.example(GRAFANA_ADMIN_PASSWORD / GRAFANA_ROOT_URL 追記)
   - `127.0.0.1:3001:3000`(homepage が :3000 使用中のため)・`GF_AUTH_ANONYMOUS_ENABLED=true`(Viewer)・`GF_SERVER_ROOT_URL` と admin パスワードは docker/.env 注入。ダッシュボードはエンドポイント別レイテンシ(p50/p95/p99)・リクエストレート・エラー率・JVM ヒープ・HikariCP・Kafka リスナー(`spring.kafka.listener` タイマーによる処理レート・処理時間)のパネル(design のクエリ骨子参照)
   - 完了条件: `docker compose up -d` 直後に `http://localhost:3001` へ匿名(Viewer)でアクセスでき、手動セットアップなしで全パネルにデータが描画される(`/api/report` を数回叩いて確認)。Kafka リスナーパネルにデータが描画されること(Task 1 でテスト対象外とした要件 1.4 のリスナータイマー `spring_kafka_listener_seconds` の実地確認)。レイテンシパネルのクエリ(または `uri` 変数の既定値)が `/api/stream` を除外していること
