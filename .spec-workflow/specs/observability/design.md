@@ -69,6 +69,7 @@ management:
 
 - 方式: `AccessJwtFilter` に `OncePerRequestFilter#shouldNotFilter` を override し、`request.requestURI` が上記 2 つに一致するときスキップする(`FilterRegistrationBean.addUrlPatterns` は除外指定を持たないため、除外はフィルタ側で行うのが素直)
 - `/actuator/**` 全体ではなく 2 パスに限定する理由: expose を将来広げた場合(例: 一時的な `loggers`)にまで無認証を波及させないため。除外リストと expose リストを同じ「最小限」で揃える
+- 注記: exact match のため、将来 liveness/readiness プローブのサブパス(`/actuator/health/liveness` 等)を使う場合はそれらは除外されない(`/actuator/health/**` を意図的にカバーしない設計判断。現状サブパスは使っておらず実害なし。導入時に除外リストへ明示的に追加する)
 - セキュリティ評価: この除外で無認証になるのは「メトリクスと死活」のみで、環境変数や設定は expose していない(要件 2)。到達経路は (a) localhost / LAN の `:8080` 直アクセス、(b) Cloudflare トンネル経由 — (b) はエッジの Access 認証が先に立つため保護は維持される。(a) はハードニング前の信頼レベル(自宅 LAN 内は許容)に、この 2 パスだけ戻ることを意味し、個人運用として許容する
 - 代替案(不採用): Prometheus に Access のサービストークンを持たせてヘッダ付き scrape する案は、トークン管理と Cloudflare 側設定が増える割に、守る対象がメトリクスのみでは見合わない
 
@@ -79,6 +80,7 @@ management:
 ```yaml
   prometheus:
     image: prom/prometheus:<pinned-version>
+    container_name: rss-watch-prometheus   # 既存サービス(rss-watch-kafka 等)の命名イディオムに合わせる
     ports:
       - "127.0.0.1:9090:9090"        # kafka-ui と同方針: LAN に露出しない
     command:
@@ -109,7 +111,7 @@ scrape_configs:
 | 方式 | 仕組み | 評価 |
 |---|---|---|
 | **`extra_hosts: host.docker.internal:host-gateway`(採用)** | Docker がホスト側 IP を `host.docker.internal` に解決する | Linux 本番・macOS 開発の**両方で同じ設定のまま動く**。コンテナのネットワーク分離(ループバック限定 bind)も維持される |
-| `network_mode: host`(cloudflared が採用している方式) | コンテナがホストのネットワーク名前空間を共有し `localhost:8080` が直接届く | **Linux 専用**(macOS の Docker Desktop / Rancher Desktop では同挙動にならない、と docs/public-access.md にも明記済み)。さらに ports 指定が無効になりループバック限定 bind の表現もできない |
+| `network_mode: host`(cloudflared が採用している方式) | コンテナがホストのネットワーク名前空間を共有し `localhost:8080` が直接届く | **Linux ホスト前提**(macOS/Windows の Docker Desktop では同挙動にならない、と docs/public-access.md にも明記済み)。さらに ports 指定が無効になりループバック限定 bind の表現もできない |
 
 cloudflared は「公開時のみ・Linux 前提」と割り切った常駐なので host モードでよいが、Prometheus は開発機(macOS)でも同じ compose で動かしたいため `host.docker.internal` 方式を採る。
 
@@ -118,6 +120,7 @@ cloudflared は「公開時のみ・Linux 前提」と割り切った常駐な�
 ```yaml
   grafana:
     image: grafana/grafana:<pinned-version>
+    container_name: rss-watch-grafana
     ports:
       - "127.0.0.1:3001:3000"   # 自宅サーバーは homepage が :3000 使用中のため 3001 に避ける
     environment:
@@ -135,6 +138,7 @@ cloudflared は「公開時のみ・Linux 前提」と割り切った常駐な�
 
 - 匿名 Viewer を許すのは、到達経路がループバック + Access 保護トンネルに限定されているため(Access で人を絞り、Grafana ログインを二重に求めない)。編集(admin)だけパスワードで守る
 - `docker/.env.example` に `GRAFANA_ADMIN_PASSWORD` / `GRAFANA_ROOT_URL` の行を追記する
+- **注意(admin パスワードの焼き付き)**: `GF_SECURITY_ADMIN_PASSWORD` は **grafana-data volume の初回初期化時にのみ**反映され、あとから `docker/.env` を変えて再起動しても変わらない。したがって**初回 `up -d` の前に `docker/.env` を用意しておく**こと。初回以降に変更したい場合は `docker compose exec grafana grafana-cli admin reset-admin-password <新パスワード>` でリセットする(この運用注意は Task 4 の docs にも記載する)
 
 **provisioning 構成**(手動セットアップゼロでリポジトリ管理。要件 5.2):
 
@@ -158,6 +162,7 @@ docker/grafana/provisioning/
 
 - 時間範囲を広げれば同一パネルで改善デプロイ前後の比較ができる(主目的のユースケース)。デプロイ時刻の注釈(annotation)は手動運用で足りるため provisioning には含めない
 - `_prometheus` の URI 自体もタグに載るが、ダッシュボードの `uri` 変数で除外できるためアプリ側でのフィルタはしない
+- **`/api/stream`(SSE)の除外**: `/api/stream` は長寿命の SSE 接続で、`http.server.requests` には**接続が閉じた時点で接続寿命ぶんの duration** が記録される(数分〜数時間オーダー)。そのままではレイテンシパネルの p50/p95/p99 を大きく汚すため、レイテンシパネルのクエリ(または `uri` 変数の既定値)から `/api/stream` を除外する
 
 ## 外部公開(要件 6)
 
@@ -181,10 +186,14 @@ docker/grafana/provisioning/
 
 ### Unit Testing(TDD。CLAUDE.md の Red → Green → Refactor に従う)
 
+- **フルコンテキストテストの隔離前提**: `@SpringBootTest` 系テストは既存 `src/test/kotlin/dev/rockyh/rsswatch/RssWatchApplicationTest.kt` と同じ隔離を踏襲する
+  - `@Import(PostgresTestConfiguration::class)` で Testcontainers の共有 PostgreSQL コンテナに接続する
+  - `spring.kafka.bootstrap-servers=localhost:1`(到達不能ポート)に上書きし、ローカルの実ブローカー(localhost:9092)に group join して実メッセージを消費してしまう事故を防ぐ(接続失敗はバックグラウンドリトライになるだけで、コンテキスト起動は失敗しない)
+  - `rss-watch.fetch.initial-delay-ms=3600000` で、テスト中に `@Scheduled` の巡回(実フィードへのアクセス)が走らないようにする
 - **メトリクス公開**: `@SpringBootTest(webEnvironment = RANDOM_PORT)` + TestRestTemplate 等で
   - `GET /actuator/prometheus` が 200 で、任意のリクエスト実行後に `http_server_requests_seconds` を含むこと(要件 1.1/1.2)
   - percentiles-histogram 有効により `http_server_requests_seconds_bucket` が含まれること(要件 1.3)
-  - `GET /actuator/health` が 200(要件 1.5)
+  - `GET /actuator/health` が 200(要件 1.5)。health は DataSource ヘルスチェックを含むため、この 200 は Postgres コンテナ(PostgresTestConfiguration)への接続が UP であることが前提
   - `GET /actuator/env` が 404(expose 最小限の仕様化。要件 2.2)
 - **AccessJwtFilter の除外**: `rss-watch.access.aud` / `team-domain` を設定したコンテキストで
   - ヘッダなしの `GET /actuator/prometheus`・`/actuator/health` が 401 にならないこと(要件 3.1)
