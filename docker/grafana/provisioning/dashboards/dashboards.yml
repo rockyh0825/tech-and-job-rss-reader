@@ -1,0 +1,11 @@
+# このディレクトリの JSON をダッシュボードとして自動読み込みする provisioning 設定
+apiVersion: 1
+
+providers:
+  - name: rss-watch
+    type: file
+    # provisioning 由来のダッシュボードは UI からの上書き保存を許さない(定義はリポジトリが正)
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false
