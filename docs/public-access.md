@@ -103,7 +103,7 @@ java -jar rss-watch.jar
 - 検証内容: 署名(Cloudflare の JWKS で RS256 検証)・`aud`・`iss`(team ドメイン)・有効期限
 - JWKS は `https://<team>/cdn-cgi/access/certs` から取得しキャッシュ・鍵ローテーションに追従する
 - 有効化すると **LAN からの直アクセスも 401** になる。デバッグで直に叩きたい場合は環境変数を外して起動する
-- `/actuator/health` と `/actuator/prometheus` の 2 パスだけは有効化しても 401 にならない(localhost の Prometheus コンテナが Access を経由せず scrape するため。詳細は [observability spec](../.spec-workflow/specs/observability/) 参照)
+- `/actuator/health` と `/actuator/prometheus` の 2 パスだけは有効化しても 401 にならない(Prometheus コンテナが Access を経由せず `host.docker.internal:8080`(= ホストの `:8080`)へ直接 scrape するため。詳細は [observability spec](../.spec-workflow/specs/observability/) 参照)
 
 ## Grafana の公開(観測ダッシュボード)
 
@@ -116,11 +116,11 @@ Zero Trust ダッシュボード → **Access → Applications** で **Self-host
 - **Application domain**: `grafana.example.com`(rss-watch とは別ホスト名)
 - **Policy**: Action=Allow、Include=**Emails**(rss-watch と同じ許可メール)
 
-> **順序に注意**: rss-watch の公開時(手順 4 の注意)と同じく、Access アプリを**先に**作成・有効化してから手順 2 で Public Hostname を追加すること。既存トンネルは稼働中のため、Public Hostname を足した時点で公開が live になる。
+> **順序に注意**: rss-watch の公開時(手順 3 末尾の順序注意)と同じく、Access アプリを**先に**作成・有効化してから手順 2 で Public Hostname を追加すること。既存トンネルは稼働中のため、Public Hostname を足した時点で公開が live になる。
 
 **2. 既存トンネルに Public Hostname を追加**
 
-Zero Trust ダッシュボード → **Networks → Tunnels** → 既存トンネル(手順 2 で作成済み)の **Public Hostname** に以下を追加する。
+Zero Trust ダッシュボード → **Networks → Tunnels** → 既存トンネル(rss-watch 公開の手順 2 で作成済み)の **Public Hostname** に以下を追加する。
 
 | 項目 | 値 |
 |---|---|
