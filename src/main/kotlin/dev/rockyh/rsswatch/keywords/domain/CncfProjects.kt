@@ -1,4 +1,4 @@
-package dev.rockyh.rsswatch.notify.domain
+package dev.rockyh.rsswatch.keywords.domain
 
 import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 

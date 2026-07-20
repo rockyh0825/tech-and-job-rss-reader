@@ -1,12 +1,12 @@
 package dev.rockyh.rsswatch.notify.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
+import dev.rockyh.rsswatch.capabilities.CncfMatchPort
 import dev.rockyh.rsswatch.notify.ConditionalOnCncfNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.CncfCandidate
 import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
 import dev.rockyh.rsswatch.notify.domain.CncfDigestPublisher
 import dev.rockyh.rsswatch.notify.domain.CncfDigestSelectionPolicy
-import dev.rockyh.rsswatch.notify.domain.CncfProjectMatcher
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service
  * CNCF ダイジェスト(issue #46)の編成:CNCF フィードの新着記事に成熟度バッジを付けて投稿する。
  *
  * - 取得は archive の [ArchiveQueryPort.itemsByCategory] を再利用(`category = "cncf"`。DB は読み取りのみ)
- * - 各記事のタイトル + 概要を [CncfProjectMatcher] で照合し、言及された CNCF プロジェクトと成熟度を検出する
+ * - 各記事のタイトル + 概要を [CncfMatchPort](keywords の CNCF 辞書)で照合し、言及された CNCF プロジェクトと成熟度を検出する
  * - 並び順は [CncfDigestSelectionPolicy]:成熟度の低いプロジェクトに言及する記事が先
  *   (graduated 前を早期に掴む)、tier 内は新着順、上限 [maxArticles] 件(初回のバックログ氾濫防止)
  * - 一度通知した記事は二度と載せない(通知済み guid 全件を除外。既存ダイジェストと同じ永続的な重複排除。
@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service
 @ConditionalOnCncfNotifyEnabled
 class BuildCncfDigestUseCase(
     private val archiveQueryPort: ArchiveQueryPort,
+    private val cncfMatchPort: CncfMatchPort,
     private val summarizer: Summarizer,
     private val webhookClient: CncfDigestPublisher,
     private val postedGuidRepository: PostedGuidStore,
@@ -42,8 +43,6 @@ class BuildCncfDigestUseCase(
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
-
-    private val matcher = CncfProjectMatcher()
 
     private val selectionPolicy = CncfDigestSelectionPolicy()
 
@@ -55,7 +54,7 @@ class BuildCncfDigestUseCase(
             archiveQueryPort
                 .itemsByCategory(ItemCategory.CNCF, windowDays)
                 .filterNot { it.guid in alreadyPosted }
-                .map { CncfCandidate(it, matcher.match("${it.title} ${it.summary}")) }
+                .map { CncfCandidate(it, cncfMatchPort.match("${it.title} ${it.summary}")) }
 
         val selected = selectionPolicy.select(candidates, maxArticles)
         if (selected.isEmpty()) {

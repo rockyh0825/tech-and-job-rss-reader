@@ -1,10 +1,12 @@
 package dev.rockyh.rsswatch.notify.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
+import dev.rockyh.rsswatch.capabilities.CncfMatchPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
 import dev.rockyh.rsswatch.notify.domain.CncfDigestPublisher
 import dev.rockyh.rsswatch.shared.contract.CncfMaturity
+import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
@@ -33,6 +35,16 @@ class BuildCncfDigestUseCaseTest {
 
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
             error("not used by the CNCF digest")
+    }
+
+    /** 実辞書の代わり: テストで使う代表 3 プロジェクトだけを、成熟度の低い順で返す。 */
+    private class FakeCncfMatch : CncfMatchPort {
+        override fun match(text: String): List<CncfMention> =
+            buildList {
+                if ("WasmEdge" in text) add(CncfMention("WasmEdge", CncfMaturity.SANDBOX))
+                if ("Kubernetes" in text) add(CncfMention("Kubernetes", CncfMaturity.GRADUATED))
+                if ("Prometheus" in text) add(CncfMention("Prometheus", CncfMaturity.GRADUATED))
+            }
     }
 
     private class FakeSummarizer(var result: Result<String> = Result.success("要約")) : Summarizer {
@@ -75,6 +87,7 @@ class BuildCncfDigestUseCaseTest {
     private fun useCase(maxArticles: Int = 8, windowDays: Int = 7): BuildCncfDigestUseCase =
         BuildCncfDigestUseCase(
             archiveQueryPort = archive,
+            cncfMatchPort = FakeCncfMatch(),
             summarizer = summarizer,
             webhookClient = publisher,
             postedGuidRepository = postedGuidStore,

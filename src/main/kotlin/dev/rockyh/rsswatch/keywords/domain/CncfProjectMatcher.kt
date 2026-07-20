@@ -1,12 +1,11 @@
-package dev.rockyh.rsswatch.notify.domain
+package dev.rockyh.rsswatch.keywords.domain
 
 import dev.rockyh.rsswatch.shared.contract.CncfMention
 
 /**
  * テキストから CNCF プロジェクトの言及を検出する。
  *
- * 照合は keywords/domain/KeywordExtractor と同じ独自境界イディオムの意図的な小複製
- * (Konsist の feature 分離ルールで keywords.domain を import できないため):
+ * 照合は同 feature の [KeywordExtractor] と同じ独自境界イディオム:
  * 日本語文中の英語名(例: `Kubernetesで`)では `\b` が機能しないため
  * `(?<![A-Za-z0-9])...(?![A-Za-z0-9+#])` で照合する。
  *

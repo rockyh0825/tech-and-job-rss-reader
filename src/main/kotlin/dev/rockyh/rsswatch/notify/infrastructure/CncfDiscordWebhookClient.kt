@@ -73,7 +73,7 @@ class CncfDiscordWebhookClient(
         )
 
     /**
-     * 成熟度バッジの見出し文言。[mentions] は成熟度の低い順に整列済み([CncfProjectMatcher] 参照)なので、
+     * 成熟度バッジの見出し文言。[mentions] は成熟度の低い順に整列済み(CncfMatchPort 参照)なので、
      * 先頭 = 記事の tier を決めたプロジェクトをバッジにし、残りを最大 [MAX_EXTRA_PROJECT_NAMES] 件併記する。
      */
     private fun authorLabel(mentions: List<CncfMention>): String {

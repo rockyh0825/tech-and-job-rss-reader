@@ -5,7 +5,7 @@ import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.shared.contract.RssItem
 
 /**
- * CNCF ダイジェスト候補の記事 1 件。[mentions] は [CncfProjectMatcher] の検出結果
+ * CNCF ダイジェスト候補の記事 1 件。[mentions] は CncfMatchPort(keywords の CNCF 辞書)の検出結果
  * (成熟度の低い順に整列済み)で、言及なしなら空リスト。
  */
 data class CncfCandidate(
