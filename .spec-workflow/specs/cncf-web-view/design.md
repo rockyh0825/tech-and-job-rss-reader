@@ -15,7 +15,7 @@ PR #48 では辞書・マッチャ・語彙を notify/domain に置いた(当時
 | (新規)`CncfMatchPort` | — | `capabilities/` | 依存する側: notify/application(ダイジェスト)・report/application(Web レポート)。実装する側: keywords/application(`CncfMatchPortImpl`、無条件 Bean) |
 
 - `BuildCncfDigestUseCase` は `CncfProjectMatcher` の直接生成をやめ、`CncfMatchPort` をコンストラクタ注入に置き換える(挙動不変)
-- `CncfMatchPortImpl` は webhook 設定にガードされない無条件 `@Service`。これにより「notify の Bean は webhook 未設定時ゼロ」という既存の Feature Toggle 不変条件を保ったまま、Web UI は常時有効にできる
+- `CncfMatchPortImpl` は webhook 設定にガードされない無条件 `@Component`。これにより「notify の Bean は webhook 未設定時ゼロ」という既存の Feature Toggle 不変条件を保ったまま、Web UI は常時有効にできる
 
 ## API(Requirement 1)
 
@@ -30,7 +30,8 @@ PR #48 では辞書・マッチャ・語彙を notify/domain に置いた(当時
   "articles": [
     {
       "item": { "guid": "...", "feedName": "Kubernetes Blog", "title": "...", "url": "...", "publishedAt": "...", ... },
-      "mentions": [ { "projectName": "Kepler", "maturity": "SANDBOX" } ]
+      "mentions": [ { "projectName": "Kepler", "maturity": "SANDBOX" } ],
+      "tier": "SANDBOX"
     }
   ]
 }

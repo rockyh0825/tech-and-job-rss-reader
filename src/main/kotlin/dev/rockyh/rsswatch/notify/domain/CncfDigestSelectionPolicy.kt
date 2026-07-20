@@ -25,6 +25,9 @@ data class CncfCandidate(
  * 3. guid 昇順(完全決定性の担保)
  *
  * 並べ替え後に [select] の limit 件で打ち切る(初回有効化時のバックログ氾濫防止)。
+ *
+ * 同じ全順序を report/application/BuildCncfReportUseCase(Web レポート。cap なし)も持つ。
+ * 並び順を変えるときは両方を合わせて変更すること。
  */
 class CncfDigestSelectionPolicy {
 

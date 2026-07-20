@@ -229,24 +229,22 @@
     });
   }
 
-  // 取得失敗はこのセクション内に閉じ、他セクションの表示には影響させない。
+  // 取得失敗(非 200 だけでなく JSON でないボディも)はこのセクション内に閉じ、他セクションの表示には影響させない。
   async function loadCncf() {
-    let response;
+    let report;
     try {
-      response = await fetch(`/api/cncf?days=${state.days}`);
-    } catch {
-      response = null;
-    }
-    if (!response || !response.ok) {
+      const response = await fetch(`/api/cncf?days=${state.days}`);
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      report = await response.json();
+    } catch (error) {
       const ul = document.getElementById("cncf-articles");
       ul.replaceChildren();
       const li = document.createElement("li");
       li.className = "empty";
-      li.textContent = `CNCF レポートの取得に失敗しました${response ? ` (${response.status})` : ""}`;
+      li.textContent = `CNCF レポートの取得に失敗しました (${error.message})`;
       ul.append(li);
       return;
     }
-    const report = await response.json();
     renderCncf(report.articles);
   }
 

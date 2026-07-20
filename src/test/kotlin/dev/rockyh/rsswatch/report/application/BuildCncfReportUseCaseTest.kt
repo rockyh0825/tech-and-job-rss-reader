@@ -125,6 +125,19 @@ class BuildCncfReportUseCaseTest {
     }
 
     @Test
+    fun places_articles_with_null_published_at_last_within_the_same_tier() {
+        archive.items =
+            listOf(
+                item("undated", title = "Kubernetes undated", publishedAt = null),
+                item("dated", title = "Kubernetes dated", publishedAt = "2026-07-17T00:00:00Z"),
+            )
+
+        val report = useCase.build(days = 7)
+
+        assertEquals(listOf("dated", "undated"), report.articles.map { it.item.guid })
+    }
+
+    @Test
     fun breaks_full_ties_deterministically_by_guid() {
         archive.items =
             listOf(
