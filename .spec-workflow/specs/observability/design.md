@@ -138,7 +138,7 @@ cloudflared は「公開時のみ・Linux 前提」と割り切った常駐な�
 
 - 匿名 Viewer を許すのは、到達経路がループバック + Access 保護トンネルに限定されているため(Access で人を絞り、Grafana ログインを二重に求めない)。編集(admin)だけパスワードで守る
 - `docker/.env.example` に `GRAFANA_ADMIN_PASSWORD` / `GRAFANA_ROOT_URL` の行を追記する
-- **注意(admin パスワードの焼き付き)**: `GF_SECURITY_ADMIN_PASSWORD` は **grafana-data volume の初回初期化時にのみ**反映され、あとから `docker/.env` を変えて再起動しても変わらない。したがって**初回 `up -d` の前に `docker/.env` を用意しておく**こと。初回以降に変更したい場合は `docker compose exec grafana grafana-cli admin reset-admin-password <新パスワード>` でリセットする(この運用注意は Task 4 の docs にも記載する)
+- **注意(admin パスワードの焼き付き)**: `GF_SECURITY_ADMIN_PASSWORD` は **grafana-data volume の初回初期化時にのみ**反映され、あとから `docker/.env` を変えて再起動しても変わらない。したがって**初回 `up -d` の前に `docker/.env` を用意しておく**こと。初回以降に変更したい場合は `docker compose exec grafana grafana cli admin reset-admin-password <新パスワード>` でリセットする(新形式。旧形式の `grafana-cli` は同コマンドへの deprecated ラッパーとして残っているだけなので新形式を使う。この運用注意は Task 4 の docs にも記載する)
 
 **provisioning 構成**(手動セットアップゼロでリポジトリ管理。要件 5.2):
 
@@ -156,9 +156,10 @@ docker/grafana/provisioning/
 |---|---|
 | エンドポイント別レイテンシ p50/p95/p99 | `histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket[5m])))`(0.5 / 0.99 も同様。`uri` 変数で `/api/report` に絞れるようにする) |
 | リクエストレート | `sum by (uri) (rate(http_server_requests_seconds_count[5m]))` |
-| エラー率 | `sum(rate(...{status=~"5.."}[5m])) / sum(rate(...[5m]))` |
+| エラー率 | `sum(rate(...{status=~"5.."}[5m])) / sum(rate(...[5m]))`(無トラフィック時間帯は 0/0 が NaN になりパネルが欠けるため、慣例どおり `or vector(0)` を添えて 0 として描画する) |
 | JVM ヒープ | `jvm_memory_used_bytes{area="heap"}` / `jvm_memory_max_bytes{area="heap"}` |
 | HikariCP | `hikaricp_connections_active` / `hikaricp_connections_pending` / `hikaricp_connections_max` |
+| Kafka consumer | `rate(kafka_consumer_fetch_manager_records_consumed_total[5m])`(要件 1.4 の Kafka consumer メトリクスをダッシュボードから参照できることの担保。実地確認は Task 3 の完了条件) |
 
 - 時間範囲を広げれば同一パネルで改善デプロイ前後の比較ができる(主目的のユースケース)。デプロイ時刻の注釈(annotation)は手動運用で足りるため provisioning には含めない
 - `_prometheus` の URI 自体もタグに載るが、ダッシュボードの `uri` 変数で除外できるためアプリ側でのフィルタはしない
@@ -193,8 +194,9 @@ docker/grafana/provisioning/
 - **メトリクス公開**: `@SpringBootTest(webEnvironment = RANDOM_PORT)` + TestRestTemplate 等で
   - `GET /actuator/prometheus` が 200 で、任意のリクエスト実行後に `http_server_requests_seconds` を含むこと(要件 1.1/1.2)
   - percentiles-histogram 有効により `http_server_requests_seconds_bucket` が含まれること(要件 1.3)
+  - 自動計装メトリクスの存在確認: 出力に `jvm_memory_used_bytes` と `hikaricp_connections` 系のメーターが含まれること(要件 1.4)。Kafka consumer 系メーターは、リスナーコンテナ起動時の consumer 生成(MicrometerConsumerListener によるバインド)がコンテキスト起動と非同期のためテストではタイミング依存になり得る。テストでの断定は避け、Task 3 の実地確認(Kafka consumer パネルの描画)で確認する
   - `GET /actuator/health` が 200(要件 1.5)。health は DataSource ヘルスチェックを含むため、この 200 は Postgres コンテナ(PostgresTestConfiguration)への接続が UP であることが前提
-  - `GET /actuator/env` が 404(expose 最小限の仕様化。要件 2.2)
+  - `GET /actuator/env`・`/actuator/beans` が 404(expose 最小限の仕様化。要件 2.2)
 - **AccessJwtFilter の除外**: `rss-watch.access.aud` / `team-domain` を設定したコンテキストで
   - ヘッダなしの `GET /actuator/prometheus`・`/actuator/health` が 401 にならないこと(要件 3.1)
   - ヘッダなしの `GET /api/report` が 401 のままであること(要件 3.2)

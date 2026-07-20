@@ -64,7 +64,7 @@
 
 5.1. `docker/docker-compose.yml` に grafana サービスを追加する。ループバック限定 bind とし、自宅サーバーで homepage が `:3000` を使用中のため `127.0.0.1:3001:3000` にする
 5.2. datasource(Prometheus)とダッシュボードは provisioning(`docker/grafana/provisioning/`)でリポジトリ管理し、手動セットアップなしで起動直後から閲覧できる
-5.3. ダッシュボード JSON をコミットし、少なくとも次のパネルを持つ: エンドポイント別レイテンシ(p50/p95/p99)・エンドポイント別リクエストレート・エラー率(5xx 比率)・JVM ヒープ・HikariCP コネクションプール
+5.3. ダッシュボード JSON をコミットし、少なくとも次のパネルを持つ: エンドポイント別レイテンシ(p50/p95/p99)・エンドポイント別リクエストレート・エラー率(5xx 比率)・JVM ヒープ・HikariCP コネクションプール・Kafka consumer(records-consumed レート。要件 1.4 のメトリクスをダッシュボードから参照できることの担保)。レイテンシパネルのクエリ(または `uri` 変数の既定値)は長寿命 SSE 接続の `/api/stream` を除外する
 5.4. 匿名閲覧(`GF_AUTH_ANONYMOUS_ENABLED=true`、Viewer ロール)で開けること。admin パスワードは `docker/.env` から注入し、リポジトリにコミットしない
 5.5. Grafana のデータ(手元で加えたダッシュボード編集等)は named volume で永続化する
 
