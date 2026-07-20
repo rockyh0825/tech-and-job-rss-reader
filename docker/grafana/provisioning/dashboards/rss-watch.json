@@ -15,7 +15,10 @@
         "label": "URI",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(http_server_requests_seconds_count, uri)",
+        "query": {
+          "query": "label_values(http_server_requests_seconds_count, uri)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
         "refresh": 2,
         "multi": true,
         "includeAll": true,
@@ -125,7 +128,7 @@
         },
         {
           "refId": "B",
-          "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
+          "expr": "sum(jvm_memory_max_bytes{area=\"heap\"} > 0)",
           "legendFormat": "max"
         }
       ]
