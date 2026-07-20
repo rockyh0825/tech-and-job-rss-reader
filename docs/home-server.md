@@ -1,6 +1,6 @@
 # 自宅サーバーでの常駐運用
 
-fat jar を `/opt/rss-watch` に配置し、systemd(`rss-watch.service`)で常駐させる。依存(Kafka + PostgreSQL)は Docker Compose、環境変数は `/etc/rss-watch.env` に集約する。
+fat jar を `/opt/rss-watch` に配置し、systemd(`rss-watch.service`)で常駐させる。依存(Kafka + PostgreSQL + Prometheus + Grafana)は Docker Compose、環境変数は `/etc/rss-watch.env` に集約する。
 
 ## 構成
 
@@ -8,7 +8,7 @@ fat jar を `/opt/rss-watch` に配置し、systemd(`rss-watch.service`)で常�
 |---|---|
 | アプリ | `/opt/rss-watch/rss-watch.jar` を systemd `rss-watch.service` で常駐 |
 | 設定・機密 | `/etc/rss-watch.env`(unit の `EnvironmentFile=` で読み込み) |
-| Kafka + PostgreSQL | `docker/docker-compose.yml`(`restart: unless-stopped` で再起動後も自動復帰) |
+| Kafka + PostgreSQL + Prometheus + Grafana | `docker/docker-compose.yml`(`restart: unless-stopped` で再起動後も自動復帰) |
 | デプロイ | main へのマージで GitHub Actions self-hosted runner が jar を差し替え(後述) |
 
 ## 初回セットアップ
@@ -22,7 +22,8 @@ sudo mkdir -p /opt/rss-watch
 sudo cp build/libs/rss-watch.jar /opt/rss-watch/rss-watch.jar
 sudo cp feeds.toml /opt/rss-watch/
 
-# 3. Kafka + PostgreSQL を起動
+# 3. 依存サービス(Kafka + PostgreSQL + Prometheus + Grafana)を起動
+#    注意: Grafana の admin パスワードは初回 up -d 前に docker/.env で用意する(後述「観測」参照)
 docker compose -f docker/docker-compose.yml up -d
 ```
 
@@ -88,6 +89,41 @@ sudo systemctl enable --now rss-watch
 ```
 
 Kafka が一時停止していてもアプリは落ちない(producer/consumer がバックグラウンドで再接続し、fetcher は次周期で再巡回する)。
+
+## 観測(Prometheus + Grafana)
+
+エンドポイント別レイテンシ(p50/p95/p99)・リクエストレート・JVM・HikariCP・Kafka リスナーを Grafana のダッシュボードで閲覧できる。Prometheus(収集・保持)と Grafana(可視化)は既存の `docker/docker-compose.yml` に含まれているため、専用の起動手順はない(初回セットアップ手順 3 の `up -d` で一緒に起動する)。
+
+| サービス | ポート | 内容 |
+|---|---|---|
+| Prometheus | `127.0.0.1:9090`(ループバック限定) | ホスト上のアプリ(`:8080`)の `/actuator/prometheus` を 15 秒間隔で scrape し 90 日保持 |
+| Grafana | `127.0.0.1:3001`(ループバック限定。自宅サーバーは homepage が `:3000` 使用中のため) | ダッシュボード。datasource・パネルは provisioning 済みで手動セットアップ不要 |
+
+- 閲覧は匿名(Viewer)でログイン不要。ダッシュボードの編集だけ admin ログインが必要
+- 外部公開(`https://grafana.<ドメイン>`)の手順は [docs/public-access.md](public-access.md) を参照
+
+### 初回 `up -d` の前に `docker/.env` を用意する
+
+Grafana の admin パスワード(`GF_SECURITY_ADMIN_PASSWORD`)は **grafana-data volume の初回初期化時にのみ**反映され、あとから `docker/.env` を変えて再起動しても変わらない。**初回の `up -d` より前に** `docker/.env` を用意しておくこと(`docker/.env.example` 参照。コミットしない)。
+
+```bash
+# docker/.env
+GRAFANA_ADMIN_PASSWORD=<admin パスワード>
+GRAFANA_ROOT_URL=https://grafana.example.com   # Tunnel で公開する場合のみ。ローカルは未設定でよい(既定 http://localhost:3001)
+```
+
+初回以降にパスワードを変更する場合は、コンテナ内でリセットする(新形式の `grafana cli` を使う。旧形式の `grafana-cli` は同コマンドへの deprecated ラッパー):
+
+```bash
+docker compose -f docker/docker-compose.yml exec grafana grafana cli admin reset-admin-password <新パスワード>
+```
+
+### Prometheus target の確認とトラブルシュート
+
+デプロイ後、`http://localhost:9090/targets` で `rss-watch` target が **UP** になっていることを確認する(ループバック限定 bind のため、サーバー上で確認するか SSH ポートフォワードで開く)。
+
+- **DOWN の場合は、まずホスト側 firewall(ufw 等)を疑う**。Prometheus はコンテナから `host.docker.internal:8080`(= ホストの `:8080`)へ scrape するため、firewall がコンテナ → ホストの `:8080` を遮断していると target が DOWN になる(その場合は Docker ブリッジからの `:8080` 受信を許可する)
+- アプリ停止中も DOWN になるが、Prometheus 側の対処は不要(アプリ再起動後に自動復帰する。欠けるのは停止期間のメトリクスのみ)
 
 ## 自動デプロイ(GitHub Actions self-hosted runner)
 

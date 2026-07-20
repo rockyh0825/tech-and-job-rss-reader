@@ -103,3 +103,44 @@ java -jar rss-watch.jar
 - 検証内容: 署名(Cloudflare の JWKS で RS256 検証)・`aud`・`iss`(team ドメイン)・有効期限
 - JWKS は `https://<team>/cdn-cgi/access/certs` から取得しキャッシュ・鍵ローテーションに追従する
 - 有効化すると **LAN からの直アクセスも 401** になる。デバッグで直に叩きたい場合は環境変数を外して起動する
+- `/actuator/health` と `/actuator/prometheus` の 2 パスだけは有効化しても 401 にならない(Prometheus コンテナが Access を経由せず `host.docker.internal:8080`(= ホストの `:8080`)へ直接 scrape するため。詳細は [observability spec](../.spec-workflow/specs/observability/) 参照)
+
+## Grafana の公開(観測ダッシュボード)
+
+[Prometheus + Grafana の観測基盤](home-server.md)の Grafana(`127.0.0.1:3001`)を、rss-watch の UI と同じトンネル + Access で外部公開する手順。**新規トンネルは作成しない**(既存トンネルに Public Hostname を 1 つ足すだけ)。以下の手順 1〜2 はいずれも Cloudflare ダッシュボード操作のみで、**リポジトリ成果物はない**(ユーザー作業)。
+
+**1. Grafana 用の Access アプリを追加**
+
+Zero Trust ダッシュボード → **Access → Applications** で **Self-hosted** アプリを追加する。設定は rss-watch 用(手順 4)と同じ要領。
+
+- **Application domain**: `grafana.example.com`(rss-watch とは別ホスト名)
+- **Policy**: Action=Allow、Include=**Emails**(rss-watch と同じ許可メール)
+
+> **順序に注意**: rss-watch の公開時(手順 3 末尾の順序注意)と同じく、Access アプリを**先に**作成・有効化してから手順 2 で Public Hostname を追加すること。既存トンネルは稼働中のため、Public Hostname を足した時点で公開が live になる。
+
+**2. 既存トンネルに Public Hostname を追加**
+
+Zero Trust ダッシュボード → **Networks → Tunnels** → 既存トンネル(rss-watch 公開の手順 2 で作成済み)の **Public Hostname** に以下を追加する。
+
+| 項目 | 値 |
+|---|---|
+| Subdomain / Domain | `grafana.example.com` |
+| Service | `http://localhost:3001` |
+
+- Service の Type は **HTTP** にする(HTTPS を指定しない)。Grafana はローカルで平文 HTTP を話し、TLS 終端は Cloudflare エッジが行う
+- cloudflared は `network_mode: host` で動いているため、ホストにループバック bind された `:3001` にそのまま到達する(compose 側の変更は不要)
+
+**3. `docker/.env` に公開 URL を設定**
+
+Grafana がリンク・リダイレクト URL を正しく組み立てられるよう、公開 URL を `GRAFANA_ROOT_URL` で注入して Grafana を再作成する(`docker/.env` は `.gitignore` 済み)。
+
+```bash
+# docker/.env に追記
+GRAFANA_ROOT_URL=https://grafana.example.com
+```
+
+```bash
+docker compose --env-file docker/.env -f docker/docker-compose.yml up -d grafana
+```
+
+公開後、`https://grafana.<ドメイン>` → Access 認証 → ダッシュボードが匿名(Viewer)で閲覧できることを確認する。編集は admin ログインが必要(admin パスワードの設定・リセットは [docs/home-server.md](home-server.md) を参照)。

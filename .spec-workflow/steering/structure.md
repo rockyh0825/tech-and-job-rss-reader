@@ -15,8 +15,11 @@
 ```
 tech-and-job-rss-reader/
 ├── .spec-workflow/          # spec-workflow の steering / specs
-├── docker/                  # Kafka + kafka-ui の Docker Compose
-│   └── docker-compose.yml
+├── docker/                  # 依存サービスの Docker Compose(Kafka + kafka-ui + PostgreSQL + Prometheus + Grafana + cloudflared)
+│   ├── docker-compose.yml
+│   ├── .env.example         # 機密・環境依存値のテンプレート(実体の docker/.env はコミットしない)
+│   ├── prometheus/          # Prometheus の scrape 設定(prometheus.yml)
+│   └── grafana/provisioning/  # Grafana の datasource・ダッシュボード定義(コミット対象)
 ├── feeds.toml               # 収集フィード定義(category = "tech" | "jobs")
 ├── build.gradle.kts
 ├── settings.gradle.kts
