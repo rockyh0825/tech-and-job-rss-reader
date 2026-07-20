@@ -2,6 +2,7 @@ package dev.rockyh.rsswatch.report.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.CncfMatchPort
+import dev.rockyh.rsswatch.capabilities.PostedGuidQueryPort
 import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
@@ -17,9 +18,10 @@ data class CncfReportArticle(
     val tier: CncfMaturity? = mentions.minOfOrNull { it.maturity }
 }
 
-/** GET /api/cncf のレスポンス。 */
+/** GET /api/cncf のレスポンス。[postedGuids] はレスポンス中の記事のうち Discord 配信済みのもの。 */
 data class CncfReport(
     val articles: List<CncfReportArticle>,
+    val postedGuids: Set<String>,
 )
 
 /**
@@ -36,6 +38,7 @@ data class CncfReport(
 class BuildCncfReportUseCase(
     private val archiveQueryPort: ArchiveQueryPort,
     private val cncfMatchPort: CncfMatchPort,
+    private val postedGuidQueryPort: PostedGuidQueryPort,
 ) {
 
     private val priorityOrder =
@@ -49,6 +52,10 @@ class BuildCncfReportUseCase(
                 .itemsByCategory(ItemCategory.CNCF, days)
                 .map { CncfReportArticle(it, cncfMatchPort.match("${it.title} ${it.summary}")) }
                 .sortedWith(priorityOrder)
-        return CncfReport(articles)
+        val guidsInReport = articles.mapTo(mutableSetOf()) { it.item.guid }
+        return CncfReport(
+            articles = articles,
+            postedGuids = postedGuidQueryPort.postedGuids() intersect guidsInReport,
+        )
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
+import dev.rockyh.rsswatch.capabilities.PostedGuidQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.report.application.BuildReportUseCase
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
@@ -39,11 +40,15 @@ class ReportControllerTest {
             }
     }
 
+    private class FakePostedGuids(private val posted: Set<String>) : PostedGuidQueryPort {
+        override fun postedGuids(): Set<String> = posted
+    }
+
     private val archive = RecordingArchive()
 
     private val mockMvc: MockMvc =
         MockMvcBuilders
-            .standaloneSetup(ReportController(BuildReportUseCase(archive)))
+            .standaloneSetup(ReportController(BuildReportUseCase(archive, FakePostedGuids(setOf("article-1")))))
             .setMessageConverters(
                 MappingJackson2HttpMessageConverter(
                     jacksonObjectMapper()
@@ -77,6 +82,15 @@ class ReportControllerTest {
             .andExpect(jsonPath("$.crossSections[0].articles[0].guid").value("article-1"))
             .andExpect(jsonPath("$.techArticles[0].guid").value("article-1"))
             .andExpect(jsonPath("$.jobPostings[0].guid").value("job-1"))
+    }
+
+    @Test
+    fun returns_posted_guids_for_articles_already_posted_to_discord() {
+        mockMvc
+            .perform(get("/api/report").param("days", "7"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.postedGuids.length()").value(1))
+            .andExpect(jsonPath("$.postedGuids[0]").value("article-1"))
     }
 
     @Test
