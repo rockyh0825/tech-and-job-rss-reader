@@ -26,6 +26,7 @@ class CncfDiscordWebhookClient(
     restClientBuilder: RestClient.Builder,
     @Value("\${rss-watch.notify.cncf.discord-webhook-url:}") private val webhookUrl: String,
     @Value("\${rss-watch.notify.cncf.cta-url:https://www.cncf.io/projects/}") private val ctaUrl: String,
+    @Value("\${rss-watch.notify.site-url:$DEFAULT_SITE_URL}") private val siteUrl: String,
     @Value("\${rss-watch.notify.discord.max-retries:2}") maxRetries: Int,
     sleeper: (Long) -> Unit = { Thread.sleep(it) },
 ) : CncfDigestPublisher {
@@ -33,10 +34,7 @@ class CncfDiscordWebhookClient(
     private val poster = DiscordPoster(restClientBuilder, webhookUrl, maxRetries, sleeper)
 
     override fun post(entries: List<CncfDigestEntry>): PostOutcome {
-        if (webhookUrl.isBlank()) {
-            log.warn("CNCF 用 Discord Webhook URL が空のため投稿をスキップします。RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL を設定してください。")
-            return PostOutcome(emptyList(), IllegalStateException("CNCF 用 Discord Webhook URL が設定されていません(空文字)"))
-        }
+        blankWebhookUrlOutcome()?.let { return it }
 
         return poster.postArticles(
             posts =
@@ -45,6 +43,19 @@ class CncfDiscordWebhookClient(
                 },
             ctaEmbed = ctaEmbed(),
         )
+    }
+
+    override fun postCtaOnly(): PostOutcome {
+        blankWebhookUrlOutcome()?.let { return it }
+        // サイト導線(通常ダイジェストと同じ)が先、CNCF プロジェクト一覧が後。
+        return poster.postCtaOnly(listOf(siteCtaEmbed(siteUrl), ctaEmbed()))
+    }
+
+    /** Webhook URL 未設定なら warn して失敗の [PostOutcome] を返す(設定済みなら null)。 */
+    private fun blankWebhookUrlOutcome(): PostOutcome? {
+        if (webhookUrl.isNotBlank()) return null
+        log.warn("CNCF 用 Discord Webhook URL が空のため投稿をスキップします。RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL を設定してください。")
+        return PostOutcome(emptyList(), IllegalStateException("CNCF 用 Discord Webhook URL が設定されていません(空文字)"))
     }
 
     /**

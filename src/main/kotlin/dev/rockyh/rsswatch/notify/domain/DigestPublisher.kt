@@ -11,6 +11,12 @@ interface DigestPublisher {
      * そこで投稿を打ち切る(分類の詳細は実装の DiscordWebhookClient を参照)。
      */
     fun post(digests: List<TechDigest>): PostOutcome
+
+    /**
+     * 候補 0 件の日に、記事なしでサイト導線だけを 1 通投稿する。
+     * 記事は無いので [PostOutcome.postedGuids] は常に空(失敗は [PostOutcome.failure] で返す)。
+     */
+    fun postCtaOnly(): PostOutcome
 }
 
 /**
@@ -22,6 +28,8 @@ interface DigestPublisher {
  *
  * [failure] は投稿を**打ち切らせた**原因(最後まで投稿し終えた場合は null)。個別にスキップされた記事は
  * ここには現れず(最後まで走り切れば失敗は無い)、実装側の warn ログで可視化される。
+ *
+ * 導線のみの投稿([DigestPublisher.postCtaOnly] 等)では記事が無いため [postedGuids] は常に空。
  */
 data class PostOutcome(
     val postedGuids: List<String>,

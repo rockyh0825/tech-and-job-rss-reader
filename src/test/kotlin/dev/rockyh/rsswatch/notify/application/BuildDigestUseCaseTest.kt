@@ -66,6 +66,14 @@ class BuildDigestUseCaseTest {
             posted = digests
             return outcomeFor(digests)
         }
+
+        override fun postCtaOnly(): PostOutcome {
+            ctaOnlyCount++
+            return ctaOnlyOutcome
+        }
+
+        var ctaOnlyCount = 0
+        var ctaOnlyOutcome = PostOutcome(emptyList())
     }
 
     private class FakePostedGuidStore(private val alreadyPosted: Set<String> = emptySet()) : PostedGuidStore {
@@ -199,18 +207,35 @@ class BuildDigestUseCaseTest {
     }
 
     @Test
-    fun does_not_post_when_no_tech_has_articles() {
+    fun posts_only_the_site_link_when_no_tech_has_articles() {
+        // 候補 0 件の日も無言にはせず、サイト導線だけを届ける(記事投稿と各種記録は行わない)
         val archive =
             FakeArchive(
                 ranking = listOf(TechMention("Kotlin", 5)),
-                articlesByKeyword = emptyMap(), // Kotlin に紐づく tech 記事が無い
+                articlesByKeyword = emptyMap(),
             )
         val publisher = FakePublisher()
+        val store = FakePostedGuidStore()
+        val featuredStore = FakeFeaturedTechStore()
+
+        useCase(archive, publisher = publisher, store = store, featuredStore = featuredStore).run()
+
+        assertNull(publisher.posted)
+        assertEquals(1, publisher.ctaOnlyCount)
+        assertNull(store.marked)
+        assertNull(featuredStore.marked)
+    }
+
+    @Test
+    fun does_not_throw_when_the_cta_only_post_fails() {
+        // 導線だけの投稿が失敗しても例外にしない(翌日また試みるだけで自己回復する)
+        val archive = FakeArchive(ranking = emptyList())
+        val publisher = FakePublisher().apply { ctaOnlyOutcome = PostOutcome(emptyList(), RuntimeException("discord down")) }
         val store = FakePostedGuidStore()
 
         useCase(archive, publisher = publisher, store = store).run()
 
-        assertNull(publisher.posted)
+        assertEquals(1, publisher.ctaOnlyCount)
         assertNull(store.marked)
     }
 

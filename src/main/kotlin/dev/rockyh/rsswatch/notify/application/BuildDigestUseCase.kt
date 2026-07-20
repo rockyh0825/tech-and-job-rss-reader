@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service
  *   同着は求人言及数の多い順。上位 [techLimit] 件、各技術につき新しい記事を [articlesPerTech] 件まで載せる
  * - 一度通知した記事は二度と載せない(通知済み guid 全件を除外。永続的な重複排除)
  * - 同じ記事が複数の技術に紐づく場合もダイジェスト内では 1 度だけ載せる(セクション横断で重複排除)
- * - 候補 0 件は投稿せずスキップ / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
+ * - 候補 0 件はサイト導線だけを投稿 / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
  * - 投稿は記事ごとに 1 通ずつ行われるため、実際に投稿できた記事だけを markPosted し、その記事を
  *   含む技術だけを markFeatured する(届かなかった技術はローテーションに乗せず候補に残す)
  */
@@ -75,7 +75,14 @@ class BuildDigestUseCase(
                 .toList()
 
         if (digests.isEmpty()) {
-            log.info("no digest candidates; skipping post")
+            // 候補が無い日も無言にはせず、サイト導線だけを届ける。記事が無いので markPosted / markFeatured の
+            // 対象も無く、失敗しても翌日また試みるだけ(warn に留めて自己回復に任せる)。
+            val outcome = webhookClient.postCtaOnly()
+            if (outcome.failure == null) {
+                log.info("no digest candidates; posted the site link only")
+            } else {
+                log.warn("no digest candidates; failed to post the site link", outcome.failure)
+            }
             return
         }
 

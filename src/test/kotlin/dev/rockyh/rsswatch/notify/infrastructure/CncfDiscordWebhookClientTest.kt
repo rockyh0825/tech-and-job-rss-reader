@@ -24,6 +24,7 @@ class CncfDiscordWebhookClientTest {
 
     private val webhookUrl = "https://discord.example/webhook/cncf"
     private val ctaUrl = "https://www.cncf.io/projects/"
+    private val siteUrl = "https://site.example/"
 
     private lateinit var builder: RestClient.Builder
     private lateinit var server: MockRestServiceServer
@@ -37,6 +38,7 @@ class CncfDiscordWebhookClientTest {
             restClientBuilder = builder,
             webhookUrl = webhookUrl,
             ctaUrl = ctaUrl,
+            siteUrl = siteUrl,
             maxRetries = maxRetries,
             sleeper = { sleeps.add(it) },
         )
@@ -188,6 +190,50 @@ class CncfDiscordWebhookClientTest {
         val outcome = client().post(listOf(entry("g1")))
 
         assertNull(outcome.failure)
+        server.verify()
+    }
+
+    @Test
+    fun posts_site_link_and_cncf_link_in_one_message_when_there_are_no_articles() {
+        // 候補 0 件の日でも導線は届ける。サイト導線(通常ダイジェストと同じ文言)が先、
+        // CNCF プロジェクト一覧が後の 2 embeds を 1 通で送る(部分失敗を作らない)
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.embeds.length()").value(2))
+            .andExpect(jsonPath("$.embeds[0].title").value("🔗 求人で注目の技術と記事をサイトで見る"))
+            .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
+            .andExpect(jsonPath("$.embeds[1].title").value("🔗 CNCF プロジェクトの成熟度一覧を見る"))
+            .andExpect(jsonPath("$.embeds[1].url").value(ctaUrl))
+            .andRespond(withSuccess())
+
+        val outcome = client().postCtaOnly()
+
+        assertNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        server.verify()
+    }
+
+    @Test
+    fun returns_failure_when_the_cta_only_post_is_rejected() {
+        // 404 は Webhook 自体が削除済み。リトライせず failure として返す(翌日また試す)
+        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
+
+        val outcome = client().postCtaOnly()
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        server.verify()
+    }
+
+    @Test
+    fun returns_failure_and_does_not_send_cta_only_when_webhook_url_is_blank() {
+        // expect を一切設定しない = リクエストが飛べば verify で検出される
+
+        val outcome = client(webhookUrl = "").postCtaOnly()
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
         server.verify()
     }
 
