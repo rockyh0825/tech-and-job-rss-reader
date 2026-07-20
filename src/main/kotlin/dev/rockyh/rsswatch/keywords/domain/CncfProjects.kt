@@ -1,14 +1,6 @@
-package dev.rockyh.rsswatch.notify.domain
+package dev.rockyh.rsswatch.keywords.domain
 
-/**
- * CNCF プロジェクトの成熟度(https://www.cncf.io/projects/ の Maturity Levels)。
- * 宣言順 = ダイジェストでの優先順(成熟度が低いほど「早期に掴む」価値が高いので先頭)。
- */
-enum class CncfMaturity(val label: String, val emoji: String) {
-    SANDBOX("Sandbox", "🌱"),
-    INCUBATING("Incubating", "🧪"),
-    GRADUATED("Graduated", "🎓"),
-}
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 
 /**
  * CNCF プロジェクト辞書の 1 エントリ。
@@ -124,6 +116,8 @@ object CncfProjects {
             project(CncfMaturity.INCUBATING, "Kubescape"),
             project(CncfMaturity.INCUBATING, "KServe"),
             project(CncfMaturity.INCUBATING, "OpenFGA"),
+            // 2026-07 の CNCF Blog「HAMi becomes a CNCF incubating project」で sandbox から昇格
+            project(CncfMaturity.INCUBATING, "HAMi"),
             // ---- Sandbox(厳選)----
             project(CncfMaturity.SANDBOX, "WasmEdge"),
             project(CncfMaturity.SANDBOX, "k3s"),
@@ -147,7 +141,6 @@ object CncfProjects {
             ),
             project(CncfMaturity.SANDBOX, "bpfman"),
             project(CncfMaturity.SANDBOX, "Spiderpool"),
-            project(CncfMaturity.SANDBOX, "HAMi"),
             project(CncfMaturity.SANDBOX, "Sermant"),
             project(CncfMaturity.SANDBOX, "OpenFunction"),
             project(CncfMaturity.SANDBOX, "Podman Desktop"),

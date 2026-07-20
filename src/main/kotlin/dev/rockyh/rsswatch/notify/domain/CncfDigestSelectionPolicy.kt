@@ -1,9 +1,11 @@
 package dev.rockyh.rsswatch.notify.domain
 
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
+import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.shared.contract.RssItem
 
 /**
- * CNCF ダイジェスト候補の記事 1 件。[mentions] は [CncfProjectMatcher] の検出結果
+ * CNCF ダイジェスト候補の記事 1 件。[mentions] は CncfMatchPort(keywords の CNCF 辞書)の検出結果
  * (成熟度の低い順に整列済み)で、言及なしなら空リスト。
  */
 data class CncfCandidate(
@@ -23,6 +25,9 @@ data class CncfCandidate(
  * 3. guid 昇順(完全決定性の担保)
  *
  * 並べ替え後に [select] の limit 件で打ち切る(初回有効化時のバックログ氾濫防止)。
+ *
+ * 同じ全順序を report/application/BuildCncfReportUseCase(Web レポート。cap なし)も持つ。
+ * 並び順を変えるときは両方を合わせて変更すること。
  */
 class CncfDigestSelectionPolicy {
 

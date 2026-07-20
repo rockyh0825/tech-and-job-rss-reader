@@ -1,8 +1,8 @@
 package dev.rockyh.rsswatch.notify.infrastructure
 
 import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
-import dev.rockyh.rsswatch.notify.domain.CncfMaturity
-import dev.rockyh.rsswatch.notify.domain.CncfMention
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
+import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

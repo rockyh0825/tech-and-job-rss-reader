@@ -1,5 +1,6 @@
-package dev.rockyh.rsswatch.notify.domain
+package dev.rockyh.rsswatch.keywords.domain
 
+import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
