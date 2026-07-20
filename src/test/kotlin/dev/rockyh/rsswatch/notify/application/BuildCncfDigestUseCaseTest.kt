@@ -64,6 +64,14 @@ class BuildCncfDigestUseCaseTest {
             received += entries
             return outcome(entries)
         }
+
+        override fun postCtaOnly(): PostOutcome {
+            ctaOnlyCount++
+            return ctaOnlyOutcome
+        }
+
+        var ctaOnlyCount = 0
+        var ctaOnlyOutcome = PostOutcome(emptyList())
     }
 
     private val archive = FakeArchive()
@@ -163,6 +171,29 @@ class BuildCncfDigestUseCaseTest {
         useCase().run()
 
         assertTrue(publisher.received.isEmpty())
+        assertTrue(postedGuidStore.marked.isEmpty())
+    }
+
+    @Test
+    fun posts_only_the_links_when_there_are_no_candidates() {
+        // 候補 0 件の日も無言にはせず、導線(サイト + CNCF 一覧)だけを届ける
+        archive.items = emptyList()
+
+        useCase().run()
+
+        assertEquals(1, publisher.ctaOnlyCount)
+        assertTrue(postedGuidStore.marked.isEmpty())
+    }
+
+    @Test
+    fun does_not_throw_when_the_cta_only_post_fails() {
+        // 導線だけの投稿が失敗しても例外にしない(翌日また試みるだけで自己回復する)
+        archive.items = emptyList()
+        publisher.ctaOnlyOutcome = PostOutcome(emptyList(), RuntimeException("discord down"))
+
+        useCase().run()
+
+        assertEquals(1, publisher.ctaOnlyCount)
         assertTrue(postedGuidStore.marked.isEmpty())
     }
 

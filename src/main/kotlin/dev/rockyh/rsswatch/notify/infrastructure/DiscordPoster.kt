@@ -55,7 +55,7 @@ class DiscordPoster(
     fun postArticles(posts: List<ArticlePost>, ctaEmbed: Embed): PostOutcome {
         val postedGuids = mutableListOf<String>()
         for (post in posts) {
-            when (val result = sendWithRetry(post.embed)) {
+            when (val result = sendWithRetry(listOf(post.embed))) {
                 is SendResult.Sent -> postedGuids += post.guid
                 is SendResult.Skipped ->
                     // この記事のペイロード固有の問題。他の記事は無関係なので投稿を続ける。
@@ -77,7 +77,7 @@ class DiscordPoster(
         // 打ち切らずに最後まで走り切り、かつ 1 件以上投稿できたので導線を送る。
         // スキップした記事があっても送る: スキップぶんは翌日また試すが、それが通るまで導線を
         // 止め続けるのは「リンクは最後に来る」という元の要件の意図に反する。
-        when (val result = sendWithRetry(ctaEmbed)) {
+        when (val result = sendWithRetry(listOf(ctaEmbed))) {
             is SendResult.Sent -> Unit
             // 記事自体は届いているため通知済みとして扱う(ここで失敗を返すと翌日これらを重複投稿してしまう)。
             is SendResult.Failed -> log.warn("記事は投稿できましたが、サイト導線の投稿に失敗しました", result.error)
@@ -86,13 +86,24 @@ class DiscordPoster(
     }
 
     /**
-     * embed 1 つを 1 通として送り、結果を [SendResult] に分類して返す。
+     * 導線 embed だけを 1 通で送る(候補 0 件の日用)。記事は無いので [PostOutcome.postedGuids] は常に空。
+     * 1 通しか送らないためスキップと打ち切りの区別は不要で、失敗はそのまま [PostOutcome.failure] で返す。
+     * リトライ・レート制限の扱いは [sendWithRetry] に準じる。
+     */
+    fun postCtaOnly(embeds: List<Embed>): PostOutcome =
+        when (val result = sendWithRetry(embeds)) {
+            is SendResult.Sent -> PostOutcome(emptyList())
+            is SendResult.Failed -> PostOutcome(emptyList(), result.error)
+        }
+
+    /**
+     * embed 一式を 1 通として送り、結果を [SendResult] に分類して返す。
      *
      * 429 は `Retry-After` に従って、5xx と接続失敗は [TRANSIENT_RETRY_MS] 待って [maxRetries] 回まで
      * 再試行する。再試行回数はこの呼び出し内で数えるため、1 通ごとに満額の余力が与えられる。
      */
-    private fun sendWithRetry(embed: Embed): SendResult {
-        val payload = WebhookPayload(embeds = listOf(embed))
+    private fun sendWithRetry(embeds: List<Embed>): SendResult {
+        val payload = WebhookPayload(embeds = embeds)
         var attempt = 0
         while (true) {
             val error = runCatching { send(payload) }.exceptionOrNull() ?: return SendResult.Sent

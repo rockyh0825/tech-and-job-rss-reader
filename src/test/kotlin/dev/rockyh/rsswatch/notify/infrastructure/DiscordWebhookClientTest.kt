@@ -269,6 +269,62 @@ class DiscordWebhookClientTest {
     }
 
     @Test
+    fun posts_only_the_site_link_when_there_are_no_articles_to_post() {
+        // 候補 0 件の日でも、サイトへの導線だけは届ける(通常の導線と同じ embed を 1 通)
+        server
+            .expect(requestTo(webhookUrl))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.embeds.length()").value(1))
+            .andExpect(jsonPath("$.embeds[0].title").value("🔗 求人で注目の技術と記事をサイトで見る"))
+            .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
+            .andExpect(jsonPath("$.embeds[0].author").doesNotExist())
+            .andRespond(withSuccess())
+
+        val outcome = client().postCtaOnly()
+
+        assertNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        server.verify()
+    }
+
+    @Test
+    fun retries_the_cta_only_post_after_5xx_then_succeeds() {
+        // 導線のみの投稿も記事と同じリトライ機構(5xx は一時障害として再試行)に乗る
+        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+        expectSuccessfulPosts(1)
+
+        val outcome = client(maxRetries = 2).postCtaOnly()
+
+        assertNull(outcome.failure)
+        assertEquals(listOf(1000L), sleeps)
+        server.verify()
+    }
+
+    @Test
+    fun returns_failure_when_the_cta_only_post_is_rejected() {
+        // 404 は Webhook 自体が削除済み。リトライせず failure として返す(翌日また試す)
+        server.expect(ExpectedCount.once(), requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
+
+        val outcome = client().postCtaOnly()
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        assertTrue(sleeps.isEmpty())
+        server.verify()
+    }
+
+    @Test
+    fun returns_failure_and_does_not_send_cta_only_when_webhook_url_is_blank() {
+        // MockRestServiceServer に expect を一切設定しない = リクエストが飛べば verify で検出される
+
+        val outcome = client(webhookUrl = "   ").postCtaOnly()
+
+        assertNotNull(outcome.failure)
+        assertEquals(emptyList(), outcome.postedGuids)
+        server.verify()
+    }
+
+    @Test
     fun skips_only_the_bad_request_article_and_keeps_posting_the_rest() {
         // 400 はそのペイロード固有の問題。記事 1 が 400 でも記事 2 の妥当性とは無関係なので、
         // 記事 1 だけ捨てて記事 2 を投稿し、最後に導線も送る

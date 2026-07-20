@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service
  *   (graduated 前を早期に掴む)、tier 内は新着順、上限 [maxArticles] 件(初回のバックログ氾濫防止)
  * - 一度通知した記事は二度と載せない(通知済み guid 全件を除外。既存ダイジェストと同じ永続的な重複排除。
  *   テーブルは共有だがカテゴリが排他のため相互干渉しない)
- * - 候補 0 件は投稿せずスキップ / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
+ * - 候補 0 件は導線(サイト + CNCF 一覧)だけを投稿 / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
  * - 投稿は記事ごとに 1 通ずつ行われるため、実際に投稿できた記事だけを markPosted する
  */
 @Service
@@ -59,7 +59,14 @@ class BuildCncfDigestUseCase(
 
         val selected = selectionPolicy.select(candidates, maxArticles)
         if (selected.isEmpty()) {
-            log.info("no CNCF digest candidates; skipping post")
+            // 候補が無い日も無言にはせず、導線(サイト + CNCF 一覧)だけを届ける。記事が無いので
+            // markPosted の対象も無く、失敗しても翌日また試みるだけ(warn に留めて自己回復に任せる)。
+            val outcome = webhookClient.postCtaOnly()
+            if (outcome.failure == null) {
+                log.info("no CNCF digest candidates; posted the links only")
+            } else {
+                log.warn("no CNCF digest candidates; failed to post the links", outcome.failure)
+            }
             return
         }
 

@@ -30,18 +30,27 @@ class DiscordWebhookClient(
     private val poster = DiscordPoster(restClientBuilder, webhookUrl, maxRetries, sleeper)
 
     override fun post(digests: List<TechDigest>): PostOutcome {
-        if (webhookUrl.isBlank()) {
-            log.warn("Discord Webhook URL が空のため投稿をスキップします。RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL を設定してください。")
-            return PostOutcome(emptyList(), IllegalStateException("Discord Webhook URL が設定されていません(空文字)"))
-        }
+        blankWebhookUrlOutcome()?.let { return it }
 
         return poster.postArticles(
             posts =
                 digests.toArticlePosts().map { (digest, article) ->
                     DiscordPoster.ArticlePost(guid = article.guid, embed = toEmbed(digest, article))
                 },
-            ctaEmbed = ctaEmbed(),
+            ctaEmbed = siteCtaEmbed(siteUrl),
         )
+    }
+
+    override fun postCtaOnly(): PostOutcome {
+        blankWebhookUrlOutcome()?.let { return it }
+        return poster.postCtaOnly(listOf(siteCtaEmbed(siteUrl)))
+    }
+
+    /** Webhook URL 未設定なら warn して失敗の [PostOutcome] を返す(設定済みなら null)。 */
+    private fun blankWebhookUrlOutcome(): PostOutcome? {
+        if (webhookUrl.isNotBlank()) return null
+        log.warn("Discord Webhook URL が空のため投稿をスキップします。RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL を設定してください。")
+        return PostOutcome(emptyList(), IllegalStateException("Discord Webhook URL が設定されていません(空文字)"))
     }
 
     /**
@@ -87,24 +96,24 @@ class DiscordWebhookClient(
         return "$icon ${digest.keyword} ・ $suffix"
     }
 
-    /** 最後に単独で送る、サイト一覧への導線 embed。title をリンクにして [siteUrl] へ飛ばす。 */
-    private fun ctaEmbed(): DiscordPoster.Embed =
-        DiscordPoster.Embed(
-            author = null,
-            title = CTA_TITLE,
-            url = siteUrl,
-            description = null,
-            thumbnail = null,
-            fields = null,
-        )
-
     companion object {
         private val log = LoggerFactory.getLogger(DiscordWebhookClient::class.java)
 
         /** 要約 field の見出し(常にこの固定文言。モデル生成の見出しは使わない)。 */
         private const val SUMMARY_FIELD_NAME = "要約"
-
-        /** 最後に単独で送る導線のタイトル(サイトへのリンク)。 */
-        private const val CTA_TITLE = "🔗 求人で注目の技術と記事をサイトで見る"
     }
 }
+
+/**
+ * サイト一覧への導線 embed。通常ダイジェストの末尾と CNCF ダイジェストの候補 0 件時で共有する
+ * (「通常と同じ導線」という要件を文言ごと構造的に保つ)。
+ */
+internal fun siteCtaEmbed(siteUrl: String): DiscordPoster.Embed =
+    DiscordPoster.Embed(
+        author = null,
+        title = "🔗 求人で注目の技術と記事をサイトで見る",
+        url = siteUrl,
+        description = null,
+        thumbnail = null,
+        fields = null,
+    )

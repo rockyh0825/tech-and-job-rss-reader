@@ -8,4 +8,11 @@ package dev.rockyh.rsswatch.notify.domain
 interface CncfDigestPublisher {
 
     fun post(entries: List<CncfDigestEntry>): PostOutcome
+
+    /**
+     * 候補 0 件の日に、記事なしで導線だけを投稿する。サイト導線(通常ダイジェストと同じ)と
+     * CNCF プロジェクト一覧への導線の 2 embeds を 1 通で送る(部分失敗を作らない)。
+     * 記事は無いので [PostOutcome.postedGuids] は常に空(失敗は [PostOutcome.failure] で返す)。
+     */
+    fun postCtaOnly(): PostOutcome
 }
