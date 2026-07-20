@@ -2,6 +2,7 @@ package dev.rockyh.rsswatch.report.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.CncfMatchPort
+import dev.rockyh.rsswatch.capabilities.PostedGuidQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 import dev.rockyh.rsswatch.shared.contract.CncfMention
@@ -40,9 +41,15 @@ class BuildCncfReportUseCaseTest {
             }
     }
 
+    private class FakePostedGuids(var posted: Set<String> = emptySet()) : PostedGuidQueryPort {
+        override fun postedIn(guids: Set<String>): Set<String> = posted intersect guids
+    }
+
     private val archive = FakeArchive()
 
-    private val useCase = BuildCncfReportUseCase(archive, FakeCncfMatch())
+    private val postedGuids = FakePostedGuids()
+
+    private val useCase = BuildCncfReportUseCase(archive, FakeCncfMatch(), postedGuids)
 
     private fun item(guid: String, title: String = "title of $guid", publishedAt: String? = "2026-07-19T00:00:00Z"): RssItem =
         RssItem(
@@ -157,5 +164,24 @@ class BuildCncfReportUseCaseTest {
         val report = useCase.build(days = 7)
 
         assertTrue(report.articles.isEmpty())
+    }
+
+    @Test
+    fun posted_guids_contain_only_report_articles_already_posted_to_discord() {
+        archive.items = listOf(item("posted-article"), item("fresh-article"))
+        postedGuids.posted = setOf("posted-article", "not-in-report")
+
+        val report = useCase.build(days = 7)
+
+        assertEquals(setOf("posted-article"), report.postedGuids)
+    }
+
+    @Test
+    fun posted_guids_are_empty_when_nothing_was_posted() {
+        archive.items = listOf(item("fresh-article"))
+
+        val report = useCase.build(days = 7)
+
+        assertEquals(emptySet(), report.postedGuids)
     }
 }

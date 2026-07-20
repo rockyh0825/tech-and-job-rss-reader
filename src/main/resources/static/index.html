@@ -101,6 +101,16 @@
   ul.items li a:hover { text-decoration: underline; }
   ul.items li .meta { color: var(--muted); font-size: 12px; margin-left: 6px; }
   ul.items li .cncf-badge { display: block; color: var(--muted); font-size: 12px; }
+  ul.items li.posted a { color: var(--muted); }
+  ul.items li .posted-badge {
+    color: #1a7f37;
+    background: #dafbe1;
+    border-radius: 10px;
+    font-size: 11px;
+    padding: 0 7px;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
   #cncf-articles li { padding: 6px 0; }
   .empty { color: var(--muted); font-size: 13px; }
   #live-status { font-size: 12px; color: var(--muted); }
@@ -157,22 +167,31 @@
 <script>
   const state = { days: 7, view: "main" };
 
-  function itemLi(item) {
+  // postedGuids(Set)に含まれる記事は Discord ダイジェスト配信済み: バッジを付けタイトルを落ち着いた色にする。
+  function itemLi(item, postedGuids) {
     const li = document.createElement("li");
     const a = document.createElement("a");
     a.href = item.url;
     a.target = "_blank";
     a.rel = "noopener";
     a.textContent = item.title;
+    li.append(a);
+    if (postedGuids && postedGuids.has(item.guid)) {
+      li.classList.add("posted");
+      const badge = document.createElement("span");
+      badge.className = "posted-badge";
+      badge.textContent = "✓ 配信済み";
+      li.append(badge);
+    }
     const meta = document.createElement("span");
     meta.className = "meta";
     const date = (item.publishedAt || item.fetchedAt || "").slice(0, 10);
     meta.textContent = `${item.feedName}${date ? " · " + date : ""}`;
-    li.append(a, meta);
+    li.append(meta);
     return li;
   }
 
-  function renderList(elementId, items, emptyText) {
+  function renderList(elementId, items, emptyText, postedGuids) {
     const ul = document.getElementById(elementId);
     ul.replaceChildren();
     if (items.length === 0) {
@@ -182,10 +201,10 @@
       ul.append(li);
       return;
     }
-    items.forEach((item) => ul.append(itemLi(item)));
+    items.forEach((item) => ul.append(itemLi(item, postedGuids)));
   }
 
-  function renderCrossSections(sections) {
+  function renderCrossSections(sections, postedGuids) {
     const container = document.getElementById("cross-sections");
     container.replaceChildren();
     if (sections.length === 0) {
@@ -214,7 +233,7 @@
         li.textContent = "この技術の記事は直近にありません";
         ul.append(li);
       } else {
-        section.articles.forEach((item) => ul.append(itemLi(item)));
+        section.articles.forEach((item) => ul.append(itemLi(item, postedGuids)));
       }
       card.append(heading, ul);
       container.append(card);
@@ -232,7 +251,7 @@
     return extras ? `${badge} ・ ${extras}` : badge;
   }
 
-  function renderCncf(articles) {
+  function renderCncf(articles, postedGuids) {
     const ul = document.getElementById("cncf-articles");
     ul.replaceChildren();
     if (articles.length === 0) {
@@ -243,7 +262,7 @@
       return;
     }
     articles.forEach((article) => {
-      const li = itemLi(article.item);
+      const li = itemLi(article.item, postedGuids);
       const badge = document.createElement("span");
       badge.className = "cncf-badge";
       badge.textContent = cncfBadgeText(article);
@@ -268,7 +287,7 @@
       ul.append(li);
       return;
     }
-    renderCncf(report.articles ?? []);
+    renderCncf(report.articles ?? [], new Set(report.postedGuids ?? []));
   }
 
   async function loadReport() {
@@ -278,9 +297,10 @@
       return;
     }
     const report = await response.json();
-    renderCrossSections(report.crossSections);
-    renderList("tech-articles", report.techArticles, "直近の技術記事はありません");
-    renderList("job-postings", report.jobPostings, "直近の求人はありません");
+    const postedGuids = new Set(report.postedGuids ?? []);
+    renderCrossSections(report.crossSections, postedGuids);
+    renderList("tech-articles", report.techArticles, "直近の技術記事はありません", postedGuids);
+    renderList("job-postings", report.jobPostings, "直近の求人はありません", postedGuids);
   }
 
   function connectLive() {

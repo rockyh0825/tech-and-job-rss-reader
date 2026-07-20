@@ -1,6 +1,7 @@
 package dev.rockyh.rsswatch.report.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
+import dev.rockyh.rsswatch.capabilities.PostedGuidQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
@@ -46,6 +47,10 @@ class BuildReportUseCaseTest {
         }
     }
 
+    private class FakePostedGuids(private val posted: Set<String> = emptySet()) : PostedGuidQueryPort {
+        override fun postedIn(guids: Set<String>): Set<String> = posted intersect guids
+    }
+
     @Test
     fun builds_cross_sections_in_job_mention_ranking_order() {
         val useCase =
@@ -58,6 +63,7 @@ class BuildReportUseCaseTest {
                             "Go" to listOf(rssItem("go-article")),
                         ),
                 ),
+                FakePostedGuids(),
             )
 
         val report = useCase.build(days = 7)
@@ -82,6 +88,7 @@ class BuildReportUseCaseTest {
                                 ),
                         ),
                 ),
+                FakePostedGuids(),
             )
 
         val report = useCase.build(days = 7)
@@ -100,6 +107,7 @@ class BuildReportUseCaseTest {
                             "jobs" to listOf(rssItem("job-1", category = "jobs")),
                         ),
                 ),
+                FakePostedGuids(),
             )
 
         val report = useCase.build(days = 7)
@@ -110,7 +118,7 @@ class BuildReportUseCaseTest {
 
     @Test
     fun returns_empty_report_when_archive_is_empty() {
-        val useCase = BuildReportUseCase(FakeArchive())
+        val useCase = BuildReportUseCase(FakeArchive(), FakePostedGuids())
 
         val report = useCase.build(days = 7)
 
@@ -122,12 +130,46 @@ class BuildReportUseCaseTest {
     @Test
     fun passes_days_to_every_archive_query() {
         val archive = FakeArchive(ranking = listOf(TechMention("Kotlin", 1)))
-        val useCase = BuildReportUseCase(archive)
+        val useCase = BuildReportUseCase(archive, FakePostedGuids())
 
         useCase.build(days = 30)
 
         assertEquals(setOf(30), archive.receivedDays.toSet())
         // techRanking + itemsByKeyword(Kotlin) + itemsByCategory(tech, jobs)
         assertEquals(4, archive.receivedDays.size)
+    }
+
+    @Test
+    fun posted_guids_contain_only_report_articles_already_posted_to_discord() {
+        val useCase =
+            BuildReportUseCase(
+                FakeArchive(
+                    ranking = listOf(TechMention("Kotlin", 1)),
+                    itemsByKeyword = mapOf("Kotlin" to listOf(rssItem("kotlin-article"))),
+                    itemsByCategory =
+                        mapOf(
+                            "tech" to listOf(rssItem("article-1"), rssItem("article-2")),
+                            "jobs" to listOf(rssItem("job-1", category = "jobs")),
+                        ),
+                ),
+                FakePostedGuids(setOf("kotlin-article", "article-2", "not-in-report")),
+            )
+
+        val report = useCase.build(days = 7)
+
+        assertEquals(setOf("kotlin-article", "article-2"), report.postedGuids)
+    }
+
+    @Test
+    fun posted_guids_are_empty_when_nothing_was_posted() {
+        val useCase =
+            BuildReportUseCase(
+                FakeArchive(itemsByCategory = mapOf("tech" to listOf(rssItem("article-1")))),
+                FakePostedGuids(),
+            )
+
+        val report = useCase.build(days = 7)
+
+        assertEquals(emptySet(), report.postedGuids)
     }
 }

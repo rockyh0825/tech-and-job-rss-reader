@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.CncfMatchPort
+import dev.rockyh.rsswatch.capabilities.PostedGuidQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.report.application.BuildCncfReportUseCase
 import dev.rockyh.rsswatch.shared.contract.CncfMaturity
@@ -45,11 +46,19 @@ class CncfReportControllerTest {
             if ("Kepler" in text) listOf(CncfMention("Kepler", CncfMaturity.SANDBOX)) else emptyList()
     }
 
+    private class FakePostedGuids(private val posted: Set<String>) : PostedGuidQueryPort {
+        override fun postedIn(guids: Set<String>): Set<String> = posted intersect guids
+    }
+
     private val archive = RecordingArchive()
 
     private val mockMvc: MockMvc =
         MockMvcBuilders
-            .standaloneSetup(CncfReportController(BuildCncfReportUseCase(archive, FakeCncfMatch())))
+            .standaloneSetup(
+                CncfReportController(
+                    BuildCncfReportUseCase(archive, FakeCncfMatch(), FakePostedGuids(setOf("cncf-1"))),
+                ),
+            )
             .setMessageConverters(
                 MappingJackson2HttpMessageConverter(
                     jacksonObjectMapper()
@@ -83,6 +92,15 @@ class CncfReportControllerTest {
             .andExpect(jsonPath("$.articles[0].mentions[0].projectName").value("Kepler"))
             .andExpect(jsonPath("$.articles[0].mentions[0].maturity").value("SANDBOX"))
             .andExpect(jsonPath("$.articles[0].tier").value("SANDBOX"))
+    }
+
+    @Test
+    fun returns_posted_guids_for_articles_already_posted_to_discord() {
+        mockMvc
+            .perform(get("/api/cncf").param("days", "7"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.postedGuids.length()").value(1))
+            .andExpect(jsonPath("$.postedGuids[0]").value("cncf-1"))
     }
 
     @Test
