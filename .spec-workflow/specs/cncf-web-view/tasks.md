@@ -23,7 +23,7 @@
   - Test: report/presentation/CncfReportControllerTest.kt(default days=7・境界 1/365・400・JSON 形)
   - _Requirements: 1.1_
 
-- [x] 5. index.html に CNCF セクションを追加 + README 追記
+- [x] 5. index.html に CNCF タブ(通常 / CNCF 切り替え)を追加 + README 追記
   - File: src/main/resources/static/index.html、README.md(Web UI 節があれば追記)
   - Test: 手動確認(表示・日数トグル連動・API 失敗時の独立性)
   - _Requirements: 2.1, 2.2, 2.3, 2.4_

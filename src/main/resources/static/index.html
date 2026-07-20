@@ -112,9 +112,9 @@
 <body>
 <header>
   <h1>RSS Watch</h1>
-  <nav class="tabs">
-    <button data-view="main" class="active">通常</button>
-    <button data-view="cncf">CNCF</button>
+  <nav class="tabs" role="tablist">
+    <button data-view="main" class="active" role="tab" aria-selected="true">通常</button>
+    <button data-view="cncf" role="tab" aria-selected="false">CNCF</button>
   </nav>
   <div class="days">
     <span>直近</span>
@@ -268,7 +268,7 @@
       ul.append(li);
       return;
     }
-    renderCncf(report.articles);
+    renderCncf(report.articles ?? []);
   }
 
   async function loadReport() {
@@ -330,6 +330,7 @@
       state.view = button.dataset.view;
       document.querySelectorAll(".tabs button").forEach((tab) => {
         tab.classList.toggle("active", tab === button);
+        tab.setAttribute("aria-selected", String(tab === button));
       });
       document.getElementById("view-main").hidden = state.view !== "main";
       document.getElementById("view-cncf").hidden = state.view !== "cncf";

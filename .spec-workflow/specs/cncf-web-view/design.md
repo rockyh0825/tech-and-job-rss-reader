@@ -2,7 +2,7 @@
 
 ## Overview
 
-PR #48 の CNCF ダイジェストは Discord 専用で、Web/API 面を持たない。本 spec では (1) CNCF 照合ロジックを feature 境界に沿って再配置し、(2) report feature に `GET /api/cncf` を追加、(3) `index.html` に CNCF セクションを追加する。
+PR #48 の CNCF ダイジェストは Discord 専用で、Web/API 面を持たない。本 spec では (1) CNCF 照合ロジックを feature 境界に沿って再配置し、(2) report feature に `GET /api/cncf` を追加、(3) `index.html` に CNCF タブ(通常 / CNCF 切り替え)を追加する。
 
 ## 配置の再設計(Requirement 3)
 
