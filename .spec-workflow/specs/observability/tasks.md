@@ -8,7 +8,7 @@
   - 完了条件: 上記テストがすべて green で、既存テスト(AccessJwtFilter/Config 含む)もデグレなし。expose は `health,prometheus` のみ
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 3.1, 3.2, 3.3_
 
-- [ ] 2. docker-compose に prometheus サービス + scrape 設定を追加
+- [x] 2. docker-compose に prometheus サービス + scrape 設定を追加
   - File: docker/docker-compose.yml(prometheus サービス + prometheus-data volume)、docker/prometheus/prometheus.yml(新規: scrape_interval 15s・metrics_path /actuator/prometheus・target host.docker.internal:8080)
   - タグ固定イメージ・`127.0.0.1:9090:9090`(ループバック限定)・`--storage.tsdb.retention.time=90d`・`extra_hosts: ["host.docker.internal:host-gateway"]`(design の scrape target 設計判断参照)
   - 完了条件: `docker compose config` が通り、`docker compose up -d` + アプリ起動後に `http://localhost:9090/targets` で rss-watch target が UP(macOS 開発機で確認。Linux 本番は Task 4 のデプロイ時に実地確認)

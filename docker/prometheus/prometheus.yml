@@ -1,0 +1,12 @@
+# rss-watch アプリ(ホスト上の :8080)のメトリクス収集設定
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: rss-watch
+    metrics_path: /actuator/prometheus
+    static_configs:
+      # アプリはコンテナではなくホスト上(本番: systemd / 開発: bootRun)で :8080 を listen するため、
+      # compose 側の extra_hosts(host-gateway)で解決される host.docker.internal を使う。
+      # Linux 本番・macOS 開発の両方で同じ設定のまま動く(design の scrape target 設計判断参照)。
+      - targets: ["host.docker.internal:8080"]

@@ -103,6 +103,29 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # ホスト上のアプリ(:8080)の /actuator/prometheus を 15 秒間隔で scrape して時系列を保持する。
+  # pull 型のため Prometheus が止まってもアプリ本体は無影響。
+  prometheus:
+    image: prom/prometheus:v3.13.1
+    container_name: rss-watch-prometheus
+    ports:
+      # 管理 UI/API を LAN に露出しないようループバック限定で bind(kafka-ui と同方針)
+      - "127.0.0.1:9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      # 改善デプロイ前後(数週間〜数ヶ月スパン)の比較に足る保持期間
+      - --storage.tsdb.retention.time=90d
+    # アプリはホスト上(fat jar / bootRun)で :8080 を listen するため、
+    # コンテナからホストへ届く名前 host.docker.internal を用意する。
+    # cloudflared の network_mode: host は Linux ホスト前提だが、
+    # この方式は macOS 開発機でも同じ設定のまま動く(prometheus/prometheus.yml の target で使用)。
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
   # Cloudflare Tunnel コネクタ。自宅サーバーから Cloudflare へアウトバウンドでトンネルを張り、
   # 公開ホスト名(例 rss.example.com)→ ホストの :8080 を結ぶ(ポート開放不要)。
   # 公開ルーティング(Public Hostname → http://localhost:8080)と認証(Access)は
@@ -129,3 +152,4 @@ services:
 volumes:
   kafka-data:
   postgres-data:
+  prometheus-data:
