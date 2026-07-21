@@ -25,7 +25,7 @@
 1.3. サンプリングは全量(`management.tracing.sampling.probability: 1.0`。既定は 0.1)。自宅規模でトラフィックが少なく保存コストが無視でき、性能調査には「遅かったあのリクエスト」が確実に残っている必要があるため
 1.4. トレースの service name は `spring.application.name`(`tech-and-job-rss-reader`)になる
 1.5. actuator の expose は増やさない(`health,prometheus` のまま。observability spec の要件 2 を維持)
-1.6. アプリログに traceId/spanId の相関 ID が載る(Micrometer Tracing がクラスパスにあると Spring Boot 3.3+ はログパターンに相関 ID を自動で含める。「ログのこのエラーはどのトレースか」を突き合わせられる)
+1.6. アプリログに traceId/spanId の相関 ID が載る(Micrometer Tracing がクラスパスにあると Spring Boot 3.2+ はログパターンに相関 ID を自動で含める。「ログのこのエラーはどのトレースか」を突き合わせられる)
 
 ### Requirement 2: SQL スパン(JDBC 観測 — 本 spec の核心価値)
 

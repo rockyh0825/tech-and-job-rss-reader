@@ -29,7 +29,7 @@ Tempo (127.0.0.1:4318 受信 / API :3200 は非公開) ←─ query(compose 内 
 ## Code Reuse Analysis
 
 - **Micrometer Observation(observability spec で導入済みの基盤)**: Spring MVC の `http.server.requests` は既に Observation として計測されている。Micrometer Tracing のブリッジを足すと、**同じ Observation からメトリクスに加えてスパンも生成される**(計装の二重化なし)。エンドポイント計測のための自前コードは不要
-- **自動構成の RestClient.Builder**: ClaudeSummarizer / DiscordWebhookClient は自動構成の builder を使っているため、アウトバウンド HTTP(`http.client.requests`)のスパンも追加コードなしで載る(ダイジェスト配信の Claude / Discord 呼び出しの所要時間が見える。おまけであり要件ではない)
+- **自動構成の RestClient.Builder**: ClaudeSummarizer / DiscordWebhookClient / CncfDiscordWebhookClient / DiscordPoster は自動構成の builder を使っているため、アウトバウンド HTTP(`http.client.requests`)のスパンも追加コードなしで載る(ダイジェスト配信の Claude / Discord 呼び出しの所要時間が見える。おまけであり要件ではない)
 - **docker-compose.yml の既存イディオム**: タグ固定イメージ・`container_name: rss-watch-*`・ループバック限定 bind・named volume・設定ファイルの `ro` マウントを踏襲
 - **Grafana provisioning(observability spec で導入済み)**: `docker/grafana/provisioning/datasources/` に YAML を 1 枚足すだけで、手動セットアップなしで Tempo datasource が使える
 
@@ -125,7 +125,7 @@ HTTP + SQL が主目的であり、このタグ互換の手間が見合わない
 ```yaml
   # トレースの受信(OTLP)・保存・検索。閲覧は Grafana(Tempo datasource)から行う
   tempo:
-    image: grafana/tempo:2.10.7            # タグ固定(Docker Hub の現行安定版。実装時に最新 patch を確認)
+    image: grafana/tempo:2.10.7            # タグ固定(2.x 系の現行安定版。実装時に 2.x 系の最新 patch を確認(3.x へは上げない))
     container_name: rss-watch-tempo
     command: ["-config.file=/etc/tempo/tempo.yml"]
     ports:
@@ -161,6 +161,7 @@ compactor:
     block_retention: 336h          # 14 日(要件 3.3)。トレースは調査用途なので Prometheus の 90d は不要
 ```
 
+- **メジャーバージョンは 2.x 系を採用(3.x へは上げない)**: Tempo 3.0 は 2026-05 に GA 済みだが、本 spec は保守継続中の 2.x 系を採用する。上記 tempo.yml の設定骨子が 2.x 前提であり、3.x の設定形式差分を検証するコストが自宅用途では見合わないため。3.x への追随は必要が生じたときに別途判断する
 - 到達経路の整理: アプリ(ホスト)→ Tempo はホストに bind された `127.0.0.1:4318`。Grafana(コンテナ)→ Tempo は compose 内 DNS `tempo:3200`。Prometheus の `host.docker.internal`(コンテナ → ホスト)とは向きが逆で、こちらは通常の port publish で足りる
 - ポートは 4318 のみ追加で、既存(8080 / 8081 / 9090 / 9092 / 3001 / 5432、ホストの homepage :3000)と衝突しない(要件 3.5)
 - 実装時の確認事項: コンテナの実行ユーザーと named volume の書き込み権限(公式イメージは非 root 実行のため、`/var/lib/tempo` に書けない場合は user 指定や初期化を調整する)
@@ -199,7 +200,7 @@ datasources:
 
 ### Unit Testing(TDD。CLAUDE.md の Red → Green → Refactor に従う)
 
-- **テストは実 Tempo に送信しない(仕組みの整理)**: Spring Boot のテスト基盤(spring-boot-test-autoconfigure の `ObservabilityContextCustomizerFactory`)は、`@AutoConfigureObservability` が付いていないテストに `management.tracing.enabled=false` を自動適用する(3.5.6 の class を javap で確認済み)。したがって**既存のフルコンテキストテスト 6 個(RssWatchApplicationTest / SinkConsumerIntegrationTest / LiveConsumerIntegrationTest / NotifyFeatureToggleTest / ActuatorAccessJwtTest / ActuatorEndpointsTest)は無変更のままトレース送信を試みず**、OTLP 接続失敗のエラーログも出ない。application.yml に endpoint を書いてもテストには影響しない
+- **テストは実 Tempo に送信しない(仕組みの整理)**: Spring Boot のテスト基盤(spring-boot-test-autoconfigure の `ObservabilityContextCustomizerFactory`)は、`@AutoConfigureObservability` が付いていないテストに `management.tracing.enabled=false` を自動適用する(3.5.6 の class を javap で確認済み)。したがって**既存のフルコンテキストテスト 6 個(RssWatchApplicationTest / SinkConsumerIntegrationTest / LiveConsumerIntegrationTest / NotifyFeatureToggleTest / ActuatorAccessJwtTest / ActuatorEndpointsTest)は無変更のままトレース送信を試みず**、OTLP 接続失敗のエラーログも出ない。application.yml に endpoint を書いてもテストには影響しない。なお datasource-micrometer の自動構成は tracing とは独立に働くため、DataSource プロキシは `management.tracing.enabled=false` のこれらのテストにも適用されるが、プロキシは JDBC 呼び出しに対して透過であり、src 全体に `unwrap` や HikariDataSource へのキャストは存在しない(コード確認済み)ため既存テストへの実害はない — これが Task 1 完了条件「既存 6 個が無変更で green」の根拠になる
 - **トレース配線のテスト(新規)**: `@SpringBootTest` + `@AutoConfigureObservability(metrics = false)`(tracing のみ有効化)+ `management.otlp.tracing.export.enabled=false` を上書きしたコンテキストで
   - `io.micrometer.tracing.Tracer` Bean が存在する(ブリッジの配線が生きている)こと
   - `management.tracing.sampling.probability` が 1.0 で束縛されていること(全量サンプリングの仕様化)
