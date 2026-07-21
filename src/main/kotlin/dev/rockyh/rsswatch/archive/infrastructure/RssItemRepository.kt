@@ -98,32 +98,46 @@ class RssItemRepository(
                     FROM items i
                     WHERE i.category = $categoryValue
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
-                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
+                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC, i.guid ASC
                     """
                 }.list<ItemRow>()
         return assembleItems(rows)
     }
 
     /** 直近 [days] 日の、指定キーワードが付いた指定カテゴリの item を新しい順で返す。 */
-    override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> {
+    override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
+        itemsByKeywords(listOf(keyword), category, days)[keyword].orEmpty()
+
+    /**
+     * 直近 [days] 日の、[keywords] の各キーワードが付いた指定カテゴリの item を
+     * 1 クエリで一括取得し、キーワードごとに新しい順で返す(N+1 回避)。
+     */
+    override fun itemsByKeywords(
+        keywords: List<String>,
+        category: ItemCategory,
+        days: Int,
+    ): Map<String, List<RssItem>> {
+        if (keywords.isEmpty()) return emptyMap()
         val cutoff = cutoff(days)
         val categoryValue = category.value
         val rows =
             kueryClient
                 .sql {
                     +"""
-                    SELECT i.guid AS guid, i.feed_name AS feedName, i.category AS category,
-                           i.title AS title, i.url AS url, i.summary AS summary,
+                    SELECT k.keyword AS matchedKeyword, i.guid AS guid, i.feed_name AS feedName,
+                           i.category AS category, i.title AS title, i.url AS url, i.summary AS summary,
                            i.published_at AS publishedAt, i.fetched_at AS fetchedAt
                     FROM items i
                     JOIN item_keywords k ON k.guid = i.guid
-                    WHERE k.keyword = $keyword
+                    WHERE k.keyword IN ($keywords)
                       AND i.category = $categoryValue
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
-                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
+                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC, i.guid ASC
                     """
-                }.list<ItemRow>()
-        return assembleItems(rows)
+                }.list<MatchedItemRow>()
+        val items = assembleItems(rows.map { it.toItemRow() })
+        val grouped = rows.zip(items).groupBy({ (row, _) -> row.matchedKeyword }, { (_, item) -> item })
+        return keywords.associateWith { grouped[it].orEmpty() }
     }
 
     /** item_keywords を引いて RssItem に組み立てる(行順は保持)。 */
@@ -165,6 +179,22 @@ class RssItemRepository(
         val publishedAt: OffsetDateTime?,
         val fetchedAt: OffsetDateTime,
     )
+
+    /** itemsByKeywords の 1 行(item の全カラム + マッチしたキーワード)。 */
+    private data class MatchedItemRow(
+        val matchedKeyword: String,
+        val guid: String,
+        val feedName: String,
+        val category: String,
+        val title: String,
+        val url: String,
+        val summary: String,
+        val publishedAt: OffsetDateTime?,
+        val fetchedAt: OffsetDateTime,
+    ) {
+        fun toItemRow(): ItemRow =
+            ItemRow(guid, feedName, category, title, url, summary, publishedAt, fetchedAt)
+    }
 
     private data class KeywordRow(val guid: String, val keyword: String)
 

@@ -24,12 +24,18 @@ class ArchiveQueryPortImplTest {
             keywords = emptyList(),
         )
 
-    private class FakeItemQueries : ItemQueries {
+    private inner class FakeItemQueries : ItemQueries {
         override fun techRanking(days: Int): List<TechRankingEntry> = listOf(TechRankingEntry("Kotlin", 3))
 
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> = emptyList()
 
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> = emptyList()
+
+        override fun itemsByKeywords(
+            keywords: List<String>,
+            category: ItemCategory,
+            days: Int,
+        ): Map<String, List<RssItem>> = keywords.associateWith { listOf(rssItem("article-of-$it")) }
     }
 
     @Test
@@ -39,5 +45,14 @@ class ArchiveQueryPortImplTest {
         val ranking = port.techRanking(days = 7)
 
         assertEquals(listOf(TechMention("Kotlin", 3)), ranking)
+    }
+
+    @Test
+    fun delegates_items_by_keywords_to_item_queries() {
+        val port = ArchiveQueryPortImpl(FakeItemQueries())
+
+        val itemsByKeyword = port.itemsByKeywords(listOf("Kotlin"), ItemCategory.TECH, days = 7)
+
+        assertEquals(mapOf("Kotlin" to listOf(rssItem("article-of-Kotlin"))), itemsByKeyword)
     }
 }

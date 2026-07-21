@@ -32,6 +32,12 @@ class CncfReportControllerTest {
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
             error("not used by the CNCF report")
 
+        override fun itemsByKeywords(
+            keywords: List<String>,
+            category: ItemCategory,
+            days: Int,
+        ): Map<String, List<RssItem>> = error("not used by the CNCF report")
+
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
             receivedDays += days
             return when (category) {

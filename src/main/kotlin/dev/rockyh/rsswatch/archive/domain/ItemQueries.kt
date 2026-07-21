@@ -20,4 +20,10 @@ interface ItemQueries {
 
     /** 直近 [days] 日の、指定キーワードが付いた指定カテゴリの item を新しい順で返す。 */
     fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem>
+
+    /**
+     * 直近 [days] 日の、[keywords] の各キーワードが付いた指定カテゴリの item を一括で取得し、
+     * キーワードごとに新しい順で返す(N+1 回避)。
+     */
+    fun itemsByKeywords(keywords: List<String>, category: ItemCategory, days: Int): Map<String, List<RssItem>>
 }
