@@ -98,33 +98,15 @@ class RssItemRepository(
                     FROM items i
                     WHERE i.category = $categoryValue
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
-                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
+                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC, i.guid ASC
                     """
                 }.list<ItemRow>()
         return assembleItems(rows)
     }
 
     /** 直近 [days] 日の、指定キーワードが付いた指定カテゴリの item を新しい順で返す。 */
-    override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> {
-        val cutoff = cutoff(days)
-        val categoryValue = category.value
-        val rows =
-            kueryClient
-                .sql {
-                    +"""
-                    SELECT i.guid AS guid, i.feed_name AS feedName, i.category AS category,
-                           i.title AS title, i.url AS url, i.summary AS summary,
-                           i.published_at AS publishedAt, i.fetched_at AS fetchedAt
-                    FROM items i
-                    JOIN item_keywords k ON k.guid = i.guid
-                    WHERE k.keyword = $keyword
-                      AND i.category = $categoryValue
-                      AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
-                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
-                    """
-                }.list<ItemRow>()
-        return assembleItems(rows)
-    }
+    override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
+        itemsByKeywords(listOf(keyword), category, days)[keyword].orEmpty()
 
     /**
      * 直近 [days] 日の、[keywords] の各キーワードが付いた指定カテゴリの item を
@@ -150,11 +132,11 @@ class RssItemRepository(
                     WHERE k.keyword IN ($keywords)
                       AND i.category = $categoryValue
                       AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
-                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC
+                    ORDER BY COALESCE(i.published_at, i.fetched_at) DESC, i.guid ASC
                     """
                 }.list<MatchedItemRow>()
         val items = assembleItems(rows.map { it.toItemRow() })
-        val grouped = rows.indices.groupBy({ rows[it].matchedKeyword }, { items[it] })
+        val grouped = rows.zip(items).groupBy({ (row, _) -> row.matchedKeyword }, { (_, item) -> item })
         return keywords.associateWith { grouped[it].orEmpty() }
     }
 

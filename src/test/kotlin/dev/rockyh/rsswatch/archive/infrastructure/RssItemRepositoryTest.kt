@@ -288,6 +288,27 @@ class RssItemRepositoryTest {
     }
 
     @Test
+    fun items_by_category_orders_items_with_identical_timestamp_by_guid_ascending() {
+        // 同時刻(published_at 同値)の記事は guid の昇順で決定的に並ぶ。
+        // 挿入順(c → a → b)に依存しないことを確認するため、guid 順とずらして投入する
+        val publishedAt = Instant.parse("2026-07-05T12:00:00Z")
+        val fetchedAt = Instant.parse("2026-07-05T12:30:00Z")
+        val fixedClockRepository =
+            RssItemRepository(kueryClient, Clock.fixed(Instant.parse("2026-07-05T15:00:00Z"), ZoneOffset.UTC))
+        fixedClockRepository.insertIgnore(
+            listOf(
+                rssItem("c", publishedAt = publishedAt, fetchedAt = fetchedAt),
+                rssItem("a", publishedAt = publishedAt, fetchedAt = fetchedAt),
+                rssItem("b", publishedAt = publishedAt, fetchedAt = fetchedAt),
+            ),
+        )
+
+        val items = fixedClockRepository.itemsByCategory(ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf("a", "b", "c"), items.map { it.guid })
+    }
+
+    @Test
     fun items_by_category_returns_empty_list_when_no_items_exist() {
         val items = repository.itemsByCategory(ItemCategory.TECH, days = 7)
 
