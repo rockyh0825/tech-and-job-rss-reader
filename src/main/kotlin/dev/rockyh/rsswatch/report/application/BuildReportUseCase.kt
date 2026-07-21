@@ -32,13 +32,16 @@ class BuildReportUseCase(
 ) {
 
     fun build(days: Int): Report {
+        val ranking = archiveQueryPort.techRanking(days)
+        // キーワードごとの個別クエリは N+1 になるため、全キーワード分を一括で取得する
+        val articlesByKeyword =
+            archiveQueryPort.itemsByKeywords(ranking.map { it.keyword }, ItemCategory.TECH, days)
         val crossSections =
-            archiveQueryPort.techRanking(days).map { mention ->
+            ranking.map { mention ->
                 CrossSection(
                     keyword = mention.keyword,
                     mentionCount = mention.mentionCount,
-                    articles =
-                        archiveQueryPort.itemsByKeyword(mention.keyword, ItemCategory.TECH, days),
+                    articles = articlesByKeyword[mention.keyword].orEmpty(),
                 )
             }
         val techArticles = archiveQueryPort.itemsByCategory(ItemCategory.TECH, days)

@@ -30,6 +30,8 @@ class BuildReportUseCaseTest {
         private val itemsByCategory: Map<String, List<RssItem>> = emptyMap(),
     ) : ArchiveQueryPort {
         val receivedDays = mutableListOf<Int>()
+        var itemsByKeywordCallCount = 0
+        val itemsByKeywordsCalls = mutableListOf<List<String>>()
 
         override fun techRanking(days: Int): List<TechMention> {
             receivedDays += days
@@ -38,7 +40,20 @@ class BuildReportUseCaseTest {
 
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> {
             receivedDays += days
+            itemsByKeywordCallCount++
             return itemsByKeyword.getOrDefault(keyword, emptyList()).filter { it.category == category.value }
+        }
+
+        override fun itemsByKeywords(
+            keywords: List<String>,
+            category: ItemCategory,
+            days: Int,
+        ): Map<String, List<RssItem>> {
+            receivedDays += days
+            itemsByKeywordsCalls += keywords
+            return keywords.associateWith { keyword ->
+                itemsByKeyword.getOrDefault(keyword, emptyList()).filter { it.category == category.value }
+            }
         }
 
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
@@ -135,8 +150,40 @@ class BuildReportUseCaseTest {
         useCase.build(days = 30)
 
         assertEquals(setOf(30), archive.receivedDays.toSet())
-        // techRanking + itemsByKeyword(Kotlin) + itemsByCategory(tech, jobs)
+        // techRanking + itemsByKeywords(一括) + itemsByCategory(tech, jobs)
         assertEquals(4, archive.receivedDays.size)
+    }
+
+    @Test
+    fun keeps_ranked_keyword_without_articles_as_cross_section_with_empty_articles() {
+        val useCase =
+            BuildReportUseCase(
+                FakeArchive(
+                    ranking = listOf(TechMention("Kotlin", 2), TechMention("COBOL", 1)),
+                    itemsByKeyword = mapOf("Kotlin" to listOf(rssItem("kotlin-article"))),
+                ),
+                FakePostedGuids(),
+            )
+
+        val report = useCase.build(days = 7)
+
+        assertEquals(listOf("Kotlin", "COBOL"), report.crossSections.map { it.keyword })
+        assertEquals(emptyList(), report.crossSections[1].articles)
+    }
+
+    @Test
+    fun fetches_cross_section_articles_with_a_single_batched_query() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 3), TechMention("Go", 1)),
+                itemsByKeyword = mapOf("Kotlin" to listOf(rssItem("kotlin-article"))),
+            )
+        val useCase = BuildReportUseCase(archive, FakePostedGuids())
+
+        useCase.build(days = 7)
+
+        assertEquals(listOf(listOf("Kotlin", "Go")), archive.itemsByKeywordsCalls)
+        assertEquals(0, archive.itemsByKeywordCallCount)
     }
 
     @Test

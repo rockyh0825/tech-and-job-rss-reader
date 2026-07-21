@@ -32,6 +32,12 @@ class ReportControllerTest {
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
             listOf(rssItem("article-1"))
 
+        override fun itemsByKeywords(
+            keywords: List<String>,
+            category: ItemCategory,
+            days: Int,
+        ): Map<String, List<RssItem>> = keywords.associateWith { listOf(rssItem("article-1")) }
+
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> =
             when (category) {
                 ItemCategory.TECH -> listOf(rssItem("article-1"))
