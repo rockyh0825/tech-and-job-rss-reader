@@ -466,4 +466,26 @@ class RssItemRepositoryTest {
 
         assertEquals(listOf("at-cutoff"), itemsByKeyword.getValue("Kotlin").map { it.guid })
     }
+
+    @Test
+    fun items_by_keywords_orders_items_with_identical_timestamp_by_guid_ascending() {
+        // 同時刻(published_at 同値)の記事はキーワード内で guid の昇順で決定的に並ぶ。
+        // 挿入順(c → a → b)に依存しないことを確認するため、guid 順とずらして投入する
+        val publishedAt = Instant.parse("2026-07-05T12:00:00Z")
+        val fetchedAt = Instant.parse("2026-07-05T12:30:00Z")
+        val fixedClockRepository =
+            RssItemRepository(kueryClient, Clock.fixed(Instant.parse("2026-07-05T15:00:00Z"), ZoneOffset.UTC))
+        fixedClockRepository.insertIgnore(
+            listOf(
+                rssItem("c", publishedAt = publishedAt, fetchedAt = fetchedAt, keywords = listOf("Kotlin")),
+                rssItem("a", publishedAt = publishedAt, fetchedAt = fetchedAt, keywords = listOf("Kotlin")),
+                rssItem("b", publishedAt = publishedAt, fetchedAt = fetchedAt, keywords = listOf("Kotlin")),
+            ),
+        )
+
+        val itemsByKeyword =
+            fixedClockRepository.itemsByKeywords(listOf("Kotlin"), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf("a", "b", "c"), itemsByKeyword.getValue("Kotlin").map { it.guid })
+    }
 }
