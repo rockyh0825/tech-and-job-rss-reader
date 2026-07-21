@@ -29,6 +29,12 @@ class BuildCncfReportUseCaseTest {
 
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
             error("not used by the CNCF report")
+
+        override fun itemsByKeywords(
+            keywords: List<String>,
+            category: ItemCategory,
+            days: Int,
+        ): Map<String, List<RssItem>> = error("not used by the CNCF report")
     }
 
     /** 実辞書の代わり: テストで使う代表 3 プロジェクトだけを、成熟度の低い順で返す。 */

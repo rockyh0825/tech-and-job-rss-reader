@@ -37,6 +37,12 @@ class BuildDigestUseCaseTest {
 
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
             if (category == ItemCategory.TECH) articlesByKeyword[keyword].orEmpty() else emptyList()
+
+        override fun itemsByKeywords(
+            keywords: List<String>,
+            category: ItemCategory,
+            days: Int,
+        ): Map<String, List<RssItem>> = keywords.associateWith { itemsByKeyword(it, category, days) }
     }
 
     private class FakeSummarizer(private val result: Result<String>) : Summarizer {

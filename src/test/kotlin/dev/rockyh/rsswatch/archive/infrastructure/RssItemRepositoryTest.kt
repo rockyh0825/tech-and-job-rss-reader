@@ -357,4 +357,92 @@ class RssItemRepositoryTest {
 
         assertEquals(listOf("newer", "older"), items.map { it.guid })
     }
+
+    // --- itemsByKeywords(一括取得)---
+
+    @Test
+    fun items_by_keywords_groups_items_per_keyword_newest_first() {
+        val now = Instant.now()
+        repository.insertIgnore(
+            listOf(
+                rssItem("kotlin-older", publishedAt = now.minus(Duration.ofHours(3)), keywords = listOf("Kotlin")),
+                rssItem("kotlin-newer", publishedAt = now.minus(Duration.ofHours(1)), keywords = listOf("Kotlin")),
+                rssItem("go-article", publishedAt = now.minus(Duration.ofHours(2)), keywords = listOf("Go")),
+                rssItem("rust-article", publishedAt = now, keywords = listOf("Rust")),
+            ),
+        )
+
+        val itemsByKeyword =
+            repository.itemsByKeywords(listOf("Kotlin", "Go"), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(setOf("Kotlin", "Go"), itemsByKeyword.keys)
+        assertEquals(listOf("kotlin-newer", "kotlin-older"), itemsByKeyword.getValue("Kotlin").map { it.guid })
+        assertEquals(listOf("go-article"), itemsByKeyword.getValue("Go").map { it.guid })
+    }
+
+    @Test
+    fun items_by_keywords_repeats_item_under_every_matching_keyword() {
+        // 現行の itemsByKeyword(キーワードごとの独立クエリ)と同じく、
+        // 複数キーワードにマッチする記事は各キーワードの一覧に重複して現れる
+        repository.insertIgnore(listOf(rssItem("both", keywords = listOf("Go", "Kotlin"))))
+
+        val itemsByKeyword =
+            repository.itemsByKeywords(listOf("Kotlin", "Go"), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf("both"), itemsByKeyword.getValue("Kotlin").map { it.guid })
+        assertEquals(listOf("both"), itemsByKeyword.getValue("Go").map { it.guid })
+        assertEquals(listOf("Go", "Kotlin"), itemsByKeyword.getValue("Kotlin").single().keywords)
+    }
+
+    @Test
+    fun items_by_keywords_maps_keyword_without_items_to_empty_list() {
+        repository.insertIgnore(listOf(rssItem("kotlin-article", keywords = listOf("Kotlin"))))
+
+        val itemsByKeyword =
+            repository.itemsByKeywords(listOf("Kotlin", "COBOL"), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(setOf("Kotlin", "COBOL"), itemsByKeyword.keys)
+        assertEquals(emptyList(), itemsByKeyword.getValue("COBOL"))
+    }
+
+    @Test
+    fun items_by_keywords_returns_empty_map_for_empty_keyword_list() {
+        repository.insertIgnore(listOf(rssItem("article", keywords = listOf("Kotlin"))))
+
+        val itemsByKeyword = repository.itemsByKeywords(emptyList(), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(emptyMap(), itemsByKeyword)
+    }
+
+    @Test
+    fun items_by_keywords_returns_only_items_of_the_given_category() {
+        repository.insertIgnore(
+            listOf(
+                rssItem("article", category = "tech", keywords = listOf("Kotlin")),
+                rssItem("job", category = "jobs", keywords = listOf("Kotlin")),
+            ),
+        )
+
+        val itemsByKeyword = repository.itemsByKeywords(listOf("Kotlin"), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf("article"), itemsByKeyword.getValue("Kotlin").map { it.guid })
+    }
+
+    @Test
+    fun items_by_keywords_includes_item_published_exactly_at_cutoff_but_excludes_older_ones() {
+        val fixedNow = Instant.parse("2026-07-05T00:00:00Z")
+        val fixedClockRepository = RssItemRepository(kueryClient, Clock.fixed(fixedNow, ZoneOffset.UTC))
+        val cutoff = fixedNow.minus(Duration.ofDays(7))
+        fixedClockRepository.insertIgnore(
+            listOf(
+                rssItem("at-cutoff", publishedAt = cutoff, keywords = listOf("Kotlin")),
+                rssItem("before-cutoff", publishedAt = cutoff.minusNanos(1_000), keywords = listOf("Kotlin")),
+            ),
+        )
+
+        val itemsByKeyword =
+            fixedClockRepository.itemsByKeywords(listOf("Kotlin"), category = ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf("at-cutoff"), itemsByKeyword.getValue("Kotlin").map { it.guid })
+    }
 }

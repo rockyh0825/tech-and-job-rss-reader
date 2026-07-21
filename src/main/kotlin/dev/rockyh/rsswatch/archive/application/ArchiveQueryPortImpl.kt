@@ -19,4 +19,10 @@ class ArchiveQueryPortImpl(private val itemQueries: ItemQueries) : ArchiveQueryP
 
     override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
         itemQueries.itemsByKeyword(keyword, category, days)
+
+    override fun itemsByKeywords(
+        keywords: List<String>,
+        category: ItemCategory,
+        days: Int,
+    ): Map<String, List<RssItem>> = itemQueries.itemsByKeywords(keywords, category, days)
 }
