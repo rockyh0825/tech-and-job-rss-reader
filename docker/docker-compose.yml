@@ -167,6 +167,7 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+      - tempo
     restart: unless-stopped
 
   # Cloudflare Tunnel コネクタ。自宅サーバーから Cloudflare へアウトバウンドでトンネルを張り、
