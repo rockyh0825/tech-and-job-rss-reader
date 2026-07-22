@@ -26,6 +26,11 @@ dependencies {
     // メトリクス公開(/actuator/prometheus)。エンドポイント計装は Actuator/Micrometer の自動計装に任せる
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+    // 分散トレーシング: Observation → OTel スパンへのブリッジと OTLP 送信(いずれも Boot BOM 管理)
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    // クエリ単位の SQL スパン(distributed-tracing spec の核心価値)。Boot の BOM 管理外なのでバージョン明示
+    implementation("net.ttddyy.observation:datasource-micrometer-spring-boot:1.1.1")
     implementation("org.springframework.kafka:spring-kafka")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-toml")
