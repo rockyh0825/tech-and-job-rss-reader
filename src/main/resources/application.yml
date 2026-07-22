@@ -32,6 +32,18 @@ server:
   port: 8080
 
 management:
+  tracing:
+    sampling:
+      # 既定 0.1 を全量に。自宅規模でトラフィックが少なく保存コストが無視でき、
+      # 性能調査には「遅かったあのリクエスト」が確実に残っている必要があるため(design の「サンプリング」参照)
+      probability: 1.0
+  otlp:
+    tracing:
+      # ローカルの Tempo(OTLP/HTTP)。endpoint は明示必須(Spring Boot 3.5 は未設定だと
+      # エクスポータ Bean 自体を作らない)。アプリはホスト上・Tempo はループバック bind の
+      # コンテナなので、本番・開発とも 127.0.0.1 で到達する。
+      # 恒常的に Tempo なしで動かす環境では MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED=false で送信だけ止められる
+      endpoint: http://127.0.0.1:4318/v1/traces
   endpoints:
     web:
       exposure:
