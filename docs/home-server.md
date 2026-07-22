@@ -142,7 +142,7 @@ docker compose -f docker/docker-compose.yml exec grafana grafana cli admin reset
 1. Grafana(`http://localhost:3001`)左メニューの **Explore** を開き、datasource に **Tempo** を選ぶ(provisioning 済み)
 2. **TraceQL** タブにクエリを入れて実行し、ヒットした Trace ID を開くとウォーターフォール図が表示される
 
-TraceQL の例(いずれも実際にヒットすることを確認済み):
+TraceQL の例(前 2 つは実際にヒットすることを確認済み):
 
 ```
 # このアプリの全トレース(service name は spring.application.name)
@@ -151,7 +151,7 @@ TraceQL の例(いずれも実際にヒットすることを確認済み):
 # /api/report のトレース(HTTP サーバースパンの名前は「メソッド + パス」の小文字)
 {name="http get /api/report"}
 
-# 遅かったリクエストに絞る(全量サンプリングなので外れ値のトレースも必ず残っている)
+# 遅かったリクエストに絞る構文例(閾値は調査対象に合わせて調整する。全量サンプリングなので外れ値のトレースも必ず残っている)
 {resource.service.name="tech-and-job-rss-reader" && span:duration > 500ms}
 ```
 
