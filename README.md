@@ -26,7 +26,7 @@ notifier (@Scheduled デフォルト毎朝8:00 / CNCF ダイジェストは 8:10
 前提: JDK 21 / Docker(Compose v2)
 
 ```bash
-# 1. 依存サービス(Kafka + PostgreSQL + kafka-ui + Prometheus + Grafana)を起動
+# 1. 依存サービス(Kafka + PostgreSQL + kafka-ui + Prometheus + Grafana + Tempo)を起動
 #    (topic rss.items は kafka-init が自動作成)
 docker compose -f docker/docker-compose.yml up -d
 
@@ -38,7 +38,7 @@ docker compose -f docker/docker-compose.yml up -d
 - 集計 API: `GET http://localhost:8080/api/report?days=7`
 - CNCF レポート API(CNCF 記事 × プロジェクト成熟度): `GET http://localhost:8080/api/cncf?days=7`
 - kafka-ui(topic の中身の確認): <http://localhost:8081>
-- Grafana(メトリクスのダッシュボード): <http://localhost:3001>(Prometheus は <http://localhost:9090>。運用の要点は [docs/home-server.md](docs/home-server.md))
+- Grafana(メトリクスのダッシュボード・トレースの閲覧): <http://localhost:3001>(Prometheus は <http://localhost:9090>。運用の要点は [docs/home-server.md](docs/home-server.md))
 
 PostgreSQL のスキーマは初回起動時に Flyway が自動で作成する(DB 自体は compose の postgres サービスが用意する)。
 
@@ -61,7 +61,7 @@ category = "tech"   # "tech"(技術記事)/ "jobs"(求人)/ "cncf"(CNCF 関連�
 
 | ドキュメント | 内容 |
 |---|---|
-| [docs/home-server.md](docs/home-server.md) | 自宅サーバーでの常駐運用(systemd + `/etc/rss-watch.env`)・観測(Prometheus + Grafana)・自動デプロイ(GitHub Actions self-hosted runner) |
+| [docs/home-server.md](docs/home-server.md) | 自宅サーバーでの常駐運用(systemd + `/etc/rss-watch.env`)・観測(Prometheus + Grafana + Tempo)・自動デプロイ(GitHub Actions self-hosted runner) |
 | [docs/notify.md](docs/notify.md) | デイリーダイジェスト・CNCF ダイジェスト(Discord 通知)の挙動と設定 |
 | [docs/public-access.md](docs/public-access.md) | Cloudflare Tunnel + Access による外部公開と、オリジンでの JWT 検証(任意ハードニング) |
 | [docs/verification.md](docs/verification.md) | ローカルでのパイプライン動作確認(手動 E2E)手順 |
@@ -78,6 +78,7 @@ category = "tech"   # "tech"(技術記事)/ "jobs"(求人)/ "cncf"(CNCF 関連�
 - [.spec-workflow/specs/discord-notifier/](.spec-workflow/specs/discord-notifier/) — デイリーダイジェスト(Discord 通知)の requirements / design / tasks
 - [.spec-workflow/specs/private-web-access/](.spec-workflow/specs/private-web-access/) — Cloudflare Tunnel + Access による外部公開の requirements / design / tasks
 - [.spec-workflow/specs/observability/](.spec-workflow/specs/observability/) — Actuator + Prometheus + Grafana による観測の requirements / design / tasks
+- [.spec-workflow/specs/distributed-tracing/](.spec-workflow/specs/distributed-tracing/) — Micrometer Tracing + Tempo による分散トレーシングの requirements / design / tasks
 
 ## ステータス
 
