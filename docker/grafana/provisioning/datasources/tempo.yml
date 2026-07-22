@@ -1,0 +1,13 @@
+# Tempo datasource の provisioning(手動セットアップゼロでリポジトリ管理)
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    # Explore での TraceQL 検索から固定 uid で参照できるようにする(prometheus.yml と同方針)
+    uid: tempo
+    type: tempo
+    access: proxy
+    # compose 内 DNS でコンテナ名解決(Grafana コンテナ → Tempo コンテナ)
+    url: http://tempo:3200
+    # default は既存の Prometheus のまま(prometheus.yml の isDefault: true を維持)
+    editable: false

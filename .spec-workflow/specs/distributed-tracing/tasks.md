@@ -8,7 +8,7 @@
   - 完了条件: 上記テストがすべて green で、テスト実行ログに OTLP 接続エラーが出ない。datasource-micrometer 1.1.1 と Boot 3.5.6 の互換を確認済み(合わなければ対応バージョンへ調整して design に追記)
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1_
 
-- [ ] 2. docker-compose に Tempo + Grafana の Tempo datasource を追加
+- [x] 2. docker-compose に Tempo + Grafana の Tempo datasource を追加
   - File: docker/docker-compose.yml(tempo サービス + tempo-data volume。grafana/tempo タグ固定・container_name rss-watch-tempo・`127.0.0.1:4318:4318` のみ publish)、docker/tempo/tempo.yml(新規: OTLP/HTTP 受信 0.0.0.0:4318・local backend・block_retention 336h。design の骨子を採用バージョンの公式リファレンスで確認して確定)、docker/grafana/provisioning/datasources/tempo.yml(新規: uid tempo・url http://tempo:3200)
   - 完了条件: `docker compose config` が通り、`docker compose up -d` + `./gradlew bootRun` 後に `/api/report` を数回叩くと、Grafana Explore(Tempo datasource)の TraceQL 検索でトレースがヒットし、ウォーターフォールに HTTP サーバースパン + 子の SQL スパン(SQL 文つき・バインド値なし)が並ぶ。Tempo 停止中もアプリが正常応答する(要件 2.2〜2.4 の実地確認を含む)
   - _Requirements: 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2_

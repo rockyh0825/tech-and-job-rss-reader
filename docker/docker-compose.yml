@@ -126,6 +126,23 @@ services:
       - prometheus-data:/prometheus
     restart: unless-stopped
 
+  # トレースの受信(OTLP)・保存・検索。閲覧は Grafana(Tempo datasource)から行う。
+  # 送信はアプリ側のバックグラウンドバッチのため、Tempo が止まってもアプリ本体は無影響。
+  tempo:
+    image: grafana/tempo:2.10.7
+    container_name: rss-watch-tempo
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports:
+      # OTLP/HTTP 受信。ホスト上のアプリ(systemd / bootRun)から届けばよいのでループバック限定で bind。
+      # Tempo API(:3200)は publish しない(Grafana から compose 内 DNS tempo:3200 で届く)
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      # マウント先はイメージ既定のデータディレクトリ /var/tempo(uid 10001 所有)。
+      # named volume が所有権を継承するため、非 root 実行のまま書き込める(tempo/tempo.yml 参照)
+      - tempo-data:/var/tempo
+    restart: unless-stopped
+
   # Prometheus のメトリクスを可視化するダッシュボード。
   # datasource とダッシュボードは provisioning でリポジトリ管理し、手動セットアップなしで起動直後から閲覧できる。
   grafana:
@@ -180,3 +197,4 @@ volumes:
   postgres-data:
   prometheus-data:
   grafana-data:
+  tempo-data:

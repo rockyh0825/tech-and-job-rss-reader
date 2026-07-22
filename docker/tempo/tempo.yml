@@ -1,0 +1,35 @@
+# Grafana Tempo(トレースバックエンド)の設定。
+# 設定キーは採用バージョン v2.10.7 の公式リファレンス
+# (docs/sources/tempo/configuration/_index.md)と突き合わせて確定した。
+server:
+  # Tempo API(TraceQL 検索など)。Grafana から compose 内 DNS tempo:3200 で参照する
+  # (ホストへは publish しない — docker-compose.yml 参照)
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          # Tempo 2.7+ は受信の既定 bind が localhost に変わったため 0.0.0.0 を明示する
+          # (既定のままだとコンテナ外 = ホスト上のアプリからの OTLP/HTTP 送信を受け取れない)
+          endpoint: 0.0.0.0:4318
+
+storage:
+  trace:
+    # 単一ノードの filesystem バックエンドで十分(S3 等のオブジェクトストレージは不要)。
+    # パスは design の /var/lib/tempo からイメージ既定の /var/tempo に変更した:
+    # 公式イメージは非 root(uid 10001)実行で、イメージ内に用意済みの /var/tempo(10001 所有)に
+    # named volume をマウントすれば所有権が継承され、chown 用 init コンテナなしで書き込める
+    # (/var/lib/tempo はイメージに存在せず、volume が root 所有になり起動に失敗する)
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal
+
+compactor:
+  compaction:
+    # 14 日保持。トレースは直近の性能調査用途なので Prometheus の 90d は不要
+    # (2.10 系の既定値も 336h だが、保持期間は運用上の意思決定なので明示しておく)
+    block_retention: 336h
