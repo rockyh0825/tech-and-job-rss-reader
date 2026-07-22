@@ -21,7 +21,9 @@
 - **kuery-client**(`dev.hsbrysk:kuery-client-spring-data-jdbc` + Gradle プラグイン `dev.hsbrysk.kuery-client`): SQL を Kotlin の文字列補間で書く DB クライアント。補間はコンパイラプラグインによりバインドパラメータに変換されるため injection 安全。spring-data-jdbc ベースで `@Transactional` と互換
 - **Flyway**(flyway-core): スキーマ管理。`db/migration/` の `V{番号}__{説明}.sql` を起動時に自動適用(Spring Boot 統合)
 - **Prometheus**(compose 管理): メトリクスの収集・保持。アプリの `/actuator/prometheus` を 15 秒間隔で scrape し 90 日保持する pull 型(Prometheus が止まってもアプリは無影響)
-- **Grafana**(compose 管理): メトリクスの可視化。datasource・ダッシュボードは provisioning(`docker/grafana/provisioning/`)でリポジトリ管理し、手動セットアップなしで閲覧できる
+- **Grafana**(compose 管理): メトリクスの可視化とトレースの閲覧(Explore + TraceQL)。datasource・ダッシュボードは provisioning(`docker/grafana/provisioning/`)でリポジトリ管理し、手動セットアップなしで閲覧できる
+- **Micrometer Tracing**(micrometer-tracing-bridge-otel + opentelemetry-exporter-otlp + JDBC 観測は別ライブラリ `net.ttddyy.observation:datasource-micrometer-spring-boot`(Boot BOM 管理外・バージョン明示)): HTTP リクエストと JDBC クエリのスパンを生成し OTLP/HTTP で Tempo へ送信。SQL スパン(SQL 文つき・バインド値なし)がクエリ単位で出るのが要点。全量サンプリング
+- **Tempo**(compose 管理): トレースの受信(OTLP/HTTP `127.0.0.1:4318`)・保持(14 日)・検索。push 型だが送信はアプリ側の非同期バッチで、Tempo が止まってもアプリは無影響
 
 ### Application Architecture
 

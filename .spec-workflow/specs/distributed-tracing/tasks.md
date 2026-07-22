@@ -13,13 +13,14 @@
   - 完了条件: `docker compose config` が通り、`docker compose up -d` + `./gradlew bootRun` 後に `/api/report` を数回叩くと、Grafana Explore(Tempo datasource)の TraceQL 検索でトレースがヒットし、ウォーターフォールに HTTP サーバースパン + 子の SQL スパン(SQL 文つき・バインド値なし)が並ぶ。Tempo 停止中もアプリが正常応答する(要件 2.2〜2.4 の実地確認を含む)
   - _Requirements: 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2_
 
-- [ ] 3. (任意)live リスナーの Kafka observation 有効化
+- [ ] 3. (任意)live リスナーの Kafka observation 有効化 — **見送り**
   - File: src/main/kotlin/dev/rockyh/rsswatch/shared/config/KafkaConfig.kt(liveKafkaListenerContainerFactory に `factory.containerProperties.isObservationEnabled = true`。`spring.kafka.listener.observation-enabled` プロパティは自動構成ファクトリにしか効かないため使えない — design の「Kafka observation」参照)、必要に応じて docker/grafana/provisioning/dashboards/rss-watch.json(Kafka リスナーパネルのタグ追随)
   - 制約の確認: sink(バッチリスナー)は observation 対象外でスパンが付かない。live の `spring.kafka.listener` メトリクスがタグ体系ごと変わる(`name` → `spring.kafka.listener.id` + `messaging.*`)ため、Grafana「Kafka リスナー」パネルのデグレ確認と必要な修正が完了条件に含まれる
   - 完了条件: live の消費にスパンが付き Tempo で閲覧できる。Grafana の Kafka リスナーパネルが sink・live とも引き続き描画される(タグ混在への対処込み)。既存テストが green のまま
+  - **見送り判断(Task 4 時点)**: sink(バッチリスナー)は observation 非対応で対応できるのは live のみだが、有効化すると既存 Grafana「Kafka リスナー」パネルのタグ体系が変わるデグレ対処コストが、HTTP + SQL という主目的への追加価値に見合わないため実施しない(producer → consumer のトレース連結が必要になったら別 spec で再検討)
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 4. docs・steering 更新
+- [x] 4. docs・steering 更新
   - File: docs/home-server.md(Tempo の役割・ポート 4318・保持 14 日・Grafana Explore + TraceQL での閲覧手順と検索例・Tempo 停止時はエクスポート失敗ログが出るだけでアプリ無影響であること)、.spec-workflow/steering/tech.md(Key Dependencies に Tempo と Micrometer Tracing を追記)、.spec-workflow/steering/structure.md(`docker/` の説明に tempo/ を反映)
   - exemplars(メトリクス → トレースのジャンプ)と producer 側トレース連結はスコープ外・将来課題として docs に明記する
   - 完了条件: docs の手順どおりに Grafana Explore で `/api/report` のウォーターフォールへたどり着ける。steering の記述が実態(compose のサービス構成・依存一覧)と一致する

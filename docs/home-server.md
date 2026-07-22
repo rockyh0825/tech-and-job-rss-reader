@@ -1,6 +1,6 @@
 # 自宅サーバーでの常駐運用
 
-fat jar を `/opt/rss-watch` に配置し、systemd(`rss-watch.service`)で常駐させる。依存(Kafka + PostgreSQL + Prometheus + Grafana)は Docker Compose、環境変数は `/etc/rss-watch.env` に集約する。
+fat jar を `/opt/rss-watch` に配置し、systemd(`rss-watch.service`)で常駐させる。依存(Kafka + PostgreSQL + Prometheus + Grafana + Tempo)は Docker Compose、環境変数は `/etc/rss-watch.env` に集約する。
 
 ## 構成
 
@@ -8,7 +8,7 @@ fat jar を `/opt/rss-watch` に配置し、systemd(`rss-watch.service`)で常�
 |---|---|
 | アプリ | `/opt/rss-watch/rss-watch.jar` を systemd `rss-watch.service` で常駐 |
 | 設定・機密 | `/etc/rss-watch.env`(unit の `EnvironmentFile=` で読み込み) |
-| Kafka + PostgreSQL + Prometheus + Grafana | `docker/docker-compose.yml`(`restart: unless-stopped` で再起動後も自動復帰) |
+| Kafka + PostgreSQL + Prometheus + Grafana + Tempo | `docker/docker-compose.yml`(`restart: unless-stopped` で再起動後も自動復帰) |
 | デプロイ | main へのマージで GitHub Actions self-hosted runner が jar を差し替え(後述) |
 
 ## 初回セットアップ
@@ -22,7 +22,7 @@ sudo mkdir -p /opt/rss-watch
 sudo cp build/libs/rss-watch.jar /opt/rss-watch/rss-watch.jar
 sudo cp feeds.toml /opt/rss-watch/
 
-# 3. 依存サービス(Kafka + PostgreSQL + Prometheus + Grafana)を起動
+# 3. 依存サービス(Kafka + PostgreSQL + Prometheus + Grafana + Tempo)を起動
 #    注意: Grafana の admin パスワードは初回 up -d 前に docker/.env で用意する(後述「観測」参照)
 docker compose -f docker/docker-compose.yml up -d
 ```
@@ -90,14 +90,15 @@ sudo systemctl enable --now rss-watch
 
 Kafka が一時停止していてもアプリは落ちない(producer/consumer がバックグラウンドで再接続し、fetcher は次周期で再巡回する)。
 
-## 観測(Prometheus + Grafana)
+## 観測(Prometheus + Grafana + Tempo)
 
-エンドポイント別レイテンシ(p50/p95/p99)・リクエストレート・JVM・HikariCP・Kafka リスナーを Grafana のダッシュボードで閲覧できる。Prometheus(収集・保持)と Grafana(可視化)は既存の `docker/docker-compose.yml` に含まれているため、専用の起動手順はない(初回セットアップ手順 3 の `up -d` で一緒に起動する)。
+エンドポイント別レイテンシ(p50/p95/p99)・リクエストレート・JVM・HikariCP・Kafka リスナーを Grafana のダッシュボードで、リクエスト単位の内訳(トレース)を Grafana の Explore で閲覧できる。Prometheus(メトリクスの収集・保持)・Grafana(可視化)・Tempo(トレースの収集・保持)は既存の `docker/docker-compose.yml` に含まれているため、専用の起動手順はない(初回セットアップ手順 3 の `up -d` で一緒に起動する)。
 
 | サービス | ポート | 内容 |
 |---|---|---|
 | Prometheus | `127.0.0.1:9090`(ループバック限定) | ホスト上のアプリ(`:8080`)の `/actuator/prometheus` を 15 秒間隔で scrape し 90 日保持 |
-| Grafana | `127.0.0.1:3001`(ループバック限定。自宅サーバーは homepage が `:3000` 使用中のため) | ダッシュボード。datasource・パネルは provisioning 済みで手動セットアップ不要 |
+| Grafana | `127.0.0.1:3001`(ループバック限定。自宅サーバーは homepage が `:3000` 使用中のため) | ダッシュボード + トレース閲覧(Explore)。datasource・パネルは provisioning 済みで手動セットアップ不要 |
+| Tempo | `127.0.0.1:4318`(ループバック限定) | ホスト上のアプリが OTLP/HTTP で push するトレースを受信し 14 日保持(後述「分散トレーシング」) |
 
 - 閲覧は匿名(Viewer)でログイン不要。ダッシュボードの編集だけ admin ログインが必要
 - 外部公開(`https://grafana.<ドメイン>`)の手順は [docs/public-access.md](public-access.md) を参照
@@ -124,6 +125,51 @@ docker compose -f docker/docker-compose.yml exec grafana grafana cli admin reset
 
 - **DOWN の場合は、まずホスト側 firewall(ufw 等)を疑う**。Prometheus はコンテナから `host.docker.internal:8080`(= ホストの `:8080`)へ scrape するため、firewall がコンテナ → ホストの `:8080` を遮断していると target が DOWN になる(その場合は Docker ブリッジからの `:8080` 受信を許可する)
 - アプリ停止中も DOWN になるが、Prometheus 側の対処は不要(アプリ再起動後に自動復帰する。欠けるのは停止期間のメトリクスのみ)
+
+### 分散トレーシング(Tempo)
+
+メトリクスで「`/api/report` が遅い」ことは分かっても内訳は分からない。トレースを見ると、1 リクエストの中で「どの SQL に何 ms かかったか」がスパンのウォーターフォール図で読み取れる。アプリ(Micrometer Tracing + OTLP)がトレースを push し、Tempo が受信・保存する。閲覧は既存 Grafana に集約し、専用 UI は増やさない。
+
+| 項目 | 内容 |
+|---|---|
+| 受信ポート | OTLP/HTTP `127.0.0.1:4318`(ループバック限定 bind。ホスト上のアプリから届けばよく LAN に露出しない) |
+| Tempo API | `:3200` はホストへ publish しない(Grafana から compose 内 DNS `tempo:3200` で参照する) |
+| 保持期間 | 14 日(`block_retention: 336h`。用途が直近の性能調査なので Prometheus の 90 日は不要)。データは named volume `tempo-data` に永続化 |
+| 設定 | `docker/tempo/tempo.yml`(コミット対象) |
+
+#### 閲覧手順(Grafana Explore + TraceQL)
+
+1. Grafana(`http://localhost:3001`)左メニューの **Explore** を開き、datasource に **Tempo** を選ぶ(provisioning 済み)
+2. **TraceQL** タブにクエリを入れて実行し、ヒットした Trace ID を開くとウォーターフォール図が表示される
+
+TraceQL の例(前 2 つは実際にヒットすることを確認済み):
+
+```
+# このアプリの全トレース(service name は spring.application.name)
+{resource.service.name="tech-and-job-rss-reader"}
+
+# /api/report のトレース(HTTP サーバースパンの名前は「メソッド + パス」の小文字)
+{name="http get /api/report"}
+
+# 遅かったリクエストに絞る構文例(閾値は調査対象に合わせて調整する。全量サンプリングなので外れ値のトレースも必ず残っている)
+{resource.service.name="tech-and-job-rss-reader" && span:duration > 500ms}
+```
+
+#### ウォーターフォールの読み方
+
+- ルートは HTTP サーバースパン(例: `http get /api/report`。`uri`・`method`・`status` タグ付き)
+- その子に JDBC のスパンが並ぶ: `connection`(コネクション取得)→ `query`(SQL 実行。属性 `jdbc.query[0]` に SQL 文が入る。バインドパラメータ値は入らない)→ `result-set`(結果の読み出し)
+- **同型の `query` スパンの繰り返し**が見えたら N+1 のサイン(#59 で解消した形の再発を目視で検出できる)
+- **最後の SQL 完了から HTTP スパン終了までの差分**が集計・シリアライズ・レスポンス書き出しの時間(専用スパンはないが差分で読める)
+
+#### Tempo 停止時の挙動
+
+Tempo が止まっていてもアプリは無影響(ローカルで compose を上げずに `bootRun` する場合も同じ)。送信はバックグラウンドの非同期バッチのため、リクエスト処理は継続し、失敗したスパンは破棄され、ERROR ログ(`HttpExporter : Failed to export spans. ... Failed to connect to /127.0.0.1:4318`)がバッチ送信間隔でスロットリングされて出るだけ。compose を上げれば解消する。恒常的に Tempo なしで動かす環境では `MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED=false` で送信だけ止められる。
+
+#### スコープ外(将来課題)
+
+- **exemplars**(Grafana のメトリクスのグラフ点からトレースへ直接ジャンプする連携): 設定が複雑になる割に、自宅規模では Explore の TraceQL 検索で足りるため見送り
+- **Kafka のトレース連結**(producer → consumer のヘッダ伝播で fetch → sink/live を 1 トレースに繋ぐ): sink(バッチリスナー)は spring-kafka の observation 非対応で、live のみ有効化しても既存 Grafana「Kafka リスナー」パネルのタグ体系が変わるデグレ対処が必要になるため見送り(distributed-tracing spec の Task 3 参照)
 
 ## 自動デプロイ(GitHub Actions self-hosted runner)
 
