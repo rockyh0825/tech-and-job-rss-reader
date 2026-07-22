@@ -3,6 +3,7 @@ package dev.rockyh.rsswatch.shared.config
 import com.zaxxer.hikari.HikariDataSource
 import dev.rockyh.rsswatch.testing.PostgresTestConfiguration
 import io.micrometer.tracing.Tracer
+import io.micrometer.tracing.otel.bridge.OtelTracer
 import javax.sql.DataSource
 import net.ttddyy.dsproxy.proxy.ProxyJdbcObject
 import org.assertj.core.api.Assertions.assertThat
@@ -48,13 +49,14 @@ class TracingConfigurationTest {
     lateinit var dataSource: DataSource
 
     @Test
-    fun tracer_bean_exists_when_tracing_bridge_is_on_classpath() {
+    fun tracer_bean_is_otel_bridge_tracer() {
         // Arrange & Act: @SpringBootTest がコンテキストを起動し、micrometer-tracing-bridge-otel の
         // 自動構成(OtelAutoConfiguration)が Tracer Bean を配線する
         val tracer = tracerProvider.ifAvailable
 
-        // Assert: ブリッジの配線が生きていれば Tracer Bean が存在する
-        assertThat(tracer).isNotNull
+        // Assert: OTel ブリッジの OtelTracer であること。actuator の NoopTracerAutoConfiguration が
+        // fallback で配線する noop Tracer でも isNotNull は通ってしまうため、型まで検証する
+        assertThat(tracer).isInstanceOf(OtelTracer::class.java)
     }
 
     @Test
