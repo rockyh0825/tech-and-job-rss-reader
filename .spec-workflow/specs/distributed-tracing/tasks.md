@@ -2,7 +2,7 @@
 
 アプリ側変更(Task 1)は TDD(Red → Green → Refactor)で進める(CLAUDE.md 準拠。テストが先・実装が後)。Task 2 は宣言的なインフラ定義のため自動テストは持たず、完了条件を手動確認で定義する。Task 3 は任意(design の「Kafka observation」の制約 — sink 非対応・既存メトリクスのタグ変化 — を確認した上で、見合わなければ見送ってよい)。
 
-- [ ] 1. Micrometer Tracing + OTLP + JDBC 観測の導入(TDD)
+- [x] 1. Micrometer Tracing + OTLP + JDBC 観測の導入(TDD)
   - File: build.gradle.kts(micrometer-tracing-bridge-otel / opentelemetry-exporter-otlp / net.ttddyy.observation:datasource-micrometer-spring-boot:1.1.1 追加。Boot BOM 管理の 2 つはバージョン指定なし)、src/main/resources/application.yml(management.tracing.sampling.probability: 1.0、management.otlp.tracing.endpoint: http://127.0.0.1:4318/v1/traces — endpoint は明示必須。design の「依存と設定」参照)
   - Test: `@AutoConfigureObservability(metrics = false)` + `management.otlp.tracing.export.enabled=false` のフルコンテキストで、Tracer Bean が存在する・sampling probability が 1.0 で束縛されている・DataSource が datasource-micrometer によりプロキシされている(アサート方法は実装時にライブラリ API を確認)。既存フルコンテキストテスト 6 個が無変更で green のまま(テスト基盤が `management.tracing.enabled=false` を自動適用するため送信は起きない — design の Testing Strategy 参照)
   - 完了条件: 上記テストがすべて green で、テスト実行ログに OTLP 接続エラーが出ない。datasource-micrometer 1.1.1 と Boot 3.5.6 の互換を確認済み(合わなければ対応バージョンへ調整して design に追記)
