@@ -1,12 +1,12 @@
 # デイリーダイジェスト(Discord 通知)
 
-`notify` feature を有効にすると、毎朝 1 回「**求人で言及されている技術**」の上位を選び、各技術に「**その技術の記事**」を添えて Claude 要約付きで Discord に投稿する(report のクロスリンクと同じ組み立て)。
+`notify` feature を有効にすると、毎朝 1 回「**記事で言及の多い注目技術**」の上位を選び、各技術に「**その技術の記事**」を添えて Claude 要約付きで Discord に投稿する(report のクロスリンクと同じ組み立て)。
 
 このほかに [CNCF ダイジェスト](#cncf-ダイジェスト専用チャンネル)(CNCF フィードの新着を専用チャンネルへ配信)があり、既存ダイジェストとは**独立にオン/オフ**できる。
 
 ## 投稿の形式
 
-投稿は **記事 1 件ごとに 1 通**に分ける。各通に author 見出し(技術名 + 求人言及数)・記事タイトル・「要約」フィールド・記事ページの OGP サムネイル(embed 右上)を載せ、**記事を投稿し終えたら最後にサイト一覧への導線リンクを 1 通**送る。一度通知した記事は二度と載せない(通知済み guid 全件を除外)。実際に投稿できた記事だけを通知済みとして記録するため、投稿済みの記事が翌日重複せず、未投稿の記事は次回の巡回で改めて候補に上がる。
+投稿は **記事 1 件ごとに 1 通**に分ける。各通に author 見出し(技術名 + 記事言及数)・記事タイトル・「要約」フィールド・記事ページの OGP サムネイル(embed 右上)を載せ、**記事を投稿し終えたら最後にサイト一覧への導線リンクを 1 通**送る。一度通知した記事は二度と載せない(通知済み guid 全件を除外)。実際に投稿できた記事だけを通知済みとして記録するため、投稿済みの記事が翌日重複せず、未投稿の記事は次回の巡回で改めて候補に上がる。
 
 サムネイルは記事ページを取得して `og:image`(無ければ `og:image:url` → `twitter:image`)を解決する。Discord は Webhook で渡した embed をそのまま描画しリンク先の OGP を自前で読みには行かないため、こちら側で解決する必要がある。取得・解析に失敗した記事は画像なしで投稿する。
 
@@ -41,11 +41,11 @@ java -jar rss-watch.jar
 | `RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL` | Discord Webhook URL。**設定時のみ notify feature が有効**(未設定=無効) | (未設定) |
 | `ANTHROPIC_API_KEY` | Claude API キー。未設定なら要約なしでフォールバック | (未設定) |
 | `rss-watch.notify.cron` | 配信時刻(Spring cron 式) | `0 0 8 * * *`(毎朝 8:00) |
-| `rss-watch.notify.window-days` | 求人で言及された技術の集計窓(日) | `7` |
-| `rss-watch.notify.tech-limit` | 載せる技術の上位件数(求人言及数の多い順) | `3` |
+| `rss-watch.notify.window-days` | 記事で言及された技術の集計窓(日) | `7` |
+| `rss-watch.notify.tech-limit` | 載せる技術の上位件数(記事言及数の多い順) | `3` |
 | `rss-watch.notify.articles-per-tech` | 各技術に載せる関連記事の最大件数 | `3` |
 | `rss-watch.notify.interests.categories` | 興味のある技術カテゴリ(`TechCategory` の値。例 `cloud-infra`)。該当技術を優先して選抜する | `[]` |
-| `rss-watch.notify.interests.keywords` | 興味のある個別キーワード(辞書の正規化名。大文字小文字は無視。例 `Kotlin`)。求人ランキング圏外でも候補に含める | `[]` |
+| `rss-watch.notify.interests.keywords` | 興味のある個別キーワード(辞書の正規化名。大文字小文字は無視。例 `Kotlin`)。記事ランキング圏外でも候補に含める | `[]` |
 | `rss-watch.notify.site-url` | 通知末尾に添えるサイト一覧への導線 URL | `https://rss-watch.rocky-ha.com/` |
 | `rss-watch.notify.claude.model` | 要約モデル ID | `claude-haiku-4-5-20251001` |
 | `rss-watch.notify.claude.max-tokens` | 要約の最大トークン数 | `256` |

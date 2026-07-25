@@ -160,17 +160,17 @@ class RssItemRepositoryTest {
     // --- techRanking ---
 
     @Test
-    fun tech_ranking_counts_job_keyword_mentions_in_descending_order() {
+    fun tech_ranking_counts_keyword_mentions_of_the_given_category_in_descending_order() {
         repository.insertIgnore(
             listOf(
-                rssItem("job1", category = "jobs", keywords = listOf("Kotlin", "AWS")),
-                rssItem("job2", category = "jobs", keywords = listOf("Kotlin")),
-                rssItem("job3", category = "jobs", keywords = listOf("AWS", "Kotlin")),
-                rssItem("job4", category = "jobs", keywords = listOf("Go")),
+                rssItem("article1", category = "tech", keywords = listOf("Kotlin", "AWS")),
+                rssItem("article2", category = "tech", keywords = listOf("Kotlin")),
+                rssItem("article3", category = "tech", keywords = listOf("AWS", "Kotlin")),
+                rssItem("article4", category = "tech", keywords = listOf("Go")),
             ),
         )
 
-        val ranking = repository.techRanking(days = 7)
+        val ranking = repository.techRanking(ItemCategory.TECH, days = 7)
 
         assertEquals(
             listOf(
@@ -183,7 +183,7 @@ class RssItemRepositoryTest {
     }
 
     @Test
-    fun tech_ranking_ignores_tech_articles() {
+    fun tech_ranking_counts_only_items_of_the_given_category() {
         repository.insertIgnore(
             listOf(
                 rssItem("article", category = "tech", keywords = listOf("Kotlin")),
@@ -191,33 +191,47 @@ class RssItemRepositoryTest {
             ),
         )
 
-        val ranking = repository.techRanking(days = 7)
+        val ranking = repository.techRanking(ItemCategory.TECH, days = 7)
 
-        assertEquals(listOf(TechRankingEntry("Go", 1)), ranking)
+        assertEquals(listOf(TechRankingEntry("Kotlin", 1)), ranking)
     }
 
     @Test
-    fun tech_ranking_excludes_jobs_older_than_days_window() {
+    fun tech_ranking_counts_job_mentions_when_jobs_category_is_given() {
         repository.insertIgnore(
             listOf(
-                rssItem(
-                    "old-job",
-                    category = "jobs",
-                    publishedAt = Instant.now().minus(Duration.ofDays(10)),
-                    keywords = listOf("Kotlin"),
-                ),
-                rssItem("recent-job", category = "jobs", keywords = listOf("Go")),
+                rssItem("article", category = "tech", keywords = listOf("Kotlin")),
+                rssItem("job", category = "jobs", keywords = listOf("Go")),
             ),
         )
 
-        val ranking = repository.techRanking(days = 7)
+        val ranking = repository.techRanking(ItemCategory.JOBS, days = 7)
 
         assertEquals(listOf(TechRankingEntry("Go", 1)), ranking)
     }
 
     @Test
-    fun tech_ranking_returns_empty_list_when_no_jobs_exist() {
-        val ranking = repository.techRanking(days = 7)
+    fun tech_ranking_excludes_items_older_than_days_window() {
+        repository.insertIgnore(
+            listOf(
+                rssItem(
+                    "old-article",
+                    category = "tech",
+                    publishedAt = Instant.now().minus(Duration.ofDays(10)),
+                    keywords = listOf("Kotlin"),
+                ),
+                rssItem("recent-article", category = "tech", keywords = listOf("Go")),
+            ),
+        )
+
+        val ranking = repository.techRanking(ItemCategory.TECH, days = 7)
+
+        assertEquals(listOf(TechRankingEntry("Go", 1)), ranking)
+    }
+
+    @Test
+    fun tech_ranking_returns_empty_list_when_no_items_of_the_category_exist() {
+        val ranking = repository.techRanking(ItemCategory.TECH, days = 7)
 
         assertEquals(emptyList(), ranking)
     }

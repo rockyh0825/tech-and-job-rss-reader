@@ -32,9 +32,11 @@ class BuildReportUseCaseTest {
         val receivedDays = mutableListOf<Int>()
         var itemsByKeywordCallCount = 0
         val itemsByKeywordsCalls = mutableListOf<List<String>>()
+        val techRankingCategories = mutableListOf<ItemCategory>()
 
-        override fun techRanking(days: Int): List<TechMention> {
+        override fun techRanking(category: ItemCategory, days: Int): List<TechMention> {
             receivedDays += days
+            techRankingCategories += category
             return ranking
         }
 
@@ -67,7 +69,7 @@ class BuildReportUseCaseTest {
     }
 
     @Test
-    fun builds_cross_sections_in_job_mention_ranking_order() {
+    fun builds_cross_sections_in_article_mention_ranking_order() {
         val useCase =
             BuildReportUseCase(
                 FakeArchive(
@@ -86,6 +88,16 @@ class BuildReportUseCaseTest {
         assertEquals(listOf("Kotlin", "Go"), report.crossSections.map { it.keyword })
         assertEquals(listOf(3, 1), report.crossSections.map { it.mentionCount })
         assertEquals(listOf("kotlin-article"), report.crossSections[0].articles.map { it.guid })
+    }
+
+    @Test
+    fun ranks_techs_by_tech_article_mentions_not_by_job_mentions() {
+        val archive = FakeArchive(ranking = listOf(TechMention("Kotlin", 3)))
+        val useCase = BuildReportUseCase(archive, FakePostedGuids())
+
+        useCase.build(days = 7)
+
+        assertEquals(listOf(ItemCategory.TECH), archive.techRankingCategories)
     }
 
     @Test

@@ -41,7 +41,7 @@ docker exec rss-watch-postgres psql -U rsswatch -d rsswatch \
 
 ## 3. クロスリンクレポート API
 
-目玉機能のクロスリンク(求人で言及されている技術 × その技術の記事)が返ってくることを確認する。
+目玉機能のクロスリンク(注目技術 × その技術の記事)が返ってくることを確認する。
 
 ```bash
 # 正常系: crossSections に技術キーワードごとの言及回数と記事が並ぶ

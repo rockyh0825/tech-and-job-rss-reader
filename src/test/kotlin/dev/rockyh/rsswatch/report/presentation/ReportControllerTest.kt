@@ -24,7 +24,7 @@ class ReportControllerTest {
     private class RecordingArchive : ArchiveQueryPort {
         val receivedDays = mutableListOf<Int>()
 
-        override fun techRanking(days: Int): List<TechMention> {
+        override fun techRanking(category: ItemCategory, days: Int): List<TechMention> {
             receivedDays += days
             return listOf(TechMention("Kotlin", 2))
         }

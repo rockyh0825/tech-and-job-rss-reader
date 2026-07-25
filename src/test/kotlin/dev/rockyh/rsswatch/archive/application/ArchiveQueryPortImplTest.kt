@@ -25,7 +25,12 @@ class ArchiveQueryPortImplTest {
         )
 
     private inner class FakeItemQueries : ItemQueries {
-        override fun techRanking(days: Int): List<TechRankingEntry> = listOf(TechRankingEntry("Kotlin", 3))
+        val techRankingCategories = mutableListOf<ItemCategory>()
+
+        override fun techRanking(category: ItemCategory, days: Int): List<TechRankingEntry> {
+            techRankingCategories += category
+            return listOf(TechRankingEntry("Kotlin", 3))
+        }
 
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> = emptyList()
 
@@ -42,9 +47,19 @@ class ArchiveQueryPortImplTest {
     fun maps_tech_ranking_entries_to_tech_mentions() {
         val port = ArchiveQueryPortImpl(FakeItemQueries())
 
-        val ranking = port.techRanking(days = 7)
+        val ranking = port.techRanking(ItemCategory.TECH, days = 7)
 
         assertEquals(listOf(TechMention("Kotlin", 3)), ranking)
+    }
+
+    @Test
+    fun delegates_tech_ranking_category_to_item_queries() {
+        val itemQueries = FakeItemQueries()
+        val port = ArchiveQueryPortImpl(itemQueries)
+
+        port.techRanking(ItemCategory.JOBS, days = 7)
+
+        assertEquals(listOf(ItemCategory.JOBS), itemQueries.techRankingCategories)
     }
 
     @Test

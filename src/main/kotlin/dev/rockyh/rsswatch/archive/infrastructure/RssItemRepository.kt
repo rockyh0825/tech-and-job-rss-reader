@@ -65,17 +65,17 @@ class RssItemRepository(
         return inserted
     }
 
-    /** 直近 [days] 日の求人([ItemCategory.JOBS])で言及された技術キーワードを言及求人数の降順で返す。 */
-    override fun techRanking(days: Int): List<TechRankingEntry> {
+    /** 直近 [days] 日の指定カテゴリの item で言及された技術キーワードを言及 item 数の降順で返す。 */
+    override fun techRanking(category: ItemCategory, days: Int): List<TechRankingEntry> {
         val cutoff = cutoff(days)
-        val jobsCategory = ItemCategory.JOBS.value
+        val categoryValue = category.value
         return kueryClient
             .sql {
                 +"""
                 SELECT k.keyword AS keyword, COUNT(*) AS mentionCount
                 FROM item_keywords k
                 JOIN items i ON i.guid = k.guid
-                WHERE i.category = $jobsCategory
+                WHERE i.category = $categoryValue
                   AND COALESCE(i.published_at, i.fetched_at) >= $cutoff
                 GROUP BY k.keyword
                 ORDER BY mentionCount DESC, k.keyword ASC

@@ -6,7 +6,7 @@ import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import org.springframework.stereotype.Service
 
-/** 求人で言及された技術 1 つ分のクロスセクション(その技術の記事を添える)。 */
+/** 注目技術(記事で言及の多い技術)1 つ分のクロスセクション(その技術の記事を添える)。 */
 data class CrossSection(
     val keyword: String,
     val mentionCount: Int,
@@ -22,8 +22,8 @@ data class Report(
 )
 
 /**
- * 「求人で言及されている技術」と「その技術の記事」をクロスリンクしたレポートを組み立てる。
- * クロスセクションは言及求人数の降順(ArchiveQueryPort の並びを保持)。
+ * 「記事で言及の多い注目技術」と「その技術の記事」をクロスリンクしたレポートを組み立てる。
+ * クロスセクションは言及記事数の降順(ArchiveQueryPort の並びを保持)。
  */
 @Service
 class BuildReportUseCase(
@@ -32,7 +32,7 @@ class BuildReportUseCase(
 ) {
 
     fun build(days: Int): Report {
-        val ranking = archiveQueryPort.techRanking(days)
+        val ranking = archiveQueryPort.techRanking(ItemCategory.TECH, days)
         // キーワードごとの個別クエリは N+1 になるため、全キーワード分を一括で取得する
         val articlesByKeyword =
             archiveQueryPort.itemsByKeywords(ranking.map { it.keyword }, ItemCategory.TECH, days)
