@@ -11,9 +11,9 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 
 /**
- * 「求人で言及された技術 × その技術の記事」を Discord Webhook へ POST する(infrastructure)。
+ * 「記事で言及の多い注目技術 × その技術の記事」を Discord Webhook へ POST する(infrastructure)。
  *
- * embed の組み立て(author に技術名 + 求人言及数、title に記事タイトル+URL、field「要約」に AI 要約)だけを
+ * embed の組み立て(author に技術名 + 記事言及数、title に記事タイトル+URL、field「要約」に AI 要約)だけを
  * 担い、投稿の transport(リトライ・レート制限・打ち切り分類・導線送信)は [DiscordPoster] に委譲する。
  * 投稿のセマンティクスとエラーの扱いは [DiscordPoster] の kdoc を参照。
  */
@@ -61,7 +61,7 @@ class DiscordWebhookClient(
         flatMap { digest -> digest.articles.map { article -> digest to article } }
 
     /**
-     * 記事 1 件を embed に変換する。author に技術グループの見出し(技術名 + 求人言及数)、field は見出しを
+     * 記事 1 件を embed に変換する。author に技術グループの見出し(技術名 + 記事言及数)、field は見出しを
      * 「要約」に固定して AI 要約本文を載せる(要約なしは field ごと省く)。記事の OGP 画像は
      * thumbnail(右上の小さい画像)に載せる(解決できていなければ省く)。
      */
@@ -87,12 +87,14 @@ class DiscordWebhookClient(
         )
 
     /**
-     * 技術グループの見出し文言(例: 「🧩 Kotlin ・ 求人 5 件で言及」)。
-     * 興味技術は ⭐、求人に出ていない技術(mentionCount=0)は「求人 0 件で言及」の代わりに「新着記事」。
+     * 技術グループの見出し文言(例: 「🧩 Kotlin ・ 記事 5 件で言及」)。
+     * 興味技術は ⭐、ランキング外の興味技術(mentionCount=0)は「記事 0 件で言及」の代わりに「新着記事」。
+     * mentionCount=0 は記事ベースのランキング(新着記事があれば必ずランキング内)では発生しないが、
+     * ランキング軸を求人に戻した場合のために残している。
      */
     private fun authorLabel(digest: TechDigest): String {
         val icon = if (digest.interested) "⭐" else "🧩"
-        val suffix = if (digest.mentionCount > 0) "求人 ${digest.mentionCount} 件で言及" else "新着記事"
+        val suffix = if (digest.mentionCount > 0) "記事 ${digest.mentionCount} 件で言及" else "新着記事"
         return "$icon ${digest.keyword} ・ $suffix"
     }
 

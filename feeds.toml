@@ -44,10 +44,7 @@ name = "We Work Remotely (Programming)"
 url = "https://weworkremotely.com/categories/remote-programming-jobs.rss"
 category = "jobs"
 
-[[feeds]]
-name = "Remote OK"
-url = "https://remoteok.com/remote-dev-jobs.rss"
-category = "jobs"
+# Remote OK は 2026-07 時点で HTTP 410 Gone(フィード廃止)のため削除した
 
 # ---- CNCF 系(issue #46。専用の Discord チャンネルへ配信)----
 

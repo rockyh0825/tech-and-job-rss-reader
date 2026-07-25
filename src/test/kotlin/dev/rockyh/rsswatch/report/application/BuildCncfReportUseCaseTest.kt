@@ -19,7 +19,7 @@ class BuildCncfReportUseCaseTest {
         val receivedCategories = mutableListOf<ItemCategory>()
         val receivedDays = mutableListOf<Int>()
 
-        override fun techRanking(days: Int): List<TechMention> = error("not used by the CNCF report")
+        override fun techRanking(category: ItemCategory, days: Int): List<TechMention> = error("not used by the CNCF report")
 
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
             receivedCategories += category

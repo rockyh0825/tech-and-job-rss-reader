@@ -31,7 +31,12 @@ class BuildDigestUseCaseTest {
         private val ranking: List<TechMention>,
         private val articlesByKeyword: Map<String, List<RssItem>> = emptyMap(),
     ) : ArchiveQueryPort {
-        override fun techRanking(days: Int): List<TechMention> = ranking
+        val techRankingCategories = mutableListOf<ItemCategory>()
+
+        override fun techRanking(category: ItemCategory, days: Int): List<TechMention> {
+            techRankingCategories += category
+            return ranking
+        }
 
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> = emptyList()
 
@@ -145,6 +150,15 @@ class BuildDigestUseCaseTest {
         )
 
     private fun TechDigest.articleGuids(): List<String> = articles.map { it.guid }
+
+    @Test
+    fun ranks_candidate_techs_by_tech_article_mentions_not_by_job_mentions() {
+        val archive = FakeArchive(ranking = listOf(TechMention("Kotlin", 3)), articlesByKeyword = emptyMap())
+
+        useCase(archive).run()
+
+        assertEquals(listOf(ItemCategory.TECH), archive.techRankingCategories)
+    }
 
     @Test
     fun builds_sections_per_top_tech_with_related_articles_and_marks_all_shown() {
@@ -390,6 +404,8 @@ class BuildDigestUseCaseTest {
 
     @Test
     fun includes_interested_tech_absent_from_ranking_with_zero_mention_when_it_has_fresh_articles() {
+        // 記事ベースのランキングでは「ランキング外なのに新着記事がある」状態は実際には発生しないが、
+        // ランキング軸を求人に戻した場合の救済機構として仕様を固定しておく
         val archive =
             FakeArchive(
                 ranking = listOf(TechMention("Python", 30)),

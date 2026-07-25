@@ -288,7 +288,7 @@ internal const val DEFAULT_SITE_URL = "https://rss-watch.rocky-ha.com/"
 internal fun siteCtaEmbed(siteUrl: String): DiscordPoster.Embed =
     DiscordPoster.Embed(
         author = null,
-        title = "🔗 求人で注目の技術と記事をサイトで見る",
+        title = "🔗 注目の技術と記事をサイトで見る",
         url = siteUrl,
         description = null,
         thumbnail = null,

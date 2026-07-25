@@ -52,7 +52,7 @@ tech-and-job-rss-reader/
     │   │   └── report/                  # feature: クロスリンクレポート
     │   │       ├── presentation/        # ReportController(GET /api/report)
     │   │       ├── application/         # BuildReportUseCase
-    │   │       └── domain/              # クロスリンク組み立てルール(求人技術 × 関連記事)
+    │   │       └── domain/              # クロスリンク組み立てルール(注目技術 × 関連記事)
     │   └── resources/
     │       ├── application.yml
     │       ├── db/migration/            # Flyway マイグレーション(スキーマの唯一の正本)

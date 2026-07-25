@@ -27,7 +27,7 @@ class CncfReportControllerTest {
     private class RecordingArchive : ArchiveQueryPort {
         val receivedDays = mutableListOf<Int>()
 
-        override fun techRanking(days: Int): List<TechMention> = error("not used by the CNCF report")
+        override fun techRanking(category: ItemCategory, days: Int): List<TechMention> = error("not used by the CNCF report")
 
         override fun itemsByKeyword(keyword: String, category: ItemCategory, days: Int): List<RssItem> =
             error("not used by the CNCF report")

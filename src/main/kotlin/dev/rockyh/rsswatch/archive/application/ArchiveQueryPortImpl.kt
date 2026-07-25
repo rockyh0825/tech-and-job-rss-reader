@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component
 @Component
 class ArchiveQueryPortImpl(private val itemQueries: ItemQueries) : ArchiveQueryPort {
 
-    override fun techRanking(days: Int): List<TechMention> =
-        itemQueries.techRanking(days).map { TechMention(it.keyword, it.mentionCount) }
+    override fun techRanking(category: ItemCategory, days: Int): List<TechMention> =
+        itemQueries.techRanking(category, days).map { TechMention(it.keyword, it.mentionCount) }
 
     override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> =
         itemQueries.itemsByCategory(category, days)

@@ -3,7 +3,7 @@ package dev.rockyh.rsswatch.capabilities
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
 
-/** 求人で言及された技術キーワードとその言及求人数。 */
+/** 指定カテゴリの item で言及された技術キーワードとその言及 item 数。 */
 data class TechMention(
     val keyword: String,
     val mentionCount: Int,
@@ -17,8 +17,8 @@ data class TechMention(
  */
 interface ArchiveQueryPort {
 
-    /** 直近 [days] 日の求人で言及された技術キーワードを言及求人数の降順で返す。 */
-    fun techRanking(days: Int): List<TechMention>
+    /** 直近 [days] 日の指定カテゴリの item で言及された技術キーワードを言及 item 数の降順で返す。 */
+    fun techRanking(category: ItemCategory, days: Int): List<TechMention>
 
     /** 直近 [days] 日の指定カテゴリの item を新しい順で返す。 */
     fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem>

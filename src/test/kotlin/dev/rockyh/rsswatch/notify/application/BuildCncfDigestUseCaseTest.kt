@@ -25,7 +25,7 @@ class BuildCncfDigestUseCaseTest {
         val receivedCategories = mutableListOf<ItemCategory>()
         val receivedDays = mutableListOf<Int>()
 
-        override fun techRanking(days: Int): List<TechMention> = error("not used by the CNCF digest")
+        override fun techRanking(category: ItemCategory, days: Int): List<TechMention> = error("not used by the CNCF digest")
 
         override fun itemsByCategory(category: ItemCategory, days: Int): List<RssItem> {
             receivedCategories += category

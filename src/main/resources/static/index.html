@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RSS Watch — 求人技術 × 記事クロスリンク</title>
+<title>RSS Watch — 注目技術 × 記事クロスリンク</title>
 <style>
   :root {
     --bg: #f6f7f9;
@@ -137,7 +137,7 @@
 <main id="view-main">
   <div>
     <section>
-      <h2>求人で言及されている技術 × 関連記事(言及求人数順)</h2>
+      <h2>注目の技術 × 関連記事(言及記事数順)</h2>
       <div id="cross-sections"><p class="empty">読み込み中…</p></div>
     </section>
   </div>
@@ -210,7 +210,7 @@
     if (sections.length === 0) {
       const p = document.createElement("p");
       p.className = "empty";
-      p.textContent = "直近の求人に技術キーワードが見つかりませんでした";
+      p.textContent = "直近の記事に技術キーワードが見つかりませんでした";
       container.append(p);
       return;
     }
@@ -223,7 +223,7 @@
       name.textContent = section.keyword;
       const count = document.createElement("span");
       count.className = "count";
-      count.textContent = `求人 ${section.mentionCount} 件で言及`;
+      count.textContent = `記事 ${section.mentionCount} 件で言及`;
       heading.append(name, count);
       const ul = document.createElement("ul");
       ul.className = "items";

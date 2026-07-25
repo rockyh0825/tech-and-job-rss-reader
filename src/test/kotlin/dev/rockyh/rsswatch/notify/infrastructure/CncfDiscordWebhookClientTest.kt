@@ -201,7 +201,7 @@ class CncfDiscordWebhookClientTest {
             .expect(requestTo(webhookUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.embeds.length()").value(2))
-            .andExpect(jsonPath("$.embeds[0].title").value("🔗 求人で注目の技術と記事をサイトで見る"))
+            .andExpect(jsonPath("$.embeds[0].title").value("🔗 注目の技術と記事をサイトで見る"))
             .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
             .andExpect(jsonPath("$.embeds[1].title").value("🔗 CNCF プロジェクトの成熟度一覧を見る"))
             .andExpect(jsonPath("$.embeds[1].url").value(ctaUrl))

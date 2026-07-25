@@ -113,7 +113,7 @@ class DiscordWebhookClientTest {
     fun each_article_message_carries_its_tech_author_and_fixed_summary_field() {
         server
             .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 求人 5 件で言及"))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 記事 5 件で言及"))
             .andExpect(jsonPath("$.embeds[0].url").value("https://example.com/1"))
             .andExpect(jsonPath("$.embeds[0].fields[0].name").value("要約"))
             .andExpect(jsonPath("$.embeds[0].fields[0].value").value("1行目\n2行目\n3行目"))
@@ -135,11 +135,11 @@ class DiscordWebhookClientTest {
             )
         server
             .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 求人 5 件で言及"))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 記事 5 件で言及"))
             .andRespond(withSuccess())
         server
             .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Go ・ 求人 3 件で言及"))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Go ・ 記事 3 件で言及"))
             .andRespond(withSuccess())
         server
             .expect(requestTo(webhookUrl))
@@ -160,7 +160,7 @@ class DiscordWebhookClientTest {
             )
         server
             .expect(requestTo(webhookUrl))
-            .andExpect(jsonPath("$.embeds[0].author.name").value("⭐ AWS ・ 求人 12 件で言及"))
+            .andExpect(jsonPath("$.embeds[0].author.name").value("⭐ AWS ・ 記事 12 件で言及"))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
 
@@ -172,7 +172,7 @@ class DiscordWebhookClientTest {
 
     @Test
     fun shows_fresh_articles_label_instead_of_zero_mentions() {
-        // 求人に出ていない興味技術(mentionCount=0)は「求人 0 件で言及」ではなく新着記事の見出しにする
+        // ランキング外の興味技術(mentionCount=0)は「記事 0 件で言及」ではなく新着記事の見出しにする
         val digest =
             listOf(
                 TechDigest("Elixir", 0, listOf(article("g1", "記事", "https://example.com/1", null)), interested = true),
@@ -275,7 +275,7 @@ class DiscordWebhookClientTest {
             .expect(requestTo(webhookUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.embeds.length()").value(1))
-            .andExpect(jsonPath("$.embeds[0].title").value("🔗 求人で注目の技術と記事をサイトで見る"))
+            .andExpect(jsonPath("$.embeds[0].title").value("🔗 注目の技術と記事をサイトで見る"))
             .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
             .andExpect(jsonPath("$.embeds[0].author").doesNotExist())
             .andRespond(withSuccess())
