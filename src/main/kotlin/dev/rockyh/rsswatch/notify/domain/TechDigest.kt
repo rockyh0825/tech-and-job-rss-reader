@@ -3,7 +3,8 @@ package dev.rockyh.rsswatch.notify.domain
 /**
  * 記事で言及の多い注目技術 1 件と、その技術に関連する記事(要約付き)。Discord 通知の 1 グループ(純 Kotlin)。
  * application が組み立て、infrastructure が投稿する feature 内共有の型。
- * [mentionCount] は 0 になり得る(ランキング外の興味技術を記事だけで載せる場合)。
+ * [mentionCount] は 0 になり得る(ランキング外の興味技術を記事だけで載せる場合。記事ベースの
+ * ランキングでは新着記事のある技術は必ずランキング内のため発生しないが、求人軸に戻す場合に備えて残す)。
  */
 data class TechDigest(
     val keyword: String,

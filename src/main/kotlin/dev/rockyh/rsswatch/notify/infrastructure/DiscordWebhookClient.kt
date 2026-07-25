@@ -89,6 +89,8 @@ class DiscordWebhookClient(
     /**
      * 技術グループの見出し文言(例: 「🧩 Kotlin ・ 記事 5 件で言及」)。
      * 興味技術は ⭐、ランキング外の興味技術(mentionCount=0)は「記事 0 件で言及」の代わりに「新着記事」。
+     * mentionCount=0 は記事ベースのランキング(新着記事があれば必ずランキング内)では発生しないが、
+     * ランキング軸を求人に戻した場合のために残している。
      */
     private fun authorLabel(digest: TechDigest): String {
         val icon = if (digest.interested) "⭐" else "🧩"

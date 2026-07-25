@@ -45,7 +45,7 @@ java -jar rss-watch.jar
 | `rss-watch.notify.tech-limit` | 載せる技術の上位件数(記事言及数の多い順) | `3` |
 | `rss-watch.notify.articles-per-tech` | 各技術に載せる関連記事の最大件数 | `3` |
 | `rss-watch.notify.interests.categories` | 興味のある技術カテゴリ(`TechCategory` の値。例 `cloud-infra`)。該当技術を優先して選抜する | `[]` |
-| `rss-watch.notify.interests.keywords` | 興味のある個別キーワード(辞書の正規化名。大文字小文字は無視。例 `Kotlin`)。記事ランキング圏外でも候補に含める | `[]` |
+| `rss-watch.notify.interests.keywords` | 興味のある個別キーワード(辞書の正規化名。大文字小文字は無視。例 `Kotlin`)。興味技術を優先的に紹介する(記事ベースのランキングでは新着記事のある技術は常にランキング内のため、実質は優先度ブースト。ランキング軸を求人に戻した場合は圏外でも候補に含める) | `[]` |
 | `rss-watch.notify.site-url` | 通知末尾に添えるサイト一覧への導線 URL | `https://rss-watch.rocky-ha.com/` |
 | `rss-watch.notify.claude.model` | 要約モデル ID | `claude-haiku-4-5-20251001` |
 | `rss-watch.notify.claude.max-tokens` | 要約の最大トークン数 | `256` |

@@ -404,6 +404,8 @@ class BuildDigestUseCaseTest {
 
     @Test
     fun includes_interested_tech_absent_from_ranking_with_zero_mention_when_it_has_fresh_articles() {
+        // 記事ベースのランキングでは「ランキング外なのに新着記事がある」状態は実際には発生しないが、
+        // ランキング軸を求人に戻した場合の救済機構として仕様を固定しておく
         val archive =
             FakeArchive(
                 ranking = listOf(TechMention("Python", 30)),
