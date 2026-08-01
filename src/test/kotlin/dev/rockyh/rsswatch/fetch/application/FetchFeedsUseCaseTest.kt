@@ -12,6 +12,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -185,22 +186,40 @@ class FetchFeedsUseCaseTest {
 
     @Test
     fun skips_entries_published_before_the_cutoff() {
-        val oldEntry = entry.copy(guid = "guid-old", publishedAt = Instant.parse("2026-06-28T11:59:59Z"))
+        val oldEntry = entry.copy(guid = "guid-old", title = "古い記事", publishedAt = Instant.parse("2026-06-28T11:59:59Z"))
         val recentEntry = entry.copy(guid = "guid-recent", publishedAt = Instant.parse("2026-07-04T12:00:00Z"))
         val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(oldEntry, recentEntry)))
         val publisher = RecordingPublisher()
+        val port = RecordingKeywordPort()
         val useCase =
             FetchFeedsUseCase(
                 FakeFeedConfigSource(listOf(techFeed)),
                 parser,
                 publisher,
-                RecordingKeywordPort(),
+                port,
                 clock,
             )
 
         useCase.fetchAll()
 
         assertEquals(listOf("guid-recent"), publisher.published.map { it.guid })
+        // 足切りしたエントリはキーワード抽出も行わない(冗長な抽出の削減が本変更の目的の一つ)
+        assertEquals(1, port.extractedTexts.size)
+        assertTrue("古い記事" !in port.extractedTexts.single(), "stale entry should not be keyword-extracted")
+    }
+
+    @Test
+    fun rejects_non_positive_max_entry_age() {
+        assertFailsWith<IllegalArgumentException> {
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                FakeFeedParser(),
+                RecordingPublisher(),
+                RecordingKeywordPort(),
+                clock,
+                maxEntryAgeDays = 0,
+            )
+        }
     }
 
     @Test

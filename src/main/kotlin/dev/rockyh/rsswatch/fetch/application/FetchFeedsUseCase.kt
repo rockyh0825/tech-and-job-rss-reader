@@ -32,6 +32,10 @@ class FetchFeedsUseCase(
     @Value("\${rss-watch.fetch.max-entry-age-days:7}") private val maxEntryAgeDays: Long = 7,
 ) {
 
+    init {
+        require(maxEntryAgeDays > 0) { "rss-watch.fetch.max-entry-age-days must be positive: $maxEntryAgeDays" }
+    }
+
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun fetchAll() {

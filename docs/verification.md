@@ -64,7 +64,7 @@ curl -N http://localhost:8080/api/stream
 
 ## 5. 冪等性と consumer group の独立オフセット
 
-アプリを Ctrl-C で止めて `./gradlew bootRun` で再起動すると、fetcher が同じアイテムを再度 Kafka へ publish するが、**DB には重複保存されない**(guid を主キーとした冪等書き込み)。
+アプリを Ctrl-C で止めて `./gradlew bootRun` で再起動すると、fetcher が同じアイテム(publishedAt が直近 7 日以内のもの。`rss-watch.fetch.max-entry-age-days` で変更可)を再度 Kafka へ publish するが、**DB には重複保存されない**(guid を主キーとした冪等書き込み)。
 
 ```bash
 # 再起動の前後で件数を比較する(純粋な新着分しか増えない)
