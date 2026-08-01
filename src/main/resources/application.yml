@@ -74,6 +74,9 @@ rss-watch:
     interval-ms: 900000
     connect-timeout-ms: 10000
     read-timeout-ms: 10000
+    # publishedAt がこの日数より古いエントリは publish しない(issue #67。
+    # gihyo.jp など全アーカイブを載せるフィードの毎サイクル再配信を入口で足切りする)。
+    max-entry-age-days: 7
   notify:
     # Discord Webhook URL は環境変数 RSS_WATCH_NOTIFY_DISCORD_WEBHOOK_URL で渡す(Spring Boot の relaxed binding)。
     # ここには宣言しない(未設定=未定義のとき @ConditionalOnProperty で notify feature 一式を無効化=Bean 未登録

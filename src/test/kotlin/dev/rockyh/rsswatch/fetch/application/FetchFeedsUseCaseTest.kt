@@ -12,6 +12,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -181,6 +182,103 @@ class FetchFeedsUseCaseTest {
         useCase.fetchAll()
 
         assertEquals(listOf("guid-2"), publisher.published.map { it.guid })
+    }
+
+    @Test
+    fun skips_entries_published_before_the_cutoff() {
+        val oldEntry = entry.copy(guid = "guid-old", title = "古い記事", publishedAt = Instant.parse("2026-06-28T11:59:59Z"))
+        val recentEntry = entry.copy(guid = "guid-recent", publishedAt = Instant.parse("2026-07-04T12:00:00Z"))
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(oldEntry, recentEntry)))
+        val publisher = RecordingPublisher()
+        val port = RecordingKeywordPort()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                port,
+                clock,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-recent"), publisher.published.map { it.guid })
+        // 足切りしたエントリはキーワード抽出も行わない(冗長な抽出の削減が本変更の目的の一つ)
+        assertEquals(1, port.extractedTexts.size)
+        assertTrue("古い記事" !in port.extractedTexts.single(), "stale entry should not be keyword-extracted")
+    }
+
+    @Test
+    fun rejects_non_positive_max_entry_age() {
+        assertFailsWith<IllegalArgumentException> {
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                FakeFeedParser(),
+                RecordingPublisher(),
+                RecordingKeywordPort(),
+                clock,
+                maxEntryAgeDays = 0,
+            )
+        }
+    }
+
+    @Test
+    fun publishes_entries_published_exactly_at_the_cutoff() {
+        val boundaryEntry = entry.copy(guid = "guid-boundary", publishedAt = Instant.parse("2026-06-28T12:00:00Z"))
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(boundaryEntry)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-boundary"), publisher.published.map { it.guid })
+    }
+
+    @Test
+    fun publishes_entries_without_published_at() {
+        val undatedEntry = entry.copy(guid = "guid-undated", publishedAt = null)
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(undatedEntry)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-undated"), publisher.published.map { it.guid })
+    }
+
+    @Test
+    fun applies_the_configured_max_entry_age() {
+        val twoDaysOld = entry.copy(guid = "guid-2d", publishedAt = Instant.parse("2026-07-03T12:00:00Z"))
+        val halfDayOld = entry.copy(guid = "guid-12h", publishedAt = Instant.parse("2026-07-05T00:00:00Z"))
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(twoDaysOld, halfDayOld)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+                maxEntryAgeDays = 1,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-12h"), publisher.published.map { it.guid })
     }
 
     @Test
