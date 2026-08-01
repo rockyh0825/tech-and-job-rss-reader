@@ -154,8 +154,8 @@ class FeedConfigLoaderTest {
     fun parses_the_bundled_feeds_toml() {
         val feeds = loader.load(Path.of("feeds.toml"))
 
-        assertEquals(10, feeds.size)
-        assertEquals(5, feeds.count { it.category == ItemCategory.TECH })
+        assertEquals(12, feeds.size)
+        assertEquals(7, feeds.count { it.category == ItemCategory.TECH })
         assertEquals(3, feeds.count { it.category == ItemCategory.JOBS })
         assertEquals(2, feeds.count { it.category == ItemCategory.CNCF })
     }

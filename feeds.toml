@@ -1,6 +1,7 @@
 # 収集するフィードの設定
 # category は "tech"(技術記事)/ "jobs"(求人)/ "cncf"(CNCF 関連。専用ダイジェストで配信)のいずれか。
 # 行を追加するだけでフィードを増やせます。
+# フィードの選定基準と実測値(件/日・辞書ヒット率)は issue #65 を参照。
 
 [[feeds]]
 name = "はてなブックマーク テクノロジー"
@@ -22,29 +23,45 @@ name = "Publickey"
 url = "https://www.publickey1.jp/atom.xml"
 category = "tech"
 
+# points=150 で 150 ポイント以上の記事に絞る(無指定だと 6.8 件/日と雑多。issue #65)
 [[feeds]]
 name = "Hacker News"
-url = "https://hnrss.org/frontpage"
+url = "https://hnrss.org/frontpage?points=150"
+category = "tech"
+
+[[feeds]]
+name = "InfoQ Japan"
+url = "https://www.infoq.com/jp/feed/"
+category = "tech"
+
+[[feeds]]
+name = "gihyo.jp"
+url = "https://gihyo.jp/feed/rss2"
 category = "tech"
 
 # ---- 求人系 ----
 
-[[feeds]]
-name = "Hacker News Jobs"
-url = "https://hnrss.org/jobs"
-category = "jobs"
+# Hacker News Jobs はタイトルに技術名が皆無(辞書ヒット率 0%)でクロスリンクに寄与しないため削除した(issue #65)
 
 [[feeds]]
 name = "HN Who is hiring"
 url = "https://hnrss.org/whoishiring/jobs"
 category = "jobs"
 
+# We Work Remotely (Programming) は他職種求人の混入 + 実効 0.3 件/日のため削除した(issue #65)
+
 [[feeds]]
-name = "We Work Remotely (Programming)"
-url = "https://weworkremotely.com/categories/remote-programming-jobs.rss"
+name = "Jobicy (Engineering)"
+url = "https://jobicy.com/?feed=job_feed&job_categories=engineering"
+category = "jobs"
+
+[[feeds]]
+name = "We Work Remotely (DevOps & SysAdmin)"
+url = "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss"
 category = "jobs"
 
 # Remote OK は 2026-07 時点で HTTP 410 Gone(フィード廃止)のため削除した
+# Himalayas は XML の名前空間 prefix が未宣言で Rome 2.1 がパースできないため見送り(issue #65 で実測)
 
 # ---- CNCF 系(issue #46。専用の Discord チャンネルへ配信)----
 
