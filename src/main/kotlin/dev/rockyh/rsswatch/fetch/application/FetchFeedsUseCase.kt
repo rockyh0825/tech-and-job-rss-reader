@@ -8,12 +8,19 @@ import dev.rockyh.rsswatch.fetch.domain.ItemPublisher
 import dev.rockyh.rsswatch.fetch.domain.ParsedEntry
 import dev.rockyh.rsswatch.shared.contract.RssItem
 import java.time.Clock
+import java.time.Duration
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 /**
  * 全フィードを巡回し、パース → キーワード抽出 → publish する(パイプラインの入口)。
  * 個別フィードの失敗はログを残してスキップし、残りのフィードの巡回を継続する(要件 1.3)。
+ *
+ * publishedAt が [maxEntryAgeDays] 日より古いエントリは publish しない(issue #67)。
+ * gihyo.jp のようにフィードへ全アーカイブ(数百件)を載せる配信元をそのまま流すと、
+ * 毎サイクル同じ旧記事が Kafka・SSE へ再配信されるため、入口で足切りする。
+ * publishedAt を持たないエントリは判定できないので従来どおり publish する(フェイルオープン)。
  */
 @Service
 class FetchFeedsUseCase(
@@ -22,6 +29,7 @@ class FetchFeedsUseCase(
     private val itemPublisher: ItemPublisher,
     private val keywordExtractionPort: KeywordExtractionPort,
     private val clock: Clock = Clock.systemUTC(),
+    @Value("\${rss-watch.fetch.max-entry-age-days:7}") private val maxEntryAgeDays: Long = 7,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -37,7 +45,15 @@ class FetchFeedsUseCase(
     }
 
     private fun fetchOne(feed: FeedDefinition) {
-        feedParser.parse(feed).forEach { entry ->
+        val cutoff = clock.instant().minus(Duration.ofDays(maxEntryAgeDays))
+        val (fresh, stale) =
+            feedParser.parse(feed).partition { entry ->
+                entry.publishedAt == null || !entry.publishedAt.isBefore(cutoff)
+            }
+        if (stale.isNotEmpty()) {
+            log.debug("フィード「{}」の {} 件は publishedAt が {} より古いため publish しません", feed.name, stale.size, cutoff)
+        }
+        fresh.forEach { entry ->
             itemPublisher.publish(toRssItem(feed, entry))
         }
     }

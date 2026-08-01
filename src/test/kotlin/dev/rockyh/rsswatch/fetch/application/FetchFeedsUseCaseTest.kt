@@ -184,6 +184,85 @@ class FetchFeedsUseCaseTest {
     }
 
     @Test
+    fun skips_entries_published_before_the_cutoff() {
+        val oldEntry = entry.copy(guid = "guid-old", publishedAt = Instant.parse("2026-06-28T11:59:59Z"))
+        val recentEntry = entry.copy(guid = "guid-recent", publishedAt = Instant.parse("2026-07-04T12:00:00Z"))
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(oldEntry, recentEntry)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-recent"), publisher.published.map { it.guid })
+    }
+
+    @Test
+    fun publishes_entries_published_exactly_at_the_cutoff() {
+        val boundaryEntry = entry.copy(guid = "guid-boundary", publishedAt = Instant.parse("2026-06-28T12:00:00Z"))
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(boundaryEntry)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-boundary"), publisher.published.map { it.guid })
+    }
+
+    @Test
+    fun publishes_entries_without_published_at() {
+        val undatedEntry = entry.copy(guid = "guid-undated", publishedAt = null)
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(undatedEntry)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-undated"), publisher.published.map { it.guid })
+    }
+
+    @Test
+    fun applies_the_configured_max_entry_age() {
+        val twoDaysOld = entry.copy(guid = "guid-2d", publishedAt = Instant.parse("2026-07-03T12:00:00Z"))
+        val halfDayOld = entry.copy(guid = "guid-12h", publishedAt = Instant.parse("2026-07-05T00:00:00Z"))
+        val parser = FakeFeedParser(entriesByFeed = mapOf("Zenn" to listOf(twoDaysOld, halfDayOld)))
+        val publisher = RecordingPublisher()
+        val useCase =
+            FetchFeedsUseCase(
+                FakeFeedConfigSource(listOf(techFeed)),
+                parser,
+                publisher,
+                RecordingKeywordPort(),
+                clock,
+                maxEntryAgeDays = 1,
+            )
+
+        useCase.fetchAll()
+
+        assertEquals(listOf("guid-12h"), publisher.published.map { it.guid })
+    }
+
+    @Test
     fun publishes_nothing_when_no_feeds_are_configured() {
         val publisher = RecordingPublisher()
         val useCase =
