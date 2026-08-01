@@ -1,5 +1,6 @@
 package dev.rockyh.rsswatch.notify.domain
 
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -21,24 +22,32 @@ data class TechCandidate(
  * ダイジェストに載せる技術の優先順位付け。決定的な単一コンパレータで全順序を定める:
  *
  * 1. interested 降順(興味技術が先)
- * 2. lastFeaturedAt 昇順・null(未紹介)最優先(ローテーション:最近紹介した技術を後回し)
- * 3. mentionCount 降順(記事言及数のタイブレーク)
+ * 2. クールダウン中(直近 [cooldownDays] 日以内に紹介済み)の技術を後回し
+ * 3. mentionCount 降順(記事言及数の多い順)
  * 4. keyword 昇順(完全決定性の担保)
  *
  * ローテーションは興味・非興味の両グループに一様に適用する(興味技術同士でも巡回させる)。
- * また期限なし(クールダウン日数のような閾値は持たない):未紹介 → 紹介が古い順に全技術を
- * 巡回するため、記事言及数の多い人気技術も一巡するまでは再登場しない。これは「同じ技術ばかり
- * 連日出る」ことを避けるための意図的な仕様。
+ * クールダウンは「同じ技術ばかり連日出る」ことを避けるためのもので、明けた技術は未紹介の技術と
+ * 同格になり言及数で競う。かつては期限なし(未紹介 → 紹介が古い順に全技術を巡回)だったが、
+ * 紹介済みの注目技術がロングテールの一巡を待つ間にマイナー技術ばかりが浮上したため、
+ * クールダウン方式に変更した(issue #70 Step 1)。
+ *
+ * 境界はちょうど [cooldownDays] 日前ならクールダウン明け扱い(排他的)。
  */
-class DigestSelectionPolicy {
+class DigestSelectionPolicy(private val cooldownDays: Int) {
 
-    private val priorityOrder =
-        compareByDescending<TechCandidate> { it.interested }
-            .thenBy(nullsFirst(naturalOrder())) { it.lastFeaturedAt }
-            .thenByDescending { it.mentionCount }
-            .thenBy { it.keyword }
+    init {
+        require(cooldownDays > 0) { "cooldownDays must be positive: $cooldownDays" }
+    }
 
-    /** [candidates] を優先度の高い順に並べ替えて返す。 */
-    fun prioritize(candidates: List<TechCandidate>): List<TechCandidate> =
-        candidates.sortedWith(priorityOrder)
+    /** [candidates] を [now] 時点の優先度の高い順に並べ替えて返す。 */
+    fun prioritize(candidates: List<TechCandidate>, now: Instant): List<TechCandidate> {
+        val cooldownStart = now.minus(Duration.ofDays(cooldownDays.toLong()))
+        val priorityOrder =
+            compareByDescending<TechCandidate> { it.interested }
+                .thenBy { candidate -> candidate.lastFeaturedAt?.isAfter(cooldownStart) ?: false }
+                .thenByDescending { it.mentionCount }
+                .thenBy { it.keyword }
+        return candidates.sortedWith(priorityOrder)
+    }
 }
