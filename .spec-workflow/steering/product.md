@@ -26,7 +26,7 @@
 
 ## Key Features
 
-1. **フィード収集**: 技術系フィード(はてブ IT・Zenn・Qiita・Publickey・Hacker News)と求人系フィード(HN Jobs・Who is hiring・We Work Remotely)を定期巡回して蓄積する。フィードは `category = "tech" | "jobs"` の 2 分類
+1. **フィード収集**: 技術系フィード(はてブ IT・Zenn・Qiita・Publickey・Hacker News・InfoQ Japan・gihyo.jp)と求人系フィード(Who is hiring・Jobicy・We Work Remotely)を定期巡回して蓄積する。フィードは `category = "tech" | "jobs"` の 2 分類(選定基準は issue #65)
 2. **キーワード抽出**: 「正規化名 + エイリアス」の辞書(約 60 分類)+ 正規表現で、タイトル + 概要から技術キーワードを抽出する
 3. **クロスリンク(目玉機能)**: 「記事で言及回数の多い注目技術」ランキングと「その技術についての技術記事」を並べて表示する
 4. **リアルタイム新着表示**: 取得した新着を SSE でブラウザにリアルタイム配信する
