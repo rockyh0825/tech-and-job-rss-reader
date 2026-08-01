@@ -57,6 +57,11 @@ class BuildDigestUseCase(
 
     init {
         require(techPoolSize > 0) { "rss-watch.notify.tech-pool-size must be positive: $techPoolSize" }
+        // 設定キーと値のマッピングは application 層の関心なので、domain([DigestSelectionPolicy])の
+        // require とは別にここでも設定キー名つきで検証する(起動時 fail-fast のメッセージを分かりやすく)
+        require(rotationCooldownDays > 0) {
+            "rss-watch.notify.rotation-cooldown-days must be positive: $rotationCooldownDays"
+        }
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -126,7 +131,7 @@ class BuildDigestUseCase(
         return digests.filter { digest -> digest.articles.any { it.guid in posted } }.map { it.keyword }
     }
 
-    /** 記事言及ランキング全件 + ランキング外の興味技術(言及 0 件)を候補にする。 */
+    /** 記事言及ランキング上位 [techPoolSize] 件(興味技術は足切り対象外)+ ランキング外の興味技術(言及 0 件)を候補にする。 */
     private fun collectCandidates(): List<TechCandidate> {
         val lastFeaturedAt = featuredTechStore.lastFeaturedAt()
         val ranking = archiveQueryPort.techRanking(ItemCategory.TECH, windowDays)
@@ -138,8 +143,8 @@ class BuildDigestUseCase(
                 // (実言及数を保ったまま候補に残す)
                 .filterIndexed { index, mention -> index < techPoolSize || interests.isInterested(mention.keyword) }
                 .map {
-                TechCandidate(it.keyword, it.mentionCount, interests.isInterested(it.keyword), lastFeaturedAt[it.keyword])
-            }
+                    TechCandidate(it.keyword, it.mentionCount, interests.isInterested(it.keyword), lastFeaturedAt[it.keyword])
+                }
         val unrankedInterests =
             (interests.keywords - rankedKeywords).map {
                 TechCandidate(it, mentionCount = 0, interested = true, lastFeaturedAt = lastFeaturedAt[it])

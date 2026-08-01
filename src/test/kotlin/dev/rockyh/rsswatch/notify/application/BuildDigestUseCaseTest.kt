@@ -16,6 +16,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -429,6 +430,15 @@ class BuildDigestUseCaseTest {
     @Test
     fun rejects_non_positive_tech_pool_size() {
         assertFailsWith<IllegalArgumentException> { useCase(FakeArchive(ranking = emptyList()), techPoolSize = 0) }
+    }
+
+    @Test
+    fun rejects_non_positive_rotation_cooldown_days_with_the_config_key_in_the_message() {
+        val error =
+            assertFailsWith<IllegalArgumentException> {
+                useCase(FakeArchive(ranking = emptyList()), rotationCooldownDays = 0)
+            }
+        assertContains(error.message.orEmpty(), "rss-watch.notify.rotation-cooldown-days")
     }
 
     // --- 興味技術の優先とローテーション ---

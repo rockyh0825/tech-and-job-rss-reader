@@ -37,7 +37,7 @@ data class TechCandidate(
 class DigestSelectionPolicy(private val cooldownDays: Int) {
 
     init {
-        require(cooldownDays > 0) { "rss-watch.notify.rotation-cooldown-days must be positive: $cooldownDays" }
+        require(cooldownDays > 0) { "cooldownDays must be positive: $cooldownDays" }
     }
 
     /** [candidates] を [now] 時点の優先度の高い順に並べ替えて返す。 */

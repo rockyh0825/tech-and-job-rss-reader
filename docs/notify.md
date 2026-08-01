@@ -43,8 +43,8 @@ java -jar rss-watch.jar
 | `rss-watch.notify.cron` | 配信時刻(Spring cron 式) | `0 0 8 * * *`(毎朝 8:00) |
 | `rss-watch.notify.window-days` | 記事で言及された技術の集計窓(日) | `7` |
 | `rss-watch.notify.tech-limit` | 載せる技術の件数(候補プールから優先順位の高い順) | `3` |
-| `rss-watch.notify.tech-pool-size` | 候補プールの足切り: 記事言及ランキングの上位何件までを候補にするか。「未紹介だから」という理由だけで言及の少ないマイナー技術が浮上するのを防ぐ。興味技術は足切りの対象外 | `10` |
-| `rss-watch.notify.rotation-cooldown-days` | ローテーションのクールダウン(日)。直近 N 日以内に紹介した技術を後回しにし、クールダウンが明けた技術は未紹介の技術と同格で言及数を競う(ちょうど N 日前はクールダウン明け扱い) | `3` |
+| `rss-watch.notify.tech-pool-size` | 候補プールの足切り: 記事言及ランキングの上位何件までを候補にするか。「未紹介だから」という理由だけで言及の少ないマイナー技術が浮上するのを防ぐ。興味技術は足切りの対象外。1 以上(0 以下は起動エラー) | `10` |
+| `rss-watch.notify.rotation-cooldown-days` | ローテーションのクールダウン(日)。直近 N 日以内に紹介した技術を後回しにし、クールダウンが明けた技術は未紹介の技術と同格で言及数を競う(ちょうど N 日前はクールダウン明け扱い)。1 以上(0 以下は起動エラー) | `3` |
 | `rss-watch.notify.articles-per-tech` | 各技術に載せる関連記事の最大件数 | `3` |
 | `rss-watch.notify.interests.categories` | 興味のある技術カテゴリ(`TechCategory` の値。例 `cloud-infra`)。該当技術を優先して選抜する | `[]` |
 | `rss-watch.notify.interests.keywords` | 興味のある個別キーワード(辞書の正規化名。大文字小文字は無視。例 `Kotlin`)。興味技術を優先的に紹介する(記事ベースのランキングでは新着記事のある技術は常にランキング内のため、実質は優先度ブースト。ランキング軸を求人に戻した場合は圏外でも候補に含める)。`tech-pool-size` の足切り対象外 | `[]` |
