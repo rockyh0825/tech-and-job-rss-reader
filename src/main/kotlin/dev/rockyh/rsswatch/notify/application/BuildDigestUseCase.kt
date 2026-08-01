@@ -25,10 +25,12 @@ import org.springframework.stereotype.Service
  *
  * - 取得は archive の [ArchiveQueryPort.techRanking] / [ArchiveQueryPort.itemsByKeyword] を再利用
  *   (report の crossSection と同じ組み立て。DB は読み取りのみ)
- * - 候補はランキング全件 + ランキング外の興味技術(記事ベースのランキングでは新着記事のある技術は
- *   必ずランキング内のため後者は実質空。ランキング軸を求人に戻した場合の救済として残す)
- * - 優先順位は [DigestSelectionPolicy]:興味技術を先頭に、最近紹介した技術を後回し(ローテーション)、
- *   同着は記事言及数の多い順。上位 [techLimit] 件、各技術につき新しい記事を [articlesPerTech] 件まで載せる
+ * - 候補はランキング上位 [techPoolSize] 件 + 興味技術(足切りの対象外)+ ランキング外の興味技術
+ *   (記事ベースのランキングでは新着記事のある技術は必ずランキング内のため最後は実質空。
+ *   ランキング軸を求人に戻した場合の救済として残す)
+ * - 優先順位は [DigestSelectionPolicy]:興味技術を先頭に、クールダウン中(直近 [rotationCooldownDays] 日
+ *   以内に紹介)の技術を後回し、あとは記事言及数の多い順。上位 [techLimit] 件、各技術につき新しい記事を
+ *   [articlesPerTech] 件まで載せる
  * - 一度通知した記事は二度と載せない(通知済み guid 全件を除外。永続的な重複排除)
  * - 同じ記事が複数の技術に紐づく場合もダイジェスト内では 1 度だけ載せる(セクション横断で重複排除)
  * - 候補 0 件はサイト導線だけを投稿 / 要約失敗は要約なしでフォールバック / サムネイル解決失敗は画像なしでフォールバック
@@ -49,8 +51,13 @@ class BuildDigestUseCase(
     @Value("\${rss-watch.notify.articles-per-tech:3}") private val articlesPerTech: Int,
     @Value("\${rss-watch.notify.window-days:7}") private val windowDays: Int,
     @Value("\${rss-watch.notify.rotation-cooldown-days:3}") private val rotationCooldownDays: Int,
+    @Value("\${rss-watch.notify.tech-pool-size:10}") private val techPoolSize: Int,
     private val clock: Clock = Clock.systemUTC(),
 ) {
+
+    init {
+        require(techPoolSize > 0) { "rss-watch.notify.tech-pool-size must be positive: $techPoolSize" }
+    }
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -125,7 +132,12 @@ class BuildDigestUseCase(
         val ranking = archiveQueryPort.techRanking(ItemCategory.TECH, windowDays)
         val rankedKeywords = ranking.map { it.keyword }.toSet()
         val rankedCandidates =
-            ranking.map {
+            ranking
+                // 候補プールの足切り: ランキング上位 techPoolSize 件に絞る。「未紹介だから」という理由
+                // だけで言及の少ないマイナー技術が浮上するのを防ぐ。興味技術は足切りの対象外
+                // (実言及数を保ったまま候補に残す)
+                .filterIndexed { index, mention -> index < techPoolSize || interests.isInterested(mention.keyword) }
+                .map {
                 TechCandidate(it.keyword, it.mentionCount, interests.isInterested(it.keyword), lastFeaturedAt[it.keyword])
             }
         val unrankedInterests =

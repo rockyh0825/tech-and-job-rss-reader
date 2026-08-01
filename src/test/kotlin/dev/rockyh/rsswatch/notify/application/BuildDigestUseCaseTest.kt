@@ -17,6 +17,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
@@ -125,6 +126,7 @@ class BuildDigestUseCaseTest {
         articlesPerTech: Int = 3,
         windowDays: Int = 7,
         rotationCooldownDays: Int = 3,
+        techPoolSize: Int = 10,
     ): BuildDigestUseCase =
         BuildDigestUseCase(
             archiveQueryPort = archive,
@@ -138,6 +140,7 @@ class BuildDigestUseCaseTest {
             articlesPerTech = articlesPerTech,
             windowDays = windowDays,
             rotationCooldownDays = rotationCooldownDays,
+            techPoolSize = techPoolSize,
             clock = Clock.fixed(now, ZoneOffset.UTC),
         )
 
@@ -389,6 +392,43 @@ class BuildDigestUseCaseTest {
         useCase(archive, publisher = publisher, store = FakePostedGuidStore(alreadyPosted = setOf("old1")), techLimit = 2).run()
 
         assertEquals(listOf("t2", "t3"), publisher.posted!!.map { it.keyword })
+    }
+
+    @Test
+    fun limits_candidates_to_the_top_ranked_pool() {
+        // ランキング全件を候補にしない: プール(上位 K 件)の外の技術は、未紹介でも浮上しない
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30), TechMention("Ruby", 1)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Ruby" to listOf(item("r1"))),
+            )
+        val publisher = FakePublisher()
+
+        useCase(archive, publisher = publisher, techPoolSize = 1).run()
+
+        assertEquals(listOf("Python"), publisher.posted!!.map { it.keyword })
+    }
+
+    @Test
+    fun keeps_interested_tech_as_candidate_even_when_ranked_below_the_pool_cutoff() {
+        // 興味技術は足切りの対象外。ランキング内の実言及数を保ったまま候補に残る
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30), TechMention("Kotlin", 2)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Kotlin" to listOf(item("k1"))),
+            )
+        val publisher = FakePublisher()
+
+        useCase(archive, publisher = publisher, interests = NotifyInterests(setOf("Kotlin")), techPoolSize = 1).run()
+
+        val posted = publisher.posted!!
+        assertEquals(listOf("Kotlin", "Python"), posted.map { it.keyword })
+        assertEquals(2, posted[0].mentionCount)
+    }
+
+    @Test
+    fun rejects_non_positive_tech_pool_size() {
+        assertFailsWith<IllegalArgumentException> { useCase(FakeArchive(ranking = emptyList()), techPoolSize = 0) }
     }
 
     // --- 興味技術の優先とローテーション ---
