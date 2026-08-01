@@ -14,6 +14,7 @@ import dev.rockyh.rsswatch.notify.domain.TechDigest
 import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
+import java.time.Clock
 import java.time.Instant
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -47,11 +48,13 @@ class BuildDigestUseCase(
     @Value("\${rss-watch.notify.tech-limit:3}") private val techLimit: Int,
     @Value("\${rss-watch.notify.articles-per-tech:3}") private val articlesPerTech: Int,
     @Value("\${rss-watch.notify.window-days:7}") private val windowDays: Int,
+    @Value("\${rss-watch.notify.rotation-cooldown-days:3}") private val rotationCooldownDays: Int,
+    private val clock: Clock = Clock.systemUTC(),
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private val selectionPolicy = DigestSelectionPolicy()
+    private val selectionPolicy = DigestSelectionPolicy(rotationCooldownDays)
 
     fun run() {
         // 過去に一度でも通知した記事は二度と載せない(EPOCH 起点=通知済み全件を照会)。
@@ -60,7 +63,7 @@ class BuildDigestUseCase(
 
         val digests =
             selectionPolicy
-                .prioritize(collectCandidates())
+                .prioritize(collectCandidates(), clock.instant())
                 .asSequence()
                 .mapNotNull { candidate ->
                     val articles =

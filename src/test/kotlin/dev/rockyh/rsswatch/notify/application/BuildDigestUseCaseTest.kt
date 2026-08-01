@@ -12,8 +12,10 @@ import dev.rockyh.rsswatch.notify.domain.TechDigest
 import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
 import dev.rockyh.rsswatch.shared.contract.ItemCategory
 import dev.rockyh.rsswatch.shared.contract.RssItem
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
@@ -122,6 +124,7 @@ class BuildDigestUseCaseTest {
         techLimit: Int = 3,
         articlesPerTech: Int = 3,
         windowDays: Int = 7,
+        rotationCooldownDays: Int = 3,
     ): BuildDigestUseCase =
         BuildDigestUseCase(
             archiveQueryPort = archive,
@@ -134,6 +137,8 @@ class BuildDigestUseCaseTest {
             techLimit = techLimit,
             articlesPerTech = articlesPerTech,
             windowDays = windowDays,
+            rotationCooldownDays = rotationCooldownDays,
+            clock = Clock.fixed(now, ZoneOffset.UTC),
         )
 
     private fun item(guid: String): RssItem =
@@ -447,6 +452,23 @@ class BuildDigestUseCaseTest {
         useCase(archive, publisher = publisher, featuredStore = featuredStore, techLimit = 1).run()
 
         assertEquals(listOf("Ruby"), publisher.posted!!.map { it.keyword })
+    }
+
+    @Test
+    fun brings_back_high_mention_tech_once_its_cooldown_has_passed() {
+        // 旧仕様(未紹介 → 紹介が古い順)では未紹介の Ruby が先だった。クールダウン(既定 3 日)が
+        // 明けた注目技術は言及数で競い、全技術の一巡を待たずに戻ってくる
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Python", 30), TechMention("Ruby", 1)),
+                articlesByKeyword = mapOf("Python" to listOf(item("p1")), "Ruby" to listOf(item("r1"))),
+            )
+        val publisher = FakePublisher()
+        val featuredStore = FakeFeaturedTechStore(mapOf("Python" to now.minus(Duration.ofDays(4))))
+
+        useCase(archive, publisher = publisher, featuredStore = featuredStore, techLimit = 1).run()
+
+        assertEquals(listOf("Python"), publisher.posted!!.map { it.keyword })
     }
 
     @Test
