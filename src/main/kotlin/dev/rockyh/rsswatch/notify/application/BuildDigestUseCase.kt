@@ -3,6 +3,7 @@ package dev.rockyh.rsswatch.notify.application
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.notify.ConditionalOnNotifyEnabled
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
+import dev.rockyh.rsswatch.notify.domain.DigestMessageStore
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
 import dev.rockyh.rsswatch.notify.domain.DigestSelectionPolicy
 import dev.rockyh.rsswatch.notify.domain.FeaturedTechStore
@@ -47,6 +48,7 @@ class BuildDigestUseCase(
     private val thumbnailResolver: ThumbnailResolver,
     private val interests: NotifyInterests,
     private val featuredTechStore: FeaturedTechStore,
+    private val digestMessageStore: DigestMessageStore,
     @Value("\${rss-watch.notify.tech-limit:3}") private val techLimit: Int,
     @Value("\${rss-watch.notify.articles-per-tech:3}") private val articlesPerTech: Int,
     @Value("\${rss-watch.notify.window-days:7}") private val windowDays: Int,
@@ -112,6 +114,10 @@ class BuildDigestUseCase(
             // ローテーション記録の一時失敗は配信成功を壊さない(未記録=次回も候補に残るだけで自己回復する)
             runCatching { featuredTechStore.markFeatured(featuredKeywords(digests, outcome.postedGuids)) }
                 .onFailure { log.warn("failed to mark featured techs; rotation will catch up next time", it) }
+            // 記事 ↔ Discord メッセージの対応はフィードバック回収(リアクション・返信)のための付随情報。
+            // 記録に失敗しても配信自体の成立(markPosted による重複防止)を壊さない
+            runCatching { digestMessageStore.record(outcome.postedMessages) }
+                .onFailure { log.warn("failed to record posted message refs; feedback for them will not be collected", it) }
         }
         if (outcome.failure == null) {
             log.info("posted daily digest: {} techs, {} articles", digests.size, outcome.postedGuids.size)

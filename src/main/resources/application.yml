@@ -116,6 +116,16 @@ rss-watch:
       max-tokens: 256
     discord:
       max-retries: 2
+    # Discord 上のフィードバック(リアクション・返信)の回収(issue #72)。学習データとして生のまま貯める。
+    # Bot トークンは環境変数 RSS_WATCH_NOTIFY_FEEDBACK_BOT_TOKEN で渡し、ここには宣言しない
+    # (未設定=未定義のとき回収一式を無効化するため。Webhook URL と同じ規則。投稿側の message ID 記録は
+    # トークンなしでも Webhook 設定だけで行われる)。データの集まり方は docs/notify.md 参照。
+    feedback:
+      # 回収の実行時刻。既定は毎日 0:30/6:30/12:30/18:30(ダイジェスト配信 8:00 と同一スレッドを取り合わない)
+      cron: "0 30 */6 * * *"
+      # 回収対象: 直近 N 日に投稿したダイジェストのメッセージ(1 以上。0 以下は起動エラー)。
+      # 返信は Discord API の直近 100 通からしか拾えないため、長くしても取りこぼしは起こり得る
+      lookback-days: 7
     # CNCF ダイジェスト(issue #46)。CNCF フィード(feeds.toml の category = "cncf")の新着記事に
     # プロジェクト成熟度バッジを付けて専用チャンネルへ配信する。
     # Webhook URL は環境変数 RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL で渡し、ここには宣言しない

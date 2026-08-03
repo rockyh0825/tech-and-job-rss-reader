@@ -8,6 +8,7 @@ import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
 import dev.rockyh.rsswatch.notify.domain.CncfDigestPublisher
 import dev.rockyh.rsswatch.notify.domain.CncfDigestSelectionPolicy
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
+import dev.rockyh.rsswatch.notify.domain.DigestMessageStore
 import dev.rockyh.rsswatch.notify.domain.PostedGuidStore
 import dev.rockyh.rsswatch.notify.domain.Summarizer
 import dev.rockyh.rsswatch.notify.domain.ThumbnailResolver
@@ -38,6 +39,7 @@ class BuildCncfDigestUseCase(
     private val webhookClient: CncfDigestPublisher,
     private val postedGuidRepository: PostedGuidStore,
     private val thumbnailResolver: ThumbnailResolver,
+    private val digestMessageStore: DigestMessageStore,
     @Value("\${rss-watch.notify.cncf.max-articles:8}") private val maxArticles: Int,
     @Value("\${rss-watch.notify.cncf.window-days:7}") private val windowDays: Int,
 ) {
@@ -78,6 +80,10 @@ class BuildCncfDigestUseCase(
         val outcome = webhookClient.post(entries)
         if (outcome.postedGuids.isNotEmpty()) {
             postedGuidRepository.markPosted(outcome.postedGuids)
+            // 記事 ↔ Discord メッセージの対応はフィードバック回収(リアクション・返信)のための付随情報。
+            // 記録に失敗しても配信自体の成立(markPosted による重複防止)を壊さない
+            runCatching { digestMessageStore.record(outcome.postedMessages) }
+                .onFailure { log.warn("failed to record posted message refs; feedback for them will not be collected", it) }
         }
         if (outcome.failure == null) {
             log.info("posted CNCF digest: {} articles", outcome.postedGuids.size)

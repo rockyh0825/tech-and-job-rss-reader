@@ -2,7 +2,9 @@ package dev.rockyh.rsswatch.notify.application
 
 import dev.rockyh.rsswatch.capabilities.ArchiveQueryPort
 import dev.rockyh.rsswatch.capabilities.TechMention
+import dev.rockyh.rsswatch.notify.domain.DigestMessageStore
 import dev.rockyh.rsswatch.notify.domain.DigestPublisher
+import dev.rockyh.rsswatch.notify.domain.DiscordMessageRef
 import dev.rockyh.rsswatch.notify.domain.FeaturedTechStore
 import dev.rockyh.rsswatch.notify.domain.NotifyInterests
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
@@ -115,6 +117,17 @@ class BuildDigestUseCaseTest {
         }
     }
 
+    private class FakeMessageStore(private val failure: Throwable? = null) : DigestMessageStore {
+        var recorded: List<DiscordMessageRef>? = null
+
+        override fun record(messages: List<DiscordMessageRef>) {
+            failure?.let { throw it }
+            recorded = messages
+        }
+
+        override fun messagesSince(since: Instant): List<DiscordMessageRef> = emptyList()
+    }
+
     private fun useCase(
         archive: ArchiveQueryPort,
         summarizer: Summarizer = FakeSummarizer(Result.success("要約")),
@@ -123,6 +136,7 @@ class BuildDigestUseCaseTest {
         thumbnailResolver: ThumbnailResolver = FakeThumbnailResolver(),
         interests: NotifyInterests = NotifyInterests(emptySet()),
         featuredStore: FeaturedTechStore = FakeFeaturedTechStore(),
+        messageStore: DigestMessageStore = FakeMessageStore(),
         techLimit: Int = 3,
         articlesPerTech: Int = 3,
         windowDays: Int = 7,
@@ -137,6 +151,7 @@ class BuildDigestUseCaseTest {
             thumbnailResolver = thumbnailResolver,
             interests = interests,
             featuredTechStore = featuredStore,
+            digestMessageStore = messageStore,
             techLimit = techLimit,
             articlesPerTech = articlesPerTech,
             windowDays = windowDays,
@@ -603,5 +618,44 @@ class BuildDigestUseCaseTest {
 
         val posted = publisher.posted!!
         assertEquals(listOf(true, false), posted.map { it.interested })
+    }
+
+    @Test
+    fun records_posted_message_refs_for_feedback_collection() {
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val refs = listOf(DiscordMessageRef(guid = "a", channelId = "ch1", messageId = "m1"))
+        val publisher = FakePublisher { PostOutcome(it.allGuids(), null, refs) }
+        val messageStore = FakeMessageStore()
+
+        useCase(archive, publisher = publisher, messageStore = messageStore).run()
+
+        assertEquals(refs, messageStore.recorded)
+    }
+
+    @Test
+    fun message_ref_recording_failure_does_not_break_posting() {
+        // メッセージ対応はフィードバック回収のための付随情報。記録に失敗しても配信自体の成立
+        // (markPosted による重複防止)を壊さない
+        val archive =
+            FakeArchive(
+                ranking = listOf(TechMention("Kotlin", 5)),
+                articlesByKeyword = mapOf("Kotlin" to listOf(item("a"))),
+            )
+        val refs = listOf(DiscordMessageRef(guid = "a", channelId = "ch1", messageId = "m1"))
+        val publisher = FakePublisher { PostOutcome(it.allGuids(), null, refs) }
+        val store = FakePostedGuidStore()
+
+        useCase(
+            archive,
+            publisher = publisher,
+            store = store,
+            messageStore = FakeMessageStore(failure = RuntimeException("db down")),
+        ).run()
+
+        assertEquals(listOf("a"), store.marked)
     }
 }
