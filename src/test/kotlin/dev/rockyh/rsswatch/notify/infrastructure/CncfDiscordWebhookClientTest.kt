@@ -23,6 +23,9 @@ import org.springframework.web.client.RestClient
 class CncfDiscordWebhookClientTest {
 
     private val webhookUrl = "https://discord.example/webhook/cncf"
+
+    /** 実際の POST 先。作成されたメッセージをレスポンスで受け取るため `?wait=true` を付ける。 */
+    private val postUrl = "$webhookUrl?wait=true"
     private val ctaUrl = "https://www.cncf.io/projects/"
     private val siteUrl = "https://site.example/"
 
@@ -72,18 +75,18 @@ class CncfDiscordWebhookClientTest {
     @Test
     fun posts_one_message_per_article_then_a_final_message_with_the_cncf_link() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.embeds.length()").value(1))
             .andExpect(jsonPath("$.embeds[0].title").value("title of g1"))
             .andRespond(withSuccess())
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].title").value("title of g2"))
             .andRespond(withSuccess())
         // 記事を全部送り終えてから、最後に CNCF プロジェクト一覧へのリンクを 1 通
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].url").value(ctaUrl))
             .andExpect(jsonPath("$.embeds[0].author").doesNotExist())
             .andRespond(withSuccess())
@@ -102,10 +105,10 @@ class CncfDiscordWebhookClientTest {
                 entry("g1", mentions = listOf(CncfMention("Kepler", CncfMaturity.SANDBOX))),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("🌱 Sandbox: Kepler"))
             .andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
 
         val outcome = client().post(entries)
 
@@ -129,10 +132,10 @@ class CncfDiscordWebhookClientTest {
                 ),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("🌱 Sandbox: Kepler ・ OpenTelemetry, Kubernetes"))
             .andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
 
         val outcome = client().post(entries)
 
@@ -143,10 +146,10 @@ class CncfDiscordWebhookClientTest {
     @Test
     fun shows_generic_cncf_author_line_for_articles_without_project_mentions() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("☸️ CNCF"))
             .andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
 
         val outcome = client().post(listOf(entry("g1")))
 
@@ -165,12 +168,12 @@ class CncfDiscordWebhookClientTest {
                 ),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].fields[0].name").value("要約"))
             .andExpect(jsonPath("$.embeds[0].fields[0].value").value("1行目\n2行目\n3行目"))
             .andExpect(jsonPath("$.embeds[0].thumbnail.url").value("https://example.com/ogp.png"))
             .andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
 
         val outcome = client().post(entries)
 
@@ -181,11 +184,11 @@ class CncfDiscordWebhookClientTest {
     @Test
     fun omits_summary_field_and_thumbnail_when_absent() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].fields").doesNotExist())
             .andExpect(jsonPath("$.embeds[0].thumbnail").doesNotExist())
             .andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
 
         val outcome = client().post(listOf(entry("g1")))
 
@@ -198,7 +201,7 @@ class CncfDiscordWebhookClientTest {
         // 候補 0 件の日でも導線は届ける。サイト導線(通常ダイジェストと同じ文言)が先、
         // CNCF プロジェクト一覧が後の 2 embeds を 1 通で送る(部分失敗を作らない)
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.embeds.length()").value(2))
             .andExpect(jsonPath("$.embeds[0].title").value("🔗 注目の技術と記事をサイトで見る"))
@@ -217,7 +220,7 @@ class CncfDiscordWebhookClientTest {
     @Test
     fun returns_failure_when_the_cta_only_post_is_rejected() {
         // 404 は Webhook 自体が削除済み。リトライせず failure として返す(翌日また試す)
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
 
         val outcome = client().postCtaOnly()
 
@@ -240,13 +243,13 @@ class CncfDiscordWebhookClientTest {
     @Test
     fun retries_on_429_respecting_retry_after_then_succeeds() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(
                 withStatus(HttpStatus.TOO_MANY_REQUESTS)
                     .headers(HttpHeaders().apply { set(HttpHeaders.RETRY_AFTER, "1") }),
             )
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
 
         val outcome = client().post(listOf(entry("g1")))
 
@@ -258,8 +261,8 @@ class CncfDiscordWebhookClientTest {
 
     @Test
     fun aborts_and_reports_posted_guids_when_the_webhook_is_gone() {
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
 
         val outcome = client().post(listOf(entry("g1"), entry("g2")))
 

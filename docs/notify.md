@@ -83,3 +83,60 @@ export RSS_WATCH_NOTIFY_CNCF_DISCORD_WEBHOOK_URL="https://discord.com/api/webhoo
 | `rss-watch.notify.cncf.cta-url` | 通知末尾に添える導線 URL | `https://www.cncf.io/projects/` |
 
 > プロジェクト成熟度の辞書は `keywords/domain/CncfProjects.kt` の手書き管理(graduated はほぼ全件、incubating / sandbox は厳選)。CNCF 側で昇格・アーカイブがあったら行を移す。CNCF カテゴリの記事は既存ダイジェストや `/api/report` には混ざらず、この専用チャンネルと Web UI の CNCF タブ(`GET /api/cncf`。Webhook 未設定でも常に有効)に流れる。
+
+## フィードバック回収(リアクション・返信)
+
+ダイジェスト投稿への**リアクション(絵文字)と返信**を定期回収して DB に貯める([issue #72](https://github.com/rockyh0825/tech-and-job-rss-reader/issues/72))。将来のレコメンド改善([issue #70](https://github.com/rockyh0825/tech-and-job-rss-reader/issues/70) Step 4)の学習データ集めが目的で、**この段階では収集のみ**(GOOD/BAD などの解釈や選定への反映はしない。解釈は貯まったデータを見てから決める)。
+
+### 有効化(Bot が必要)
+
+Webhook は送信専用でリアクションを読めないため、読み取りには **Discord Bot** が要る:
+
+1. [Discord Developer Portal](https://discord.com/developers/applications) で Application を作成し、Bot タブでトークンを発行する
+2. 返信の**本文**まで貯めたい場合は、同じ Bot タブで **Message Content Intent** を ON にする(OFF でも「返信が付いた事実」は取れるが、本文は空文字で保存される)
+3. OAuth2 → URL Generator で scope `bot`、権限 **View Channel + Read Message History** の招待 URL を作り、ダイジェストを配信しているサーバーへ Bot を招待する(投稿は引き続き Webhook なので送信系の権限は不要)
+4. トークンを環境変数で渡す:
+
+```bash
+export RSS_WATCH_NOTIFY_FEEDBACK_BOT_TOKEN="..."
+```
+
+トークン未設定なら回収一式は無効のまま(投稿側の message ID 記録だけが走る)。トークンだけ設定してもダイジェスト(Webhook)が無効なら回収対象が無いので有効にならない。
+
+| 変数 / 設定キー | 意味 | デフォルト |
+|---|---|---|
+| `RSS_WATCH_NOTIFY_FEEDBACK_BOT_TOKEN` | Discord Bot トークン。**設定時のみ回収が有効**(未設定=無効) | (未設定) |
+| `rss-watch.notify.feedback.cron` | 回収の実行時刻(Spring cron 式) | `0 30 */6 * * *`(6 時間おき) |
+| `rss-watch.notify.feedback.lookback-days` | 回収対象: 直近 N 日に投稿したメッセージ | `7` |
+
+### リアクションや返信でどうデータが集まるか
+
+ダイジェスト投稿時に Webhook へ `?wait=true` を付けて、**記事 guid ↔ Discord メッセージ ID** の対応を `notify_discord_message` に記録しておく(この記録は Bot トークンなしでも動く)。回収ジョブ(既定 6 時間おき)は直近 `lookback-days` 日のメッセージについて:
+
+| あなたの操作 | 集まるデータ | 保存先 |
+|---|---|---|
+| 投稿に 👍 や 👎 などの絵文字を押す | メッセージ × 絵文字ごとの**件数**(取得時点のスナップショット) | `notify_reaction` |
+| 絵文字を取り消す | 次回回収時のスナップショットから消える(=取り消しも反映される) | `notify_reaction` |
+| 投稿に**返信機能**で返信する(「あとで見る」等) | 返信 1 件ごとに、どの記事への返信か・誰が・いつ・**本文**(Intent ON のとき) | `notify_reply` |
+| 返信の本文を編集する | 次回回収時に本文が上書きされる | `notify_reply` |
+
+記事情報(タイトル・キーワード等)とは `notify_discord_message.guid` → `items.guid` で結合できるので、「どの技術の記事に 👍 が付きやすいか」「どんな記事に『あとで見る』が付くか」を後から SQL で集計できる。
+
+**拾えないもの・注意**:
+
+- **手打ちの引用(`> ...`)や、返信機能を使わないただの発言**は拾えない(Discord の `message_reference` が付かないため)。フィードバックのつもりの返信は必ず「メッセージを右クリック → 返信」で
+- 返信は Discord API の**チャンネル直近 100 通**からしか探せない。チャンネルの流量が多いと、回収間隔(6 時間)の間に流れた返信は取りこぼし得る
+- リアクションは**件数のみ**で「誰が押したか」は貯めない(実質 1 人運用のため。必要になったら拡張)
+- **返信の削除には追従しない**(本文の編集は上書きで追従するが、Discord 側で削除した返信も DB には残る。リアクションのスナップショット方式と違う点に注意)
+- 投稿が削除されたメッセージは回収をスキップする(最後のスナップショットが残る)
+- Bot 導入前に投稿されたダイジェストは message ID の記録が無いため回収対象外(`?wait=true` 導入後の投稿から貯まり始める)
+
+集計の例(「👍 が付いた記事のキーワード」):
+
+```sql
+SELECT i.title, r.emoji, r.reaction_count
+FROM notify_reaction r
+JOIN notify_discord_message m ON m.message_id = r.message_id
+JOIN items i ON i.guid = m.guid
+ORDER BY r.updated_at DESC;
+```

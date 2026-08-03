@@ -5,6 +5,8 @@ import dev.rockyh.rsswatch.capabilities.CncfMatchPort
 import dev.rockyh.rsswatch.capabilities.TechMention
 import dev.rockyh.rsswatch.notify.domain.CncfDigestEntry
 import dev.rockyh.rsswatch.notify.domain.CncfDigestPublisher
+import dev.rockyh.rsswatch.notify.domain.DigestMessageStore
+import dev.rockyh.rsswatch.notify.domain.DiscordMessageRef
 import dev.rockyh.rsswatch.shared.contract.CncfMaturity
 import dev.rockyh.rsswatch.shared.contract.CncfMention
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
@@ -92,13 +94,29 @@ class BuildCncfDigestUseCaseTest {
         var ctaOnlyOutcome = PostOutcome(emptyList())
     }
 
+    private class FakeMessageStore(private val failure: Throwable? = null) : DigestMessageStore {
+        var recorded: List<DiscordMessageRef>? = null
+
+        override fun record(messages: List<DiscordMessageRef>) {
+            failure?.let { throw it }
+            recorded = messages
+        }
+
+        override fun messagesSince(since: Instant): List<DiscordMessageRef> = emptyList()
+    }
+
     private val archive = FakeArchive()
     private val summarizer = FakeSummarizer()
     private val thumbnailResolver = FakeThumbnailResolver()
     private val postedGuidStore = FakePostedGuidStore()
     private val publisher = FakePublisher()
+    private val messageStore = FakeMessageStore()
 
-    private fun useCase(maxArticles: Int = 8, windowDays: Int = 7): BuildCncfDigestUseCase =
+    private fun useCase(
+        maxArticles: Int = 8,
+        windowDays: Int = 7,
+        digestMessageStore: DigestMessageStore = messageStore,
+    ): BuildCncfDigestUseCase =
         BuildCncfDigestUseCase(
             archiveQueryPort = archive,
             cncfMatchPort = FakeCncfMatch(),
@@ -106,6 +124,7 @@ class BuildCncfDigestUseCaseTest {
             webhookClient = publisher,
             postedGuidRepository = postedGuidStore,
             thumbnailResolver = thumbnailResolver,
+            digestMessageStore = digestMessageStore,
             maxArticles = maxArticles,
             windowDays = windowDays,
         )
@@ -245,5 +264,27 @@ class BuildCncfDigestUseCaseTest {
         useCase().run()
 
         assertTrue(postedGuidStore.marked.isEmpty())
+    }
+
+    @Test
+    fun records_posted_message_refs_for_feedback_collection() {
+        archive.items = listOf(item("g1"))
+        val refs = listOf(DiscordMessageRef(guid = "g1", channelId = "cncf-ch", messageId = "m1"))
+        publisher.outcome = { PostOutcome(it.map { entry -> entry.article.guid }, null, refs) }
+
+        useCase().run()
+
+        assertEquals(refs, messageStore.recorded)
+    }
+
+    @Test
+    fun message_ref_recording_failure_does_not_break_posting() {
+        archive.items = listOf(item("g1"))
+        val refs = listOf(DiscordMessageRef(guid = "g1", channelId = "cncf-ch", messageId = "m1"))
+        publisher.outcome = { PostOutcome(it.map { entry -> entry.article.guid }, null, refs) }
+
+        useCase(digestMessageStore = FakeMessageStore(failure = RuntimeException("db down"))).run()
+
+        assertEquals(listOf(listOf("g1")), postedGuidStore.marked)
     }
 }
