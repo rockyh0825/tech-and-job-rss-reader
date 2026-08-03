@@ -3,6 +3,9 @@ package dev.rockyh.rsswatch.notify.infrastructure
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import dev.rockyh.rsswatch.notify.domain.DiscordMessageRef
 import dev.rockyh.rsswatch.notify.domain.PostOutcome
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
@@ -50,14 +53,27 @@ class DiscordPoster(
 
     private val restClient: RestClient = restClientBuilder.build()
 
+    /**
+     * 実際の POST 先。`?wait=true` を付けると Discord は作成されたメッセージ(id, channel_id)を
+     * レスポンスで返す(付けないと 204 No Content)。リアクション・返信の回収で記事と突き合わせるため、
+     * メッセージ ID を [PostOutcome.postedMessages] として呼び出し側へ返す。
+     */
+    private val postUrl = "$webhookUrl?wait=true"
+
     /** 投稿 1 通ぶんの単位。[guid] は投稿できた記事の記録([PostOutcome.postedGuids])に使う。 */
     data class ArticlePost(val guid: String, val embed: Embed)
 
     fun postArticles(posts: List<ArticlePost>, ctaEmbed: Embed): PostOutcome {
         val postedGuids = mutableListOf<String>()
+        val postedMessages = mutableListOf<DiscordMessageRef>()
         for (post in posts) {
             when (val result = sendWithRetry(listOf(post.embed))) {
-                is SendResult.Sent -> postedGuids += post.guid
+                is SendResult.Sent -> {
+                    postedGuids += post.guid
+                    result.message?.let {
+                        postedMessages += DiscordMessageRef(guid = post.guid, channelId = it.channelId, messageId = it.id)
+                    }
+                }
                 is SendResult.Skipped ->
                     // この記事のペイロード固有の問題。他の記事は無関係なので投稿を続ける。
                     // 通知済みにはしない(翌日も同じ 400 を踏む見込みだが、1 通ぶんのリトライは安いので
@@ -67,7 +83,7 @@ class DiscordPoster(
                 is SendResult.Aborted -> {
                     // 叩き続けても同じ結果になるので以降は送らない。未投稿ぶんは次回の巡回で再度候補に上がる。
                     log.warn("記事の投稿に失敗したため以降の投稿を中断します: {}", post.embed.url, result.error)
-                    return PostOutcome(postedGuids, result.error)
+                    return PostOutcome(postedGuids, result.error, postedMessages)
                 }
             }
         }
@@ -83,7 +99,7 @@ class DiscordPoster(
             // 記事自体は届いているため通知済みとして扱う(ここで失敗を返すと翌日これらを重複投稿してしまう)。
             is SendResult.Failed -> log.warn("記事は投稿できましたが、サイト導線の投稿に失敗しました", result.error)
         }
-        return PostOutcome(postedGuids)
+        return PostOutcome(postedGuids, failure = null, postedMessages = postedMessages)
     }
 
     /**
@@ -107,7 +123,8 @@ class DiscordPoster(
         val payload = WebhookPayload(embeds = embeds)
         var attempt = 0
         while (true) {
-            val error = runCatching { send(payload) }.exceptionOrNull() ?: return SendResult.Sent
+            val sent = runCatching { send(payload) }
+            val error = sent.exceptionOrNull() ?: return SendResult.Sent(sent.getOrNull())
             val retryWaitMs = retryWaitMsOrNull(error)
             // リトライしても無駄なエラー(4xx)は、その場で「スキップ」か「打ち切り」かを決める。
             if (retryWaitMs == null) return terminalResult(error)
@@ -153,8 +170,8 @@ class DiscordPoster(
 
     /** 1 通の投稿結果。 */
     private sealed interface SendResult {
-        /** 投稿できた。 */
-        data object Sent : SendResult
+        /** 投稿できた。[message] はレスポンスから解析した作成済みメッセージ(解析できなければ null)。 */
+        data class Sent(val message: CreatedMessage?) : SendResult
 
         /** 失敗した(スキップと打ち切りに共通のエラー保持)。 */
         sealed interface Failed : SendResult {
@@ -168,15 +185,42 @@ class DiscordPoster(
         data class Aborted(override val error: Throwable) : Failed
     }
 
-    private fun send(payload: WebhookPayload) {
-        restClient
-            .post()
-            .uri(webhookUrl)
-            .header("content-type", "application/json")
-            .body(payload)
-            .retrieve()
-            .toBodilessEntity()
+    /**
+     * 1 通を POST し、レスポンスから作成されたメッセージを解析して返す。
+     *
+     * ボディの解析はベストエフォート: HTTP レベルで成功していれば投稿自体は完了しているため、
+     * ボディが想定外でも例外にせず null を返す(メッセージ対応が取れないだけで投稿の成否は変えない)。
+     */
+    private fun send(payload: WebhookPayload): CreatedMessage? {
+        val body =
+            restClient
+                .post()
+                .uri(postUrl)
+                .header("content-type", "application/json")
+                .body(payload)
+                .retrieve()
+                .body(String::class.java)
+        return parseCreatedMessage(body)
     }
+
+    /** `?wait=true` のレスポンスボディからメッセージ(id, channel_id)を読み取る(解析失敗は null)。 */
+    private fun parseCreatedMessage(body: String?): CreatedMessage? {
+        if (body.isNullOrBlank()) return null
+        val parsed = runCatching { mapper.readValue<CreatedMessageBody>(body) }.getOrNull() ?: return null
+        val id = parsed.id ?: return null
+        val channelId = parsed.channelId ?: return null
+        return CreatedMessage(id = id, channelId = channelId)
+    }
+
+    /** `?wait=true` のレスポンスから解析した、作成済みメッセージの所在。 */
+    data class CreatedMessage(val id: String, val channelId: String)
+
+    /** `?wait=true` のレスポンスボディ(必要なフィールドのみ)。 */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class CreatedMessageBody(
+        val id: String?,
+        @param:JsonProperty("channel_id") val channelId: String?,
+    )
 
     /**
      * 429 の待機ミリ秒を返す。
@@ -228,6 +272,9 @@ class DiscordPoster(
 
     companion object {
         private val log = LoggerFactory.getLogger(DiscordPoster::class.java)
+
+        /** レスポンスボディの解析用(送信ペイロードは RestClient の変換に任せるため送信側では使わない)。 */
+        private val mapper = jacksonObjectMapper()
 
         /** Discord embed の author name 最大文字数。 */
         const val MAX_AUTHOR_NAME_LENGTH = 256

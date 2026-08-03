@@ -30,8 +30,13 @@ interface DigestPublisher {
  * ここには現れず(最後まで走り切れば失敗は無い)、実装側の warn ログで可視化される。
  *
  * 導線のみの投稿([DigestPublisher.postCtaOnly] 等)では記事が無いため [postedGuids] は常に空。
+ *
+ * [postedMessages] は投稿できた記事と Discord メッセージの対応(リアクション・返信の回収用)。
+ * `?wait=true` のレスポンスからメッセージを解析できた記事だけが載る = [postedGuids] の部分集合で、
+ * 解析に失敗しても投稿自体の成否([postedGuids] / [failure])には影響しない。
  */
 data class PostOutcome(
     val postedGuids: List<String>,
     val failure: Throwable? = null,
+    val postedMessages: List<DiscordMessageRef> = emptyList(),
 )

@@ -1,6 +1,7 @@
 package dev.rockyh.rsswatch.notify.infrastructure
 
 import dev.rockyh.rsswatch.notify.domain.DigestArticle
+import dev.rockyh.rsswatch.notify.domain.DiscordMessageRef
 import dev.rockyh.rsswatch.notify.domain.TechDigest
 import java.io.IOException
 import kotlin.test.assertEquals
@@ -25,6 +26,9 @@ import org.springframework.web.client.RestClient
 class DiscordWebhookClientTest {
 
     private val webhookUrl = "https://discord.example/webhook/abc"
+
+    /** 実際の POST 先。作成されたメッセージをレスポンスで受け取るため `?wait=true` を付ける。 */
+    private val postUrl = "$webhookUrl?wait=true"
     private val siteUrl = "https://site.example/"
 
     private lateinit var builder: RestClient.Builder
@@ -71,7 +75,7 @@ class DiscordWebhookClientTest {
 
     /** 中身を検証しない成功レスポンスの expectation を [count] 通ぶん積む(登録順に消費される)。 */
     private fun expectSuccessfulPosts(count: Int) {
-        repeat(count) { server.expect(requestTo(webhookUrl)).andRespond(withSuccess()) }
+        repeat(count) { server.expect(requestTo(postUrl)).andRespond(withSuccess()) }
     }
 
     @BeforeEach
@@ -84,19 +88,19 @@ class DiscordWebhookClientTest {
     @Test
     fun posts_one_message_per_article_then_a_final_message_with_the_site_link() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.embeds.length()").value(1))
             .andExpect(jsonPath("$.embeds[0].title").value("Kotlin の記事"))
             .andRespond(withSuccess())
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds.length()").value(1))
             .andExpect(jsonPath("$.embeds[0].title").value("要約なしの記事"))
             .andRespond(withSuccess())
         // 記事を全部送り終えてから、最後にサイトへのリンクを 1 通
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds.length()").value(1))
             .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
             .andExpect(jsonPath("$.embeds[0].author").doesNotExist())
@@ -112,7 +116,7 @@ class DiscordWebhookClientTest {
     @Test
     fun each_article_message_carries_its_tech_author_and_fixed_summary_field() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 記事 5 件で言及"))
             .andExpect(jsonPath("$.embeds[0].url").value("https://example.com/1"))
             .andExpect(jsonPath("$.embeds[0].fields[0].name").value("要約"))
@@ -134,15 +138,15 @@ class DiscordWebhookClientTest {
                 TechDigest("Go", 3, listOf(article("g2", "Go 記事", "https://example.com/2", null))),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Kotlin ・ 記事 5 件で言及"))
             .andRespond(withSuccess())
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("🧩 Go ・ 記事 3 件で言及"))
             .andRespond(withSuccess())
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
             .andRespond(withSuccess())
 
@@ -159,7 +163,7 @@ class DiscordWebhookClientTest {
                 TechDigest("AWS", 12, listOf(article("g1", "記事", "https://example.com/1", null)), interested = true),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("⭐ AWS ・ 記事 12 件で言及"))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -178,7 +182,7 @@ class DiscordWebhookClientTest {
                 TechDigest("Elixir", 0, listOf(article("g1", "記事", "https://example.com/1", null)), interested = true),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].author.name").value("⭐ Elixir ・ 新着記事"))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -193,7 +197,7 @@ class DiscordWebhookClientTest {
     fun omits_summary_field_when_summary_is_null() {
         expectSuccessfulPosts(1)
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].fields").doesNotExist())
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -209,7 +213,7 @@ class DiscordWebhookClientTest {
         // 空白のみの要約は field ごと省く(field value 空は Discord が 400 で弾くため)
         val digest = listOf(TechDigest("Kotlin", 1, listOf(article("g1", "記事", "https://example.com/1", "   \n "))))
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].fields").doesNotExist())
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -231,7 +235,7 @@ class DiscordWebhookClientTest {
                 ),
             )
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].thumbnail.url").value("https://cdn.example.com/thumb.png"))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -246,7 +250,7 @@ class DiscordWebhookClientTest {
     fun omits_the_thumbnail_when_the_article_has_none() {
         // サムネイルを解決できなかった記事も、画像なしでそのまま投稿する
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].thumbnail").doesNotExist())
             .andRespond(withSuccess())
         expectSuccessfulPosts(2)
@@ -272,7 +276,7 @@ class DiscordWebhookClientTest {
     fun posts_only_the_site_link_when_there_are_no_articles_to_post() {
         // 候補 0 件の日でも、サイトへの導線だけは届ける(通常の導線と同じ embed を 1 通)
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(jsonPath("$.embeds.length()").value(1))
             .andExpect(jsonPath("$.embeds[0].title").value("🔗 注目の技術と記事をサイトで見る"))
@@ -290,7 +294,7 @@ class DiscordWebhookClientTest {
     @Test
     fun retries_the_cta_only_post_after_5xx_then_succeeds() {
         // 導線のみの投稿も記事と同じリトライ機構(5xx は一時障害として再試行)に乗る
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
         expectSuccessfulPosts(1)
 
         val outcome = client(maxRetries = 2).postCtaOnly()
@@ -303,7 +307,7 @@ class DiscordWebhookClientTest {
     @Test
     fun returns_failure_when_the_cta_only_post_is_rejected() {
         // 404 は Webhook 自体が削除済み。リトライせず failure として返す(翌日また試す)
-        server.expect(ExpectedCount.once(), requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
+        server.expect(ExpectedCount.once(), requestTo(postUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
 
         val outcome = client().postCtaOnly()
 
@@ -328,13 +332,13 @@ class DiscordWebhookClientTest {
     fun skips_only_the_bad_request_article_and_keeps_posting_the_rest() {
         // 400 はそのペイロード固有の問題。記事 1 が 400 でも記事 2 の妥当性とは無関係なので、
         // 記事 1 だけ捨てて記事 2 を投稿し、最後に導線も送る
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].title").value("要約なしの記事"))
             .andRespond(withSuccess())
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].url").value(siteUrl))
             .andRespond(withSuccess())
 
@@ -350,7 +354,7 @@ class DiscordWebhookClientTest {
     @Test
     fun does_not_send_the_site_link_when_every_article_was_skipped() {
         // 1 件も投稿できていないなら導線だけ送っても意味がない
-        server.expect(ExpectedCount.times(2), requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
+        server.expect(ExpectedCount.times(2), requestTo(postUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
 
         val outcome = client().post(digests)
 
@@ -363,7 +367,7 @@ class DiscordWebhookClientTest {
     fun stops_posting_and_skips_the_site_link_when_the_webhook_url_is_gone() {
         // 404 は Webhook 自体が削除済み。以降を送っても必ず失敗するので打ち切る
         expectSuccessfulPosts(1)
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.NOT_FOUND))
 
         val outcome = client().post(digests)
 
@@ -377,7 +381,7 @@ class DiscordWebhookClientTest {
     @Test
     fun retries_after_5xx_then_succeeds() {
         // 5xx は Discord 側の一時障害。待って再試行すれば通ることがある
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
         // リトライぶん + リンク
         expectSuccessfulPosts(2)
 
@@ -392,7 +396,7 @@ class DiscordWebhookClientTest {
     @Test
     fun returns_failure_after_exhausting_retries_on_persistent_5xx() {
         server
-            .expect(ExpectedCount.times(3), requestTo(webhookUrl))
+            .expect(ExpectedCount.times(3), requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE))
 
         val outcome = client(maxRetries = 2).post(oneArticle)
@@ -407,7 +411,7 @@ class DiscordWebhookClientTest {
     @Test
     fun retries_after_a_connection_failure_then_succeeds() {
         // ソケット瞬断(RestClient は IOException を ResourceAccessException に包む)も一時障害として再試行する
-        server.expect(requestTo(webhookUrl)).andRespond { throw IOException("connection reset") }
+        server.expect(requestTo(postUrl)).andRespond { throw IOException("connection reset") }
         expectSuccessfulPosts(2)
 
         val outcome = client(maxRetries = 2).post(oneArticle)
@@ -422,7 +426,7 @@ class DiscordWebhookClientTest {
     fun reports_articles_as_posted_when_only_the_site_link_fails() {
         // 記事は全部投稿できている以上、リンクが落ちても通知済みとして記録させる(重複投稿を防ぐ)
         expectSuccessfulPosts(2)
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.BAD_REQUEST))
 
         val outcome = client().post(digests)
 
@@ -435,7 +439,7 @@ class DiscordWebhookClientTest {
     fun retries_after_429_respecting_retry_after_then_succeeds() {
         val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "2") }
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
         // リトライぶん + リンク
         expectSuccessfulPosts(2)
@@ -451,7 +455,7 @@ class DiscordWebhookClientTest {
     @Test
     fun returns_failure_after_exhausting_retries_on_persistent_429() {
         server
-            .expect(ExpectedCount.times(3), requestTo(webhookUrl))
+            .expect(ExpectedCount.times(3), requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
 
         val outcome = client(maxRetries = 2).post(oneArticle)
@@ -467,7 +471,7 @@ class DiscordWebhookClientTest {
     fun returns_failure_without_retrying_when_the_webhook_is_unauthorized() {
         // 401 は Webhook URL 自体が無効。リトライしても必ず失敗するので即打ち切る
         server
-            .expect(ExpectedCount.once(), requestTo(webhookUrl))
+            .expect(ExpectedCount.once(), requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.UNAUTHORIZED))
 
         val outcome = client().post(oneArticle)
@@ -511,7 +515,7 @@ class DiscordWebhookClientTest {
         // 256 文字以内(255 文字 + 省略記号)に切り詰められること
         val expectedTitle = "あ".repeat(255) + "…"
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].title").value(expectedTitle))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -529,7 +533,7 @@ class DiscordWebhookClientTest {
         val digest = listOf(TechDigest("Kotlin", 1, listOf(article("g1", "記事", "https://example.com/1", "x".repeat(2000)))))
         val expectedSummary = "x".repeat(1023) + "…"
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].fields[0].value").value(expectedSummary))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -549,7 +553,7 @@ class DiscordWebhookClientTest {
         // 255 code unit 枠 → 直前が high surrogate なので 254 で切る = 完全な 😀 ×127 + 省略記号
         val expectedTitle = "😀".repeat(127) + "…"
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andExpect(jsonPath("$.embeds[0].title").value(expectedTitle))
             .andRespond(withSuccess())
         expectSuccessfulPosts(1)
@@ -564,7 +568,7 @@ class DiscordWebhookClientTest {
     fun uses_default_one_second_wait_when_429_has_no_retry_after_header_or_body() {
         // Retry-After ヘッダ無し・ボディ無しの 429 → 既定 1000ms を採用してリトライ(即リトライで叩き続けない)
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
         expectSuccessfulPosts(2)
 
@@ -579,7 +583,7 @@ class DiscordWebhookClientTest {
     fun retries_using_retry_after_from_json_body_when_header_absent() {
         // Retry-After ヘッダ無し・ボディに retry_after のみ → ボディ値を尊重してリトライ
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(
                 withStatus(HttpStatus.TOO_MANY_REQUESTS)
                     .body("""{"message":"rate limited","retry_after":3,"global":false}""")
@@ -599,7 +603,7 @@ class DiscordWebhookClientTest {
         // Retry-After: 0 をそのまま信じると sleeper(0) の即時リトライになり、レート制限を叩き続けてしまう
         val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "0") }
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
         expectSuccessfulPosts(2)
 
@@ -613,7 +617,7 @@ class DiscordWebhookClientTest {
     @Test
     fun waits_a_minimum_interval_when_the_body_retry_after_is_zero() {
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(
                 withStatus(HttpStatus.TOO_MANY_REQUESTS)
                     .body("""{"message":"rate limited","retry_after":0,"global":false}""")
@@ -633,7 +637,7 @@ class DiscordWebhookClientTest {
         // Discord は 0.5 秒等の小数秒を返す。下限を超えていればサーバの指示をそのまま尊重する
         val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "0.5") }
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
         expectSuccessfulPosts(2)
 
@@ -650,7 +654,7 @@ class DiscordWebhookClientTest {
         // スレッドを 1 時間占有してしまう。待たずに打ち切り、翌日の巡回へ回す
         val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "3600") }
         server
-            .expect(ExpectedCount.once(), requestTo(webhookUrl))
+            .expect(ExpectedCount.once(), requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
 
         val outcome = client(maxRetries = 2).post(oneArticle)
@@ -665,7 +669,7 @@ class DiscordWebhookClientTest {
     fun aborts_without_waiting_when_the_body_retry_after_exceeds_the_maximum_wait() {
         // ヘッダ経由と同じ扱い。グローバル制限はボディの retry_after で返ってくることがある
         server
-            .expect(ExpectedCount.once(), requestTo(webhookUrl))
+            .expect(ExpectedCount.once(), requestTo(postUrl))
             .andRespond(
                 withStatus(HttpStatus.TOO_MANY_REQUESTS)
                     .body("""{"message":"You are being rate limited.","retry_after":1200,"global":true}""")
@@ -685,7 +689,7 @@ class DiscordWebhookClientTest {
         // 上限ちょうどは「待つ」側。上限を超えたときだけ打ち切る
         val headers = HttpHeaders().apply { add(HttpHeaders.RETRY_AFTER, "60") }
         server
-            .expect(requestTo(webhookUrl))
+            .expect(requestTo(postUrl))
             .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).headers(headers))
         expectSuccessfulPosts(2)
 
@@ -698,12 +702,56 @@ class DiscordWebhookClientTest {
     }
 
     @Test
+    fun returns_the_posted_message_refs_parsed_from_wait_true_responses() {
+        // ?wait=true 付きの POST に Discord は作成されたメッセージ(id, channel_id)を返す。
+        // リアクション・返信の回収で記事と突き合わせるため、投稿できた記事の対応を返す
+        server
+            .expect(requestTo(postUrl))
+            .andRespond(withSuccess("""{"id":"m1","channel_id":"ch1"}""", MediaType.APPLICATION_JSON))
+        server
+            .expect(requestTo(postUrl))
+            .andRespond(withSuccess("""{"id":"m2","channel_id":"ch1"}""", MediaType.APPLICATION_JSON))
+        // 導線はどの記事のものでもないので対応には現れない
+        server
+            .expect(requestTo(postUrl))
+            .andRespond(withSuccess("""{"id":"m3","channel_id":"ch1"}""", MediaType.APPLICATION_JSON))
+
+        val outcome = client().post(digests)
+
+        assertNull(outcome.failure)
+        assertEquals(
+            listOf(
+                DiscordMessageRef(guid = "g1", channelId = "ch1", messageId = "m1"),
+                DiscordMessageRef(guid = "g2", channelId = "ch1", messageId = "m2"),
+            ),
+            outcome.postedMessages,
+        )
+        server.verify()
+    }
+
+    @Test
+    fun reports_articles_as_posted_without_message_refs_when_the_response_is_not_a_message() {
+        // レスポンスがメッセージとして解析できなくても、投稿自体は成功として扱う
+        // (メッセージ対応が取れないだけで postedGuids には載る = 通知済みの記録を壊さない)
+        server.expect(requestTo(postUrl)).andRespond(withSuccess("not-json", MediaType.TEXT_PLAIN))
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
+        expectSuccessfulPosts(1)
+
+        val outcome = client().post(digests)
+
+        assertNull(outcome.failure)
+        assertEquals(listOf("g1", "g2"), outcome.postedGuids)
+        assertEquals(emptyList(), outcome.postedMessages)
+        server.verify()
+    }
+
+    @Test
     fun retry_budget_is_counted_per_message_so_a_429_on_one_article_does_not_starve_the_next() {
         // 記事 1 が 429→成功、記事 2 も 429→成功。リトライ回数は 1 通ごとに数え直される
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
-        server.expect(requestTo(webhookUrl)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
-        server.expect(requestTo(webhookUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
+        server.expect(requestTo(postUrl)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS))
+        server.expect(requestTo(postUrl)).andRespond(withSuccess())
         expectSuccessfulPosts(1)
 
         val outcome = client(maxRetries = 1).post(digests)
