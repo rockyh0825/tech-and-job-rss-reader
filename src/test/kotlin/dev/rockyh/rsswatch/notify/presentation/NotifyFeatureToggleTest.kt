@@ -2,9 +2,13 @@ package dev.rockyh.rsswatch.notify.presentation
 
 import dev.rockyh.rsswatch.notify.application.BuildCncfDigestUseCase
 import dev.rockyh.rsswatch.notify.application.BuildDigestUseCase
+import dev.rockyh.rsswatch.notify.application.CollectFeedbackUseCase
 import dev.rockyh.rsswatch.notify.domain.NotifyInterests
 import dev.rockyh.rsswatch.notify.infrastructure.ClaudeSummarizer
 import dev.rockyh.rsswatch.notify.infrastructure.CncfDiscordWebhookClient
+import dev.rockyh.rsswatch.notify.infrastructure.DiscordBotClient
+import dev.rockyh.rsswatch.notify.infrastructure.DiscordFeedbackRepository
+import dev.rockyh.rsswatch.notify.infrastructure.DiscordMessageRepository
 import dev.rockyh.rsswatch.notify.infrastructure.DiscordWebhookClient
 import dev.rockyh.rsswatch.notify.infrastructure.FeaturedTechRepository
 import dev.rockyh.rsswatch.notify.infrastructure.OgpThumbnailResolver
@@ -23,6 +27,7 @@ private const val KAFKA_OFF = "spring.kafka.bootstrap-servers=localhost:1"
 private const val FETCH_OFF = "rss-watch.fetch.initial-delay-ms=3600000"
 private const val TECH_WEBHOOK = "rss-watch.notify.discord-webhook-url=https://discord.example/webhook/abc"
 private const val CNCF_WEBHOOK = "rss-watch.notify.cncf.discord-webhook-url=https://discord.example/webhook/cncf"
+private const val FEEDBACK_BOT_TOKEN = "rss-watch.notify.feedback.bot-token=token-x"
 
 private fun ApplicationContext.has(type: Class<*>): Boolean = getBeanNamesForType(type).isNotEmpty()
 
@@ -51,6 +56,52 @@ class NotifyEnabledTest {
         assertFalse(context.has(CncfDigestScheduler::class.java))
         assertFalse(context.has(BuildCncfDigestUseCase::class.java))
         assertFalse(context.has(CncfDiscordWebhookClient::class.java))
+    }
+
+    @Test
+    fun records_message_ids_but_does_not_collect_feedback_without_a_bot_token() {
+        // message ID の記録(投稿側)は webhook だけで有効になり、回収(Bot 読み取り)はトークン設定時のみ
+        assertTrue(context.has(DiscordMessageRepository::class.java))
+        assertFalse(context.has(FeedbackScheduler::class.java))
+        assertFalse(context.has(CollectFeedbackUseCase::class.java))
+        assertFalse(context.has(DiscordBotClient::class.java))
+        assertFalse(context.has(DiscordFeedbackRepository::class.java))
+    }
+}
+
+/** Webhook + Bot トークン設定時は、フィードバック回収一式も登録される。 */
+@SpringBootTest(properties = [FETCH_OFF, KAFKA_OFF, TECH_WEBHOOK, FEEDBACK_BOT_TOKEN])
+@Import(PostgresTestConfiguration::class)
+class FeedbackEnabledTest {
+
+    @Autowired
+    lateinit var context: ApplicationContext
+
+    @Test
+    fun registers_feedback_collection_beans() {
+        assertTrue(context.has(FeedbackScheduler::class.java))
+        assertTrue(context.has(CollectFeedbackUseCase::class.java))
+        assertTrue(context.has(DiscordBotClient::class.java))
+        assertTrue(context.has(DiscordFeedbackRepository::class.java))
+        assertTrue(context.has(DiscordMessageRepository::class.java))
+    }
+}
+
+/** Bot トークンだけ設定してもダイジェストが無ければ回収対象が無いので、回収一式は登録されない(起動は通常どおり)。 */
+@SpringBootTest(properties = [FETCH_OFF, KAFKA_OFF, FEEDBACK_BOT_TOKEN])
+@Import(PostgresTestConfiguration::class)
+class FeedbackTokenOnlyTest {
+
+    @Autowired
+    lateinit var context: ApplicationContext
+
+    @Test
+    fun does_not_register_feedback_collection_beans() {
+        assertFalse(context.has(FeedbackScheduler::class.java))
+        assertFalse(context.has(CollectFeedbackUseCase::class.java))
+        assertFalse(context.has(DiscordBotClient::class.java))
+        assertFalse(context.has(DiscordFeedbackRepository::class.java))
+        assertFalse(context.has(DiscordMessageRepository::class.java))
     }
 }
 
