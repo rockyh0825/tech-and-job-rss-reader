@@ -138,6 +138,17 @@ class DiscordFeedbackRepositoryTest {
     }
 
     @Test
+    fun record_replies_upserts_author_name_for_the_same_reply_message_id() {
+        // Discord 側の表示名変更に追従する
+        val repository = repositoryAt(now)
+        repository.recordReplies(listOf(reply("r1")))
+
+        repository.recordReplies(listOf(reply("r1").copy(authorName = "rocky-renamed")))
+
+        assertEquals("rocky-renamed", repository.repliesTo("m1").single().authorName)
+    }
+
+    @Test
     fun record_replies_does_nothing_for_empty_list() {
         val repository = repositoryAt(now)
 

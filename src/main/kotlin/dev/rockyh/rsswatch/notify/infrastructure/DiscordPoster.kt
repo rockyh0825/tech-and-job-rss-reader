@@ -13,6 +13,7 @@ import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
+import org.springframework.web.util.UriComponentsBuilder
 
 /**
  * Discord Webhook へのダイジェスト投稿の transport(チャンネル非依存の共有部品)。
@@ -57,8 +58,10 @@ class DiscordPoster(
      * 実際の POST 先。`?wait=true` を付けると Discord は作成されたメッセージ(id, channel_id)を
      * レスポンスで返す(付けないと 204 No Content)。リアクション・返信の回収で記事と突き合わせるため、
      * メッセージ ID を [PostOutcome.postedMessages] として呼び出し側へ返す。
+     * URL に既にクエリがある場合(`?thread_id=` 等)も壊さないよう文字列連結ではなく builder で組む。
      */
-    private val postUrl = "$webhookUrl?wait=true"
+    private val postUrl =
+        UriComponentsBuilder.fromUriString(webhookUrl).queryParam("wait", true).build().toUriString()
 
     /** 投稿 1 通ぶんの単位。[guid] は投稿できた記事の記録([PostOutcome.postedGuids])に使う。 */
     data class ArticlePost(val guid: String, val embed: Embed)

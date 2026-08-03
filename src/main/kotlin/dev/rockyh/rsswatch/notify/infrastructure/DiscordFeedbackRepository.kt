@@ -66,7 +66,7 @@ class DiscordFeedbackRepository(
                     VALUES (${reply.replyMessageId}, ${reply.referencedMessageId}, ${reply.authorId}, ${reply.authorName},
                             ${reply.content}, $repliedAt, $fetchedAt)
                     ON CONFLICT (reply_message_id) DO UPDATE
-                    SET content = EXCLUDED.content, fetched_at = EXCLUDED.fetched_at
+                    SET content = EXCLUDED.content, author_name = EXCLUDED.author_name, fetched_at = EXCLUDED.fetched_at
                     """
                 }.rowsUpdated()
         }

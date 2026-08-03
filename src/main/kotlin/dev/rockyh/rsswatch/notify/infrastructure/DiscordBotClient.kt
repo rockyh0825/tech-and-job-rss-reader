@@ -32,6 +32,12 @@ class DiscordBotClient(
     @Value("\${rss-watch.notify.feedback.api-base-url:https://discord.com/api/v10}") private val apiBaseUrl: String,
 ) : DiscordFeedbackSource {
 
+    init {
+        // @ConditionalOnProperty は空文字でも真になる。空トークンのまま 6 時間おきに 401 を吐き続けるより
+        // 起動時に fail fast して設定ミスに気づけるようにする
+        require(botToken.isNotBlank()) { "rss-watch.notify.feedback.bot-token must not be blank" }
+    }
+
     private val restClient: RestClient = restClientBuilder.build()
 
     override fun reactions(channelId: String, messageId: String): List<ReactionCount>? {

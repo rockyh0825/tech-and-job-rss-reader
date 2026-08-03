@@ -53,20 +53,22 @@ class CollectFeedbackUseCase(
         log.info("collected feedback for {} digest messages", tracked.size)
     }
 
+    // 取得(Discord API)だけでなく保存(DB)の失敗も runCatching に含める。どちらで失敗しても
+    // このメッセージ/チャンネルぶんを諦めるだけで、残りの回収は続ける(次回の巡回で追いつく)。
+
     private fun collectReplies(channelId: String, messages: List<DiscordMessageRef>) {
-        runCatching { feedbackSource.repliesTo(channelId, messages.map { it.messageId }.toSet()) }
-            .onSuccess { feedbackStore.recordReplies(it) }
+        runCatching { feedbackStore.recordReplies(feedbackSource.repliesTo(channelId, messages.map { it.messageId }.toSet())) }
             .onFailure { log.warn("failed to collect replies for channel {}; will retry next schedule", channelId, it) }
     }
 
     private fun collectReactions(message: DiscordMessageRef) {
-        runCatching { feedbackSource.reactions(message.channelId, message.messageId) }
-            .onSuccess { reactions ->
-                // null = メッセージが削除済み。「0 件」と違い取得できていないので、前回のスナップショットは残す
-                if (reactions != null) feedbackStore.replaceReactions(message.messageId, reactions)
+        runCatching {
+            // null = メッセージが削除済み。「0 件」と違い取得できていないので、前回のスナップショットは残す
+            feedbackSource.reactions(message.channelId, message.messageId)?.let {
+                feedbackStore.replaceReactions(message.messageId, it)
             }
-            .onFailure {
-                log.warn("failed to collect reactions for message {}; will retry next schedule", message.messageId, it)
-            }
+        }.onFailure {
+            log.warn("failed to collect reactions for message {}; will retry next schedule", message.messageId, it)
+        }
     }
 }

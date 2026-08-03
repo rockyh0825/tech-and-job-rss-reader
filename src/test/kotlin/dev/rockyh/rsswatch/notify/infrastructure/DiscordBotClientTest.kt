@@ -4,6 +4,7 @@ import dev.rockyh.rsswatch.notify.domain.DiscordReply
 import dev.rockyh.rsswatch.notify.domain.ReactionCount
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -28,6 +29,15 @@ class DiscordBotClientTest {
 
     private fun client(): DiscordBotClient =
         DiscordBotClient(restClientBuilder = builder, botToken = botToken, apiBaseUrl = apiBaseUrl)
+
+    @Test
+    fun rejects_a_blank_bot_token_at_construction_time() {
+        // @ConditionalOnProperty は空文字でも真になる。空トークンで 6 時間おきに 401 を吐き続けるより
+        // 起動時に fail fast して設定ミスに気づけるようにする
+        assertFailsWith<IllegalArgumentException> {
+            DiscordBotClient(restClientBuilder = builder, botToken = "  ", apiBaseUrl = apiBaseUrl)
+        }
+    }
 
     @BeforeEach
     fun setUp() {

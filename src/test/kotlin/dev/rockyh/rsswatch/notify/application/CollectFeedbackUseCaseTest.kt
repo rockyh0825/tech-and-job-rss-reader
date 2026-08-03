@@ -54,14 +54,18 @@ class CollectFeedbackUseCaseTest {
     private class FakeFeedbackStore : FeedbackStore {
         val replacedReactions = mutableMapOf<String, List<ReactionCount>>()
         val recordedReplies = mutableListOf<DiscordReply>()
+        val failReactionsFor = mutableSetOf<String>()
+        var failReplies = false
 
         override fun replaceReactions(messageId: String, reactions: List<ReactionCount>) {
+            check(messageId !in failReactionsFor) { "replaceReactions failed for $messageId" }
             replacedReactions[messageId] = reactions
         }
 
         override fun reactions(messageId: String): List<ReactionCount> = replacedReactions[messageId].orEmpty()
 
         override fun recordReplies(replies: List<DiscordReply>) {
+            check(!failReplies) { "recordReplies failed" }
             recordedReplies += replies
         }
 
@@ -186,6 +190,37 @@ class CollectFeedbackUseCaseTest {
         useCase(messageStore, source, store).run()
 
         assertTrue(store.recordedReplies.isEmpty())
+        assertEquals(listOf(ReactionCount("👍", 1)), store.replacedReactions["m1"])
+    }
+
+    @Test
+    fun keeps_collecting_remaining_messages_when_storing_a_reaction_snapshot_fails() {
+        // 取得だけでなく保存(DB)の失敗でも回収サイクル全体を止めない
+        val messageStore = FakeMessageStore(listOf(message("g1", "m1"), message("g2", "m2")))
+        val source =
+            FakeFeedbackSource().apply {
+                reactionsByMessage["m1"] = listOf(ReactionCount("👍", 1))
+                reactionsByMessage["m2"] = listOf(ReactionCount("👎", 2))
+            }
+        val store = FakeFeedbackStore().apply { failReactionsFor += "m1" }
+
+        useCase(messageStore, source, store).run()
+
+        assertEquals(listOf(ReactionCount("👎", 2)), store.replacedReactions["m2"])
+    }
+
+    @Test
+    fun keeps_collecting_reactions_when_storing_replies_fails() {
+        val messageStore = FakeMessageStore(listOf(message("g1", "m1")))
+        val source =
+            FakeFeedbackSource().apply {
+                repliesByChannel["ch-1"] = listOf(reply("r1", "m1"))
+                reactionsByMessage["m1"] = listOf(ReactionCount("👍", 1))
+            }
+        val store = FakeFeedbackStore().apply { failReplies = true }
+
+        useCase(messageStore, source, store).run()
+
         assertEquals(listOf(ReactionCount("👍", 1)), store.replacedReactions["m1"])
     }
 
